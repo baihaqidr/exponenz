@@ -14,8 +14,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from src.api_server import run_server
 
 def open_browser(port=5000):
-    # Hanya buka browser otomatis jika dijalankan di komputer lokal (bukan di Cloud/VPS)
-    if not os.environ.get("PORT") and not os.environ.get("KOYEB_APP_NAME") and not os.environ.get("RENDER"):
+    # Hanya buka browser otomatis jika dijalankan di komputer lokal (bukan di Cloud/VPS/Spaces)
+    if not os.environ.get("PORT") and not os.environ.get("SPACE_ID") and not os.environ.get("KOYEB_APP_NAME") and not os.environ.get("RENDER"):
         try:
             time.sleep(1.2)
             url = f"http://localhost:{port}"
@@ -25,7 +25,8 @@ def open_browser(port=5000):
             pass
 
 if __name__ == "__main__":
-    PORT = int(os.environ.get("PORT", 5000))
+    default_port = 7860 if os.environ.get("SPACE_ID") else 5000
+    PORT = int(os.environ.get("PORT", default_port))
     threading.Thread(target=open_browser, args=(PORT,), daemon=True).start()
     run_server(PORT)
 
