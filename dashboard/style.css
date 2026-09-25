@@ -1947,56 +1947,627 @@ body {
     margin-top: 0.2rem;
 }
 
-/* RESPONSIVE */
+/* ==========================================================================
+   EXPONENZ COMPREHENSIVE RESPONSIVE DESIGN SYSTEM (MOBILE, TABLET, DESKTOP)
+   Adhering to UI/UX Pro Max standards: fluid layouts, 44px+ touch targets,
+   zero horizontal body blowout, touch-scrollable tables, and safe-area padding.
+   ========================================================================== */
+
+/* GLOBAL VIEWPORT PRESERVATION */
+html, body {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-text-size-adjust: 100%;
+}
+
+.app-container {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-content {
+    width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+/* 1. LARGE TABLET & LAPTOP (<= 1280px) */
 @media (max-width: 1280px) {
-    .metrics-grid, .bot-metrics-row { grid-template-columns: repeat(2, 1fr); }
-    .glossary-rules-grid, .bot-config-grid, .sim-form-grid { grid-template-columns: repeat(2, 1fr); }
-    .funding-hero-card { flex-direction: column; align-items: flex-start; }
-    .top-target-box { width: 100%; }
+    .navbar {
+        padding: 0.85rem 1.5rem;
+    }
+    .main-content {
+        padding: 1.25rem 1.5rem;
+    }
+    .metrics-grid, .bot-metrics-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .glossary-rules-grid, .bot-config-grid, .sim-form-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .funding-hero-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .top-target-box, .top-target-card {
+        width: 100%;
+    }
 }
 
-/* TRADE ACTION BADGES (DISTINCT OPEN VS CLOSE) */
-.trade-action-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.28rem 0.65rem;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    font-family: var(--font-mono);
-    white-space: nowrap;
+/* 2. TABLET & MOBILE (<= 992px) */
+@media (max-width: 992px) {
+    .navbar {
+        display: flex;
+        flex-wrap: wrap;
+        padding: 0.65rem 1rem;
+        gap: 0.65rem;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .nav-left {
+        order: 1;
+        flex: 1 1 auto;
+    }
+
+    .nav-right {
+        order: 2;
+        flex: 0 0 auto;
+        display: flex;
+        gap: 0.45rem;
+        align-items: center;
+    }
+
+    .nav-center {
+        order: 3;
+        width: 100%;
+        flex: 0 0 100%;
+        margin-top: 0.2rem;
+    }
+
+    .main-tab-switcher {
+        width: 100%;
+        display: flex;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 0.25rem;
+        padding: 0.25rem;
+        border-radius: 10px;
+        scrollbar-width: none;
+    }
+
+    .main-tab-switcher::-webkit-scrollbar {
+        display: none;
+    }
+
+    .main-tab-btn {
+        flex: 1 1 auto;
+        white-space: nowrap;
+        font-size: 0.78rem;
+        padding: 0.5rem 0.75rem;
+        justify-content: center;
+        min-height: 40px;
+    }
+
+    .time-display {
+        padding: 0.35rem 0.6rem;
+        font-size: 0.72rem;
+    }
+
+    .env-pill {
+        padding: 0.35rem 0.6rem;
+        font-size: 0.68rem;
+    }
+
+    .logo-title {
+        font-size: 1.15rem;
+    }
+
+    .logo-tagline {
+        font-size: 0.52rem;
+    }
+
+    .main-content {
+        padding: 0.85rem;
+        gap: 0.85rem;
+    }
+
+    /* MATRIX TOOLBAR */
+    .matrix-toolbar-card {
+        padding: 0.85rem;
+        border-radius: 12px;
+    }
+
+    .matrix-toolbar-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        width: 100%;
+    }
+
+    .control-group {
+        width: 100%;
+        min-width: 0 !important;
+        flex: none !important;
+    }
+
+    .control-group label {
+        font-size: 0.72rem;
+        margin-bottom: 0.15rem;
+    }
+
+    .dropdown-custom {
+        width: 100%;
+        font-size: 0.85rem;
+        padding: 0.65rem 0.85rem;
+        min-height: 44px;
+        border-radius: 8px;
+    }
+
+    .timeframe-group {
+        display: flex;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 2px;
+        padding: 2px;
+    }
+
+    .tf-btn {
+        flex: 1;
+        min-height: 40px;
+        font-size: 0.8rem;
+        padding: 0.4rem 0.2rem;
+        text-align: center;
+        font-weight: 700;
+    }
+
+    .btn-primary-glow {
+        width: 100%;
+        justify-content: center;
+        min-height: 46px;
+        font-size: 0.92rem;
+        border-radius: 9px;
+    }
+
+    /* GLOSSARY HERO */
+    .glossary-card {
+        padding: 0.85rem 1rem;
+        border-radius: 12px;
+        border-left-width: 4px;
+    }
+
+    .glossary-header {
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .glossary-title-wrap {
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        align-items: center;
+        flex: 1;
+    }
+
+    .glossary-title-wrap h2 {
+        font-size: 1.05rem;
+        line-height: 1.3;
+        width: 100%;
+        margin: 0.2rem 0;
+        word-break: break-word;
+    }
+
+    .style-badge {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.45rem;
+    }
+
+    .glossary-file {
+        font-size: 0.68rem;
+        padding: 0.15rem 0.4rem;
+    }
+
+    .glossary-desc {
+        font-size: 0.82rem;
+        line-height: 1.5;
+        margin-top: 0.65rem;
+    }
+
+    .glossary-rules-grid {
+        grid-template-columns: 1fr;
+        gap: 0.65rem;
+        margin-top: 0.75rem;
+    }
+
+    .rule-box {
+        padding: 0.75rem 0.85rem;
+        border-radius: 8px;
+    }
+
+    .rule-box-header {
+        font-size: 0.76rem;
+        margin-bottom: 0.45rem;
+    }
+
+    .rule-box li {
+        font-size: 0.78rem;
+        line-height: 1.4;
+    }
+
+    /* KPI METRICS */
+    .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.65rem;
+    }
+
+    .metric-card {
+        padding: 0.75rem 0.85rem;
+        border-radius: 10px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    .metric-header {
+        font-size: 0.68rem;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .metric-value {
+        font-size: 1.25rem;
+        line-height: 1.2;
+    }
+
+    .metric-sub {
+        font-size: 0.68rem;
+        line-height: 1.2;
+    }
+
+    /* CARDS & TABLES */
+    .card {
+        padding: 0.85rem;
+        border-radius: 12px;
+    }
+
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.65rem;
+        margin-bottom: 0.85rem;
+    }
+
+    .card-title {
+        font-size: 0.95rem;
+    }
+
+    .matrix-actions {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
+    .matrix-actions button {
+        width: 100%;
+        justify-content: center;
+        min-height: 42px;
+        font-size: 0.78rem;
+    }
+
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+    }
+
+    .matrix-table th, .matrix-table td,
+    .data-table th, .data-table td {
+        padding: 0.65rem 0.75rem;
+        font-size: 0.78rem;
+    }
+
+    /* FUNDING SNIPER TAB */
+    .funding-hero-card {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0.85rem;
+        gap: 1rem;
+    }
+
+    .funding-hero-left, .funding-hero-right {
+        width: 100%;
+    }
+
+    .funding-hero-title {
+        font-size: 1.15rem;
+    }
+
+    .funding-hero-desc {
+        font-size: 0.82rem;
+        margin-bottom: 0.85rem;
+    }
+
+    .settle-timer-box {
+        flex-direction: column;
+        gap: 0.65rem;
+        background: #FAF8F5;
+        padding: 0.75rem;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        width: 100%;
+    }
+
+    .timer-divider {
+        display: none;
+    }
+
+    .timer-val {
+        font-size: 1.1rem;
+    }
+
+    .top-target-card, .top-target-box {
+        min-width: 0;
+        width: 100%;
+        padding: 0.85rem;
+        border-radius: 10px;
+    }
+
+    .top-target-symbol {
+        font-size: 1.25rem;
+    }
+
+    .top-target-rate {
+        font-size: 1.15rem;
+    }
+
+    .funding-controls-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+        padding: 0.85rem;
+    }
+
+    .funding-filter-left {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.65rem;
+        width: 100%;
+    }
+
+    .search-box {
+        width: 100%;
+        min-height: 42px;
+    }
+
+    .filter-group {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+        width: 100%;
+    }
+
+    .filter-group select {
+        width: 100%;
+        min-height: 42px;
+    }
+
+    .funding-stats-right {
+        text-align: center;
+        font-size: 0.75rem;
+    }
+
+    /* LIVE BOT AUTOMATION TAB */
+    .bot-hero-panel, .bot-control-section, .bot-positions-section, .bot-terminal-section {
+        padding: 0.85rem;
+        border-radius: 12px;
+        gap: 0.85rem;
+    }
+
+    .bot-status-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+
+    .bot-status-badge, .bot-env-tag {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+        min-height: 38px;
+    }
+
+    .bot-metrics-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.65rem;
+    }
+
+    .bot-metric-card {
+        padding: 0.75rem 0.85rem;
+        border-radius: 10px;
+    }
+
+    .bot-metric-label {
+        font-size: 0.68rem;
+    }
+
+    .bot-metric-val {
+        font-size: 1.25rem;
+    }
+
+    .bot-config-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .config-field select, .config-field input {
+        min-height: 44px;
+        font-size: 0.85rem;
+    }
+
+    .coin-manager-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .coin-manager-title {
+        font-size: 0.85rem;
+    }
+
+    .coin-mode-switch {
+        width: 100%;
+        display: flex;
+    }
+
+    .btn-mode {
+        flex: 1;
+        text-align: center;
+        min-height: 38px;
+        justify-content: center;
+        font-size: 0.75rem;
+    }
+
+    .universe-presets-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.4rem;
+        width: 100%;
+    }
+
+    .btn-preset-scanner {
+        width: 100%;
+        justify-content: flex-start;
+        min-height: 40px;
+        font-size: 0.78rem;
+        padding: 0.5rem 0.85rem;
+    }
+
+    .popular-coins-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.4rem;
+        width: 100%;
+    }
+
+    .popular-pills-list {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+    }
+
+    .btn-quick-coin {
+        flex: 1 1 28%;
+        text-align: center;
+        min-height: 38px;
+        font-size: 0.76rem;
+    }
+
+    .bot-action-buttons {
+        flex-direction: column;
+        width: 100%;
+        gap: 0.65rem;
+    }
+
+    .btn-start-bot, .btn-stop-bot {
+        width: 100%;
+        justify-content: center;
+        min-height: 48px;
+        font-size: 0.92rem;
+    }
+
+    .terminal-log-box {
+        height: 200px;
+        padding: 0.75rem;
+        font-size: 0.75rem;
+    }
+
+    /* MODALS */
+    .modal-backdrop {
+        padding: 0.5rem;
+    }
+
+    .modal-content {
+        width: 98%;
+        max-width: 98vw;
+        max-height: 92vh;
+        border-radius: 12px;
+    }
+
+    .modal-header {
+        padding: 0.85rem 1rem;
+    }
+
+    .modal-title {
+        font-size: 0.92rem;
+    }
+
+    .modal-body {
+        padding: 0.75rem;
+    }
+
+    .sim-form-grid {
+        grid-template-columns: 1fr;
+        gap: 0.65rem;
+    }
+
+    .modal-table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .modal-trade-table {
+        table-layout: auto;
+        min-width: 500px;
+    }
 }
 
-.trade-action-badge.open-long {
-    background: rgba(16, 185, 129, 0.12);
-    border: 1px solid rgba(16, 185, 129, 0.35);
-    color: #059669;
+/* 3. ULTRA COMPACT MOBILE (<= 480px) */
+@media (max-width: 480px) {
+    .metrics-grid, .bot-metrics-row {
+        grid-template-columns: 1fr;
+    }
+
+    .btn-quick-coin {
+        flex: 1 1 45%;
+    }
+
+    .logo-text {
+        max-width: 160px;
+    }
+
+    .logo-tagline {
+        display: none;
+    }
+
+    .time-display {
+        font-size: 0.68rem;
+        padding: 0.25rem 0.45rem;
+    }
+
+    .env-pill {
+        font-size: 0.64rem;
+        padding: 0.25rem 0.45rem;
+    }
+
+    .main-tab-btn {
+        font-size: 0.72rem;
+        padding: 0.4rem 0.5rem;
+    }
 }
 
-.trade-action-badge.open-short {
-    background: rgba(244, 63, 94, 0.12);
-    border: 1px solid rgba(244, 63, 94, 0.35);
-    color: #e11d48;
-}
-
-.trade-action-badge.close-tp {
-    background: rgba(16, 185, 129, 0.22);
-    border: 1px solid #10b981;
-    color: #047857;
-    box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
-}
-
-.trade-action-badge.close-sl {
-    background: rgba(244, 63, 94, 0.22);
-    border: 1px solid #f43f5e;
-    color: #be123c;
-}
-
-.trade-action-badge.close-neutral {
-    background: rgba(100, 116, 139, 0.15);
-    border: 1px solid #94a3b8;
-    color: #475569;
-}
 
