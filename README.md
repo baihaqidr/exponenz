@@ -1,3 +1,13 @@
+---
+title: Exponenz Trading Bot
+emoji: ⚡
+colorFrom: orange
+colorTo: red
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # 🚀 Binance Futures Strategy Backtester & Trading Bot
 
 Engine backtesting dan otomasi strategi trading Binance Futures dengan Python, mendukung kalkulasi fee nyata, slippage, simulasi eksekusi Long & Short, dan Stop Loss (SL) / Take Profit (TP) per candlestick.
