@@ -42,6 +42,49 @@ class LiveTradingBot:
         self._thread: Optional[threading.Thread] = None
 
         self._log("SYSTEM", "Live Trading Bot Engine Initialized - Binance Pro Wilder Engine")
+        self._load_state()
+
+    def _save_state(self):
+        try:
+            os.makedirs("data", exist_ok=True)
+            state = {
+                "is_running": self.is_running,
+                "active_strategy_id": self.active_strategy_id,
+                "timeframe": self.timeframe,
+                "watchlist": self.watchlist,
+                "leverage": self.leverage,
+                "risk_pct": self.risk_pct,
+                "max_open_positions": self.max_open_positions,
+                "session_start_time": self.session_start_time
+            }
+            with open("data/bot_state.json", "w") as f:
+                json.dump(state, f, indent=2)
+        except Exception as e:
+            print(f"[ERROR] Failed to save bot state: {e}")
+
+    def _load_state(self):
+        state_file = "data/bot_state.json"
+        if os.path.exists(state_file):
+            try:
+                with open(state_file, "r") as f:
+                    state = json.load(f)
+                self.active_strategy_id = state.get("active_strategy_id", self.active_strategy_id)
+                self.timeframe = state.get("timeframe", self.timeframe)
+                self.watchlist = state.get("watchlist", self.watchlist)
+                self.leverage = state.get("leverage", self.leverage)
+                self.risk_pct = state.get("risk_pct", self.risk_pct)
+                self.max_open_positions = state.get("max_open_positions", self.max_open_positions)
+                self.session_start_time = state.get("session_start_time", self.session_start_time)
+                if state.get("is_running", False):
+                    self._log("RESTORE", "🔄 Melanjutkan status bot aktif 24/7 di background...")
+                    self.is_running = True
+                    self.start_time_ms = int(time.time() * 1000)
+                    self.last_traded_candles.clear()
+                    self._configured_leverage_symbols = set()
+                    self._thread = threading.Thread(target=self._run_loop, daemon=True)
+                    self._thread.start()
+            except Exception as e:
+                print(f"[ERROR] Failed to load bot state: {e}")
 
     def reset_session(self):
         """Reset total sesi trading baru dari modal awal $5,000"""
@@ -57,6 +100,12 @@ class LiveTradingBot:
         if os.path.exists("data/bot_trades.json"):
             try:
                 os.remove("data/bot_trades.json")
+            except Exception:
+                pass
+
+        if os.path.exists("data/bot_state.json"):
+            try:
+                os.remove("data/bot_state.json")
             except Exception:
                 pass
 
@@ -89,6 +138,7 @@ class LiveTradingBot:
         self.start_time_ms = int(time.time() * 1000)
         self.last_traded_candles.clear()
         self._configured_leverage_symbols = set()
+        self._save_state()
 
         risk_desc = f"{risk_pct*100:.0f}% Modal" if isinstance(risk_pct, (int, float)) and risk_pct <= 1.0 else str(risk_pct).replace("fixed_", "Fixed $") + " USDT"
         pairs_desc = f"{len(self.watchlist)} Koin (Auto-Hunt Universe)" if len(self.watchlist) > 12 else ', '.join(self.watchlist)
@@ -102,6 +152,7 @@ class LiveTradingBot:
         if not self.is_running:
             return {"status": "not_running"}
         self.is_running = False
+        self._save_state()
         self._log("STOP", "🛑 Bot Automation dihentikan oleh pengguna.")
         return {"status": "stopped"}
 

@@ -153,6 +153,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try { await loadStrategies(); } catch(e) { console.error('loadStrategies error:', e); }
     try { await loadAllFuturesSymbols(); } catch(e) { console.error('loadSymbols error:', e); }
     try { renderWatchlistChips(); } catch(e) { console.error('renderWatchlist error:', e); }
+    try { loadBotStatus(); } catch(e) { console.error('loadBotStatus error:', e); }
     try { await runMasterMatrix(); } catch(e) { console.error('runMasterMatrix error:', e); }
     // Preload funding data in background
     try { loadLiveFundingRates(); } catch(e) { console.error('loadFunding error:', e); }
