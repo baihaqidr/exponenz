@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EXPONENZ — Quantitative Intelligence Hub</title>
+    <!-- Google Fonts: Space Grotesk, JetBrains Mono, Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- TradingView Lightweight Charts for Live Indicator & Candlestick Plotting -->
+    <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+    <link rel="stylesheet" href="style.css?v=5.0">
+</head>
+<body>
+    <div class="app-container">
+        <!-- TOP HEADER NAVBAR (EXPONENZ BRANDING) -->
+        <header class="navbar">
+            <div class="nav-left">
+                <div class="logo">
+                    <img src="exponenz_light_clear.png" alt="EXPONENZ" class="logo-img" />
+                    <div class="logo-text">
+                        <span class="logo-title">EXPONENZ</span>
+                        <span class="logo-tagline">THE MORE YOU KNOW, THE MORE YOU SEE.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MAIN TAB SWITCHER (CENTERED & PROMINENT) -->
+            <div class="nav-center">
+                <div class="main-tab-switcher">
+                    <button class="main-tab-btn active" id="tab-btn-matrix" data-tab="matrix" onclick="switchTab('matrix')">
+                        <i class="fa-solid fa-chart-line"></i> Backtest Matriks
+                    </button>
+                    <button class="main-tab-btn" id="tab-btn-funding" data-tab="funding" onclick="switchTab('funding')">
+                        <i class="fa-solid fa-crosshairs"></i> 🎯 Funding Sniper Live
+                    </button>
+                    <button class="main-tab-btn" id="tab-btn-bot" data-tab="bot" onclick="switchTab('bot')">
+                        <i class="fa-solid fa-robot"></i> 🤖 Live Bot Demo (Binance)
+                    </button>
+                </div>
+            </div>
+
+            <div class="nav-right">
+                <div class="time-display">
+                    <i class="fa-regular fa-clock"></i>
+                    <span id="live-wib-clock">--:--:-- WIB</span>
+                </div>
+                <div class="env-pill">
+                    <span class="status-dot"></span>
+                    <span>BINANCE TESTNET</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT CONTAINER -->
+        <main class="main-content">
+            <!-- ================= TAB 1: MATRIX VIEW ================= -->
+            <div id="view-matrix" class="tab-view active">
+                <!-- DEDICATED MATRIX CONTROL TOOLBAR -->
+                <section class="matrix-toolbar-card" id="nav-matrix-controls">
+                    <div class="matrix-toolbar-grid">
+                        <!-- Strategy Dropdown -->
+                        <div class="control-group strategy-col">
+                            <label><i class="fa-solid fa-chess-knight"></i> Pilihan Strategi</label>
+                            <select id="strategy-select" class="dropdown-custom">
+                                <option value="trend_rider_supertrend" selected>👑 [PROVEN QUANT] 1H Trend Rider (Supertrend + EMA 50 Trailing Stop)</option>
+                                <option value="rsi_first_ema7_crossover">🎯 [RSI SNIPER] RSI Oversold First EMA 7 Breakout (R:R 1:2)</option>
+                                <option value="binance_bband_wilder_rsi">🏆 [BINANCE PRO WILDER] Binance Pro BbandRsi (Wilder 100% Match)</option>
+                                <option value="freqtrade_bband_rsi">🥈 [FREQTRADE PURE ORIGINAL] Freqtrade Pure BbandRsi (Official Bawaan SL -10%)</option>
+                                <option value="freqtrade_bband_rsi_adjusted">🛡️ [FREQTRADE ADJUSTED] Freqtrade BbandRsi (Futures Hard SL -5% Protection)</option>
+                                <option value="freqtrade_sample">🥉 [FREQTRADE TEMPLATE] Freqtrade Original SampleStrategy</option>
+                            </select>
+                        </div>
+
+                        <!-- Timeframe Selector -->
+                        <div class="control-group tf-col">
+                            <label><i class="fa-solid fa-clock"></i> Timeframe Eksekusi</label>
+                            <div class="timeframe-group" id="timeframe-group">
+                                <button class="tf-btn" data-tf="1m">1m</button>
+                                <button class="tf-btn" data-tf="5m">5m</button>
+                                <button class="tf-btn" data-tf="15m">15m</button>
+                                <button class="tf-btn" data-tf="1h">1h</button>
+                                <button class="tf-btn active" data-tf="4h">4h</button>
+                                <button class="tf-btn" data-tf="1d">1D</button>
+                                <button class="tf-btn" data-tf="1w">1W</button>
+                            </div>
+                        </div>
+
+                        <!-- Pair Scope Preset -->
+                        <div class="control-group">
+                            <label><i class="fa-solid fa-coins"></i> Scope Pair (Jangkauan Koin)</label>
+                            <select id="pair-scope-select" class="dropdown-custom sm">
+                                <option value="top_12" selected>Top 12 Major (Bluechip: BTC, ETH, SOL, BNB...)</option>
+                                <option value="top_25">Top 25 Populer (Volume Terbesar & Paling Aktif)</option>
+                                <option value="top_50">Top 50 Volume (50 Koin Likuiditas Tinggi)</option>
+                                <option value="top_100">Top 100 Likuiditas (100 Koin Teratas)</option>
+                                <option value="top_10_pnl">👑 Top 10 PnL Performer (10 Koin Paling Cuan di Strategi Ini)</option>
+                                <option value="all_coins">🔥 Semua Koin (Scan Seluruh 368+ Koin Futures)</option>
+                            </select>
+                        </div>
+
+                        <!-- Risk & Sizing Selector -->
+                        <div class="control-group">
+                            <label><i class="fa-solid fa-shield-halved"></i> Entry Size / Modal</label>
+                            <select id="risk-select" class="dropdown-custom sm">
+                                <optgroup label="💵 Ukuran Tetap (Fixed Size - Anti Drawdown)">
+                                    <option value="fixed_100">Fixed $100 USDT (Ukuran Kecil)</option>
+                                    <option value="fixed_250" selected>Fixed $250 USDT (Rekomendasi Aman)</option>
+                                    <option value="fixed_500">Fixed $500 USDT (Ukuran Standar)</option>
+                                    <option value="fixed_1000">Fixed $1,000 USDT (Ukuran Besar)</option>
+                                </optgroup>
+                                <optgroup label="📈 Persentase Modal (Compounding %)">
+                                    <option value="0.10">10% Modal per Posisi</option>
+                                    <option value="0.20">20% Modal per Posisi</option>
+                                    <option value="0.50">50% Modal per Posisi</option>
+                                    <option value="0.70">70% Modal (Bawaan Agresif)</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <!-- Leverage Selector -->
+                        <div class="control-group">
+                            <label><i class="fa-solid fa-gauge-high"></i> Leverage</label>
+                            <select id="leverage-select" class="dropdown-custom sm">
+                                <option value="2.0" selected>2.0x</option>
+                                <option value="3.0">3.0x</option>
+                                <option value="5.0">5.0x</option>
+                            </select>
+                        </div>
+
+                        <!-- Year Filter -->
+                        <div class="control-group">
+                            <label><i class="fa-regular fa-calendar"></i> Filter Tahun</label>
+                            <select id="year-select" class="dropdown-custom sm">
+                                <option value="ALL" selected>Semua Tahun</option>
+                                <option value="2026">2026</option>
+                                <option value="2025">2025</option>
+                            </select>
+                        </div>
+
+                        <!-- Action Button -->
+                        <div class="control-group action-col">
+                            <label>&nbsp;</label>
+                            <button id="btn-run-matrix" class="btn-primary-glow">
+                                <i class="fa-solid fa-rotate"></i> Hitung Matriks
+                            </button>
+                        </div>
+                    </div>
+                </section>
+                <!-- STRATEGY BLUEPRINT & GLOSSARY HERO -->
+                <section class="glossary-card" id="glossary-card">
+                    <div class="glossary-header">
+                        <div class="glossary-title-wrap">
+                            <span class="style-badge" id="glossary-style-badge">SWING TREND</span>
+                            <h2 id="glossary-strategy-name">Trend Rider Pro</h2>
+                            <span class="glossary-file" id="glossary-file-name"><i class="fa-brands fa-python"></i> trend_rider.py</span>
+                        </div>
+                        <button class="btn-toggle-glossary" id="btn-toggle-glossary" title="Toggle Detail Aturan">
+                            <i class="fa-solid fa-chevron-up"></i>
+                        </button>
+                    </div>
+
+                    <div class="glossary-body" id="glossary-body">
+                        <p class="glossary-desc" id="glossary-description">
+                            Strategi Swing Trend Following legendaris yang dirancang khusus untuk pasar Crypto 4H dengan Supertrend (16, 4.0) dan filter ADX untuk menunggangi rally/dump besar tanpa terkena fakeout wick jarum.
+                        </p>
+
+                        <div class="glossary-rules-grid">
+                            <div class="rule-box long">
+                                <div class="rule-box-header">
+                                    <i class="fa-solid fa-arrow-trend-up"></i>
+                                    <span>Aturan Entry BUY (LONG)</span>
+                                </div>
+                                <ul id="glossary-entry-long"></ul>
+                            </div>
+
+                            <div class="rule-box short">
+                                <div class="rule-box-header">
+                                    <i class="fa-solid fa-arrow-trend-down"></i>
+                                    <span>Aturan Entry SELL (SHORT)</span>
+                                </div>
+                                <ul id="glossary-entry-short"></ul>
+                            </div>
+
+                            <div class="rule-box exit">
+                                <div class="rule-box-header">
+                                    <i class="fa-solid fa-shield-virus"></i>
+                                    <span>Exit, Trailing & Proteksi Modal</span>
+                                </div>
+                                <ul id="glossary-exit-rules"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- PORTFOLIO KPI METRICS -->
+                <section class="metrics-grid">
+                    <div class="metric-card highlight">
+                        <div class="metric-header">
+                            <span>Total Akumulasi Portofolio</span>
+                            <i class="fa-solid fa-wallet icon"></i>
+                        </div>
+                        <div class="metric-value" id="val-portfolio-pnl">+$0.00</div>
+                        <div class="metric-sub" id="val-portfolio-sub">Gabungan Seluruh Pair Terpilih</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span>Rata-Rata Win Rate</span>
+                            <i class="fa-solid fa-trophy icon"></i>
+                        </div>
+                        <div class="metric-value" id="val-portfolio-winrate">0.0%</div>
+                        <div class="metric-sub" id="val-portfolio-trades">0 Total Trades</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span>Pair Terbaik (Top Performer)</span>
+                            <i class="fa-solid fa-crown icon" style="color: #f59e0b;"></i>
+                        </div>
+                        <div class="metric-value" id="val-best-pair">-</div>
+                        <div class="metric-sub" id="val-best-pair-pnl">Profit Tertinggi</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span>Konsistensi Bulan Hijau</span>
+                            <i class="fa-solid fa-chart-simple icon"></i>
+                        </div>
+                        <div class="metric-value" id="val-green-months">0 / 0</div>
+                        <div class="metric-sub" id="val-green-months-sub">Bulan Portofolio Profit</div>
+                    </div>
+                </section>
+
+                <!-- MASTER MATRIX TABLE SECTION -->
+                <section class="card matrix-card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fa-solid fa-table-cells"></i>
+                            <span id="matrix-title">Master Backtest Matrix [Breakdown PnL Bulanan Seluruh Pair]</span>
+                        </div>
+                        <div class="matrix-actions" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <button id="btn-sync-top10-to-bot" class="btn-secondary" style="background: rgba(255, 106, 0, 0.12); color: #FF6A00; border: 1px solid rgba(255, 106, 0, 0.3); font-weight: 700;" onclick="syncTop10PnlToBotWatchlist()">
+                                <i class="fa-solid fa-crown"></i> 👑 Pasang Top 10 Koin Cuan Tertinggi ke Bot
+                            </button>
+                            <button id="btn-export-matrix" class="btn-secondary">
+                                <i class="fa-solid fa-file-excel"></i> Export Matriks ke CSV / Excel
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive matrix-table-container">
+                        <table class="data-table matrix-table" id="master-matrix-table">
+                            <thead id="matrix-thead">
+                                <tr>
+                                    <th>Pair</th>
+                                    <th>Memuat Kolom...</th>
+                                </tr>
+                            </thead>
+                            <tbody id="matrix-tbody">
+                                <tr>
+                                    <td colspan="15" class="loading-cell">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Menghitung matriks bulanan seluruh pair...
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot id="matrix-tfoot"></tfoot>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ================= TAB 2: FUNDING SNIPER LIVE HUB ================= -->
+            <div id="view-funding" class="tab-view" style="display: none;">
+                <!-- LIVE SETTLEMENT HERO BANNER -->
+                <section class="funding-hero-card">
+                    <div class="funding-hero-left">
+                        <div class="settle-badge">
+                            <span class="pulse-dot"></span>
+                            <span>LIVE FUTURES SETTLEMENT RADAR</span>
+                        </div>
+                        <h2 class="funding-hero-title">Hit & Run Funding Rate Arbitrage</h2>
+                        <p class="funding-hero-desc">
+                            Buka posisi Short Delta-Neutral pada detik H-30 sebelum settlement pada koin dengan funding positif tebal, nikmati transferan komisi funding, lalu langsung tutup posisi pasca-settlement.
+                        </p>
+                        <div class="settle-timer-box">
+                            <div class="timer-item">
+                                <span class="timer-label">JADWAL SETTLEMENT BERIKUTNYA</span>
+                                <span class="timer-val" id="funding-next-time">23:00:00 WIB</span>
+                            </div>
+                            <div class="timer-divider"></div>
+                            <div class="timer-item">
+                                <span class="timer-label">HITUNG MUNDUR (COUNTDOWN)</span>
+                                <span class="timer-val highlight" id="funding-countdown">00h 00m 00s</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="funding-hero-right">
+                        <div class="top-target-card">
+                            <div class="top-target-header">
+                                <i class="fa-solid fa-fire text-danger"></i>
+                                <span>TARGET HIT & RUN TERBAIK SAAT INI</span>
+                            </div>
+                            <div class="top-target-symbol" id="top-target-symbol">MEMUAT...</div>
+                            <div class="top-target-rate" id="top-target-rate">+0.0000%</div>
+                            <div class="top-target-payout" id="top-target-payout">Estimasi Net: +$0.00 per $1,000</div>
+                            <button class="btn-snipe-action" id="btn-quick-simulate">
+                                <i class="fa-solid fa-calculator"></i> Buka Kalkulator Simulasi
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- FUNDING SNIPER CONTROLS & FILTER -->
+                <section class="funding-controls-bar">
+                    <div class="funding-filter-left">
+                        <div class="search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="funding-search" placeholder="Cari pair (misal SOL, PEPE, BTC)...">
+                        </div>
+
+                        <div class="filter-group">
+                            <label>Ketersediaan Spot:</label>
+                            <select id="funding-filter-spot" class="dropdown-custom sm">
+                                <option value="spot_only" selected>✅ Hanya Ada di Spot (Valid Arbitrase)</option>
+                                <option value="all">Semua Pair (Termasuk Futures-Only)</option>
+                                <option value="futures_only">⛔ Futures-Only (Tanpa Spot)</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label>Filter Minimal Rate:</label>
+                            <select id="funding-filter-rate" class="dropdown-custom sm">
+                                <option value="all">Semua Rate</option>
+                                <option value="positive" selected>Hanya Positif (&gt; 0%)</option>
+                                <option value="high_yield">&gt; +0.03% (High Yield)</option>
+                                <option value="hot">&gt; +0.10% (🔥 Hot Snipe Target)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="funding-stats-right">
+                        <span id="funding-pairs-count">Menampilkan 0 Pair Aktif</span>
+                    </div>
+                </section>
+
+                <!-- FUNDING LIVE TABLE -->
+                <section class="card funding-card">
+                    <div class="table-responsive">
+                        <table class="data-table" id="funding-table">
+                            <thead>
+                                <tr>
+                                    <th>Pair Contract</th>
+                                    <th>Ketersediaan Spot</th>
+                                    <th>Funding Rate (8H)</th>
+                                    <th>Annualized APY</th>
+                                    <th>Basis Spread (Futures vs Spot)</th>
+                                    <th>Harga Futures</th>
+                                    <th>Harga Spot Index</th>
+                                    <th>Est. Net / $1,000</th>
+                                    <th>Status Peluang</th>
+                                    <th>Aksi & Simulasi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="funding-tbody">
+                                <tr>
+                                    <td colspan="9" class="loading-cell">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Menarik data live funding rate dari 980+ pair...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ================= TAB 3: LIVE BOT AUTOMATION VIEW ================= -->
+            <div id="view-bot" class="tab-view" style="display: none;">
+                <!-- HERO BOT STATUS & METRICS -->
+                <section class="bot-hero-panel">
+                    <div class="bot-status-header">
+                        <div class="bot-status-badge" id="bot-status-badge">
+                            <span class="pulse-dot"></span>
+                            <span id="bot-status-text">BOT STANDBY / READY</span>
+                        </div>
+                        <div class="bot-env-tag">
+                            <i class="fa-solid fa-link"></i>
+                            <span id="bot-env-text">BINANCE FUTURES DEMO (TESTNET)</span>
+                        </div>
+                    </div>
+
+                    <!-- METRICS GRID -->
+                    <div class="bot-metrics-row">
+                        <div class="bot-metric-card">
+                            <div class="bot-metric-label">Total Saldo Demo (Wallet)</div>
+                            <div class="bot-metric-val" id="bot-wallet-balance">$5,000.00</div>
+                            <div class="bot-metric-sub">Saldo Virtual Testnet USDT</div>
+                        </div>
+                        <div class="bot-metric-card">
+                            <div class="bot-metric-label">Available Margin</div>
+                            <div class="bot-metric-val" id="bot-available-balance">$5,000.00</div>
+                            <div class="bot-metric-sub">Margin Siap Digunakan</div>
+                        </div>
+                        <div class="bot-metric-card">
+                            <div class="bot-metric-label">Unrealized PnL (Floating)</div>
+                            <div class="bot-metric-val pnl-neutral" id="bot-floating-pnl">$0.00</div>
+                            <div class="bot-metric-sub">Floating Posisi Berjalan</div>
+                        </div>
+                        <div class="bot-metric-card">
+                            <div class="bot-metric-label">Active Positions</div>
+                            <div class="bot-metric-val" id="bot-active-positions-count">0 Posisi</div>
+                            <div class="bot-metric-sub">Sedang Live di Bursa</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- BOT CONFIGURATION & CONTROLS -->
+                <section class="bot-control-section">
+                    <div class="bot-config-card">
+                        <div class="section-title">
+                            <i class="fa-solid fa-sliders"></i> Konfigurasi Otomasi Trading
+                        </div>
+                        <div class="bot-config-grid">
+                            <div class="config-field">
+                                <label>Pilih Strategi Otomasi</label>
+                                <select id="bot-strategy-select" class="dropdown-custom">
+                                    <option value="trend_rider_supertrend" selected>👑 [PROVEN QUANT] 1H Trend Rider (Supertrend + EMA 50 Trailing Stop)</option>
+                                    <option value="rsi_first_ema7_crossover">🎯 [RSI SNIPER] RSI Oversold First EMA 7 Breakout (R:R 1:2)</option>
+                                    <option value="binance_bband_wilder_rsi">🏆 [BINANCE PRO WILDER] Binance Pro BbandRsi (Wilder 100% Match)</option>
+                                    <option value="freqtrade_bband_rsi">🥈 [FREQTRADE PURE ORIGINAL] Freqtrade Pure BbandRsi (Official Bawaan SL -10%)</option>
+                                    <option value="freqtrade_bband_rsi_adjusted">🛡️ [FREQTRADE ADJUSTED] Freqtrade BbandRsi (Futures Hard SL -5% Protection)</option>
+                                    <option value="freqtrade_sample">🥉 [FREQTRADE TEMPLATE] Freqtrade Original SampleStrategy</option>
+                                </select>
+                            </div>
+                            <div class="config-field">
+                                <label>Timeframe Eksekusi</label>
+                                <select id="bot-timeframe-select" class="dropdown-custom">
+                                    <option value="1m" selected>1m (Ultra Scalp Live)</option>
+                                    <option value="5m">5m (Fast Scalp)</option>
+                                    <option value="15m">15m (Fast Setup)</option>
+                                    <option value="1h">1h (Rekomendasi Akurat)</option>
+                                    <option value="4h">4h (Swing Trend)</option>
+                                </select>
+                            </div>
+                            <div class="config-field">
+                                <label>Leverage Akun</label>
+                                <select id="bot-leverage-select" class="dropdown-custom">
+                                    <option value="1">1x (Delta-Neutral)</option>
+                                    <option value="2">2x (Sangat Aman)</option>
+                                    <option value="3" selected>3x (Optimal)</option>
+                                    <option value="5">5x (Agresif)</option>
+                                </select>
+                            </div>
+                            <div class="config-field" style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <label style="margin-bottom: 0;">Ukuran Posisi (Entry Size)</label>
+                                    <span id="entry-size-mode-badge" style="font-size: 0.72rem; color: #FF6A00; font-weight: 700;">Nominal Dollar ($)</span>
+                                </div>
+                                <div style="display: flex; gap: 6px; align-items: center;">
+                                    <div style="position: relative; flex: 1.1;">
+                                        <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-weight: 800; color: #10B981; font-size: 0.88rem;">$</span>
+                                        <input type="number" id="bot-entry-size-input" class="dropdown-custom" style="padding-left: 24px; font-weight: 700; color: #0F172A;" value="250" min="5" step="10" placeholder="Nominal USDT" oninput="onCustomEntrySizeChange(this.value)">
+                                        <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 0.72rem; color: #64748B; font-weight: 700;">USDT</span>
+                                    </div>
+                                    <select id="bot-risk-select" class="dropdown-custom" style="flex: 1.2; font-size: 0.8rem;" onchange="onRiskPresetSelect(this.value)">
+                                        <option value="custom" selected>✏️ Ketik Bebas</option>
+                                        <option value="fixed_100">Fixed $100 USDT</option>
+                                        <option value="fixed_250">Fixed $250 USDT</option>
+                                        <option value="fixed_500">Fixed $500 USDT</option>
+                                        <option value="fixed_1000">Fixed $1,000 USDT</option>
+                                        <option value="fixed_2500">Fixed $2,500 USDT</option>
+                                        <option value="0.20">20% Modal (~$2.5k)</option>
+                                        <option value="0.10">10% Modal (~$1.5k)</option>
+                                        <option value="0.05">5% Modal (~$750)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- COIN SEARCH & WATCHLIST SELECTOR (ALL 500+ BINANCE FUTURES COINS) -->
+                        <div class="bot-coin-manager">
+                            <div class="coin-manager-header">
+                                <div class="coin-manager-title">
+                                    <i class="fa-solid fa-coins" style="color: #FF6A00;"></i> Target Koin Trading (Watchlist Binance Futures)
+                                    <span id="watchlist-count-badge" class="coin-count-badge">1 Koin Terpilih</span>
+                                </div>
+                                <div class="coin-mode-switch">
+                                    <label class="mode-label">Mode:</label>
+                                    <button type="button" id="mode-single-coin" class="btn-mode active" onclick="setWatchlistMode('single')">Single Pair (Fokus 1)</button>
+                                    <button type="button" id="mode-multi-coin" class="btn-mode" onclick="setWatchlistMode('multi')">Multi Pairs (Scan Banyak)</button>
+                                </div>
+                            </div>
+
+                            <!-- ACTIVE WATCHLIST PILLS / TAGS -->
+                            <div class="active-coins-container">
+                                <div id="active-coins-list" class="active-coins-list">
+                                    <!-- Dynamic tags rendered here -->
+                                </div>
+                                <button type="button" class="btn-clear-coins" onclick="clearAllCoins()" title="Hapus pilihan koin">Reset Pilihan</button>
+                            </div>
+
+                            <!-- LIVE SEARCH BOX WITH AUTOCOMPLETE -->
+                            <div class="coin-search-box-container">
+                                <div class="search-input-wrapper">
+                                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                                    <input type="text" id="bot-coin-search-input" class="coin-search-input" placeholder="🔍 Cari koin resmi Binance Futures (cth: SYN, SOL, PEPE, DOGE, BTC, SUI)..." oninput="onSearchCoinInput(this.value)" onkeydown="if(event.key==='Enter'){ const f = document.querySelector('.search-result-item'); if(f) f.click(); }" autocomplete="off">
+                                    <button type="button" id="btn-clear-coin-search" class="btn-clear-input" onclick="clearSearchInput()" style="display: none;">✕</button>
+                                </div>
+                                <div id="coin-search-dropdown" class="coin-search-dropdown" style="display: none;">
+                                    <!-- Dropdown list rendered here -->
+                                </div>
+                            </div>
+
+                            <!-- UNIVERSE AUTO-SCANNER PRESETS (HARMONIOUS SENADA + DISTINCT ACTIVE STATE) -->
+                            <div class="universe-presets-row">
+                                <span class="universe-presets-label"><i class="fa-solid fa-layer-group" style="color: #FF6A00;"></i> Auto-Scanner Presets:</span>
+                                <button type="button" class="btn-preset-scanner" data-preset="top_10_pnl" onclick="applyBotWatchlistPreset('top_10_pnl')"><i class="fa-solid fa-crown"></i> Top 10 PnL Terbanyak</button>
+                                <button type="button" class="btn-preset-scanner" data-preset="top_12" onclick="applyBotWatchlistPreset('top_12')"><i class="fa-solid fa-bolt"></i> Scan Top 12 Major</button>
+                                <button type="button" class="btn-preset-scanner" data-preset="top_25" onclick="applyBotWatchlistPreset('top_25')"><i class="fa-solid fa-fire"></i> Scan Top 25 Volatile</button>
+                                <button type="button" class="btn-preset-scanner" data-preset="top_50" onclick="applyBotWatchlistPreset('top_50')"><i class="fa-solid fa-chart-simple"></i> Scan Top 50 Koin</button>
+                                <button type="button" class="btn-preset-scanner" data-preset="all_coins" onclick="applyBotWatchlistPreset('all_coins')"><i class="fa-solid fa-globe"></i> Scan Seluruh Koin (Auto-Hunt)</button>
+                            </div>
+
+                            <!-- POPULAR QUICK PRESET BUTTONS -->
+                            <div class="popular-coins-row">
+                                <span class="popular-label">Pilih Koin Satuan:</span>
+                                <div class="popular-pills-list">
+                                    <button type="button" class="btn-quick-coin" data-coin="ETHUSDT" onclick="quickSelectCoin('ETHUSDT')">+ ETH</button>
+                                    <button type="button" class="btn-quick-coin" data-coin="BTCUSDT" onclick="quickSelectCoin('BTCUSDT')">+ BTC</button>
+                                    <button type="button" class="btn-quick-coin" data-coin="SOLUSDT" onclick="quickSelectCoin('SOLUSDT')">+ SOL</button>
+                                    <button type="button" class="btn-quick-coin" data-coin="DOGEUSDT" onclick="quickSelectCoin('DOGEUSDT')">+ DOGE</button>
+                                    <button type="button" class="btn-quick-coin" data-coin="PEPEUSDT" onclick="quickSelectCoin('PEPEUSDT')">+ PEPE</button>
+                                    <button type="button" class="btn-quick-coin" data-coin="SUIUSDT" onclick="quickSelectCoin('SUIUSDT')">+ SUI</button>
+                                    <button type="button" class="btn-quick-coin" data-coin="NEARUSDT" onclick="quickSelectCoin('NEARUSDT')">+ NEAR</button>
+                                    <button type="button" class="btn-quick-coin" data-coin="XRPUSDT" onclick="quickSelectCoin('XRPUSDT')">+ XRP</button>
+                                    <button type="button" class="btn-quick-coin" data-coin="BNBUSDT" onclick="quickSelectCoin('BNBUSDT')">+ BNB</button>
+                                    <button type="button" class="btn-quick-coin" data-coin="AVAXUSDT" onclick="quickSelectCoin('AVAXUSDT')">+ AVAX</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bot-action-buttons">
+                            <button id="btn-start-bot" class="btn-start-bot" onclick="startBotAutomation()">
+                                <i class="fa-solid fa-play"></i> START BOT AUTOMATION (BTCUSDT)
+                            </button>
+                            <button id="btn-stop-bot" class="btn-stop-bot" style="display: none;" onclick="stopBotAutomation()">
+                                <i class="fa-solid fa-stop"></i> STOP AUTOMATION
+                            </button>
+                            <button id="btn-reset-bot" class="btn-stop-bot" style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #ef4444;" onclick="resetBotSession()">
+                                <i class="fa-solid fa-rotate-left"></i> RESET SESI (0 POSISI)
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- LIVE TRADINGVIEW CANDLESTICK CHART WITH EMA 7 & MQL5 SIGNALS PLOTTING -->
+                <section class="card bot-chart-section" style="margin-top: 1.5rem; padding: 1.25rem;">
+                    <div class="card-header" style="margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                        <div class="chart-header-left" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                            <div class="card-title" style="margin-bottom: 0;">
+                                <i class="fa-solid fa-chart-candlestick" style="color: #FF6A00;"></i>
+                                <span id="live-chart-symbol-title">BTCUSDT (1m)</span>
+                                <span class="chart-badge-tag" style="background: rgba(255, 106, 0, 0.12); color: #FF6A00; font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; font-weight: 700;">Live Binance Futures</span>
+                            </div>
+                            <div class="chart-price-display" style="display: flex; align-items: baseline; gap: 0.75rem;">
+                                <span id="chart-live-price" class="font-mono" style="font-size: 1.25rem; font-weight: 800; color: #111;">$0.0000</span>
+                                <span id="chart-ema-legend" class="font-mono" style="font-size: 0.82rem; font-weight: 700; color: #f59e0b; background: rgba(245, 158, 11, 0.1); padding: 2px 6px; border-radius: 4px;">Indikator: $0.0000</span>
+                                <span id="chart-rsi-header-badge" class="font-mono" style="font-size: 0.82rem; font-weight: 700; color: #8b5cf6; background: rgba(139, 92, 246, 0.1); padding: 2px 6px; border-radius: 4px;">RSI (14): --</span>
+                            </div>
+                        </div>
+                        <div class="chart-header-right" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                            <div class="chart-legend-pills" style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.78rem; font-weight: 700;">
+                                <span id="legend-badge-buy" style="display: inline-flex; align-items: center; gap: 4px; color: #10b981; background: rgba(16,185,129,0.1); padding: 2px 8px; border-radius: 4px;"><i class="fa-solid fa-arrow-up"></i> BUY (Entry Long)</span>
+                                <span id="legend-badge-sell" style="display: inline-flex; align-items: center; gap: 4px; color: #ef4444; background: rgba(239,68,68,0.1); padding: 2px 8px; border-radius: 4px;"><i class="fa-solid fa-xmark"></i> CLOSE (Tutup Posisi)</span>
+                            </div>
+                            <div class="timeframe-group" id="chart-tf-buttons" style="display: inline-flex; gap: 4px;">
+                                <button type="button" class="tf-btn active" data-chart-tf="1m" onclick="changeChartTimeframe('1m')">1m</button>
+                                <button type="button" class="tf-btn" data-chart-tf="5m" onclick="changeChartTimeframe('5m')">5m</button>
+                                <button type="button" class="tf-btn" data-chart-tf="15m" onclick="changeChartTimeframe('15m')">15m</button>
+                                <button type="button" class="tf-btn" data-chart-tf="1h" onclick="changeChartTimeframe('1h')">1h</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Chart Canvas Container (Main Candlestick & Overlays) -->
+                    <div id="live-bot-chart-container" style="width: 100%; height: 350px; border-radius: 8px 8px 0 0; overflow: hidden; background: #ffffff; border: 1px solid var(--border-color); border-bottom: none; position: relative;">
+                        <!-- Binance Style Live OHLC & Dynamic Indicator Hover Legend -->
+                        <div id="chart-ohlc-legend" style="position: absolute; top: 10px; left: 12px; z-index: 4; font-family: 'JetBrains Mono', 'Space Grotesk', monospace; font-size: 0.78rem; pointer-events: none; line-height: 1.45; background: rgba(255,255,255,0.94); backdrop-filter: blur(4px); padding: 5px 10px; border-radius: 6px; border: 1px solid rgba(226, 232, 240, 0.85); box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+                            <div id="chart-legend-line1" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: #475569;">
+                                <span id="legend-time" style="color: #64748b; font-weight: 600;">--/--/-- --:--</span>
+                                <span>Open <strong id="legend-open" style="color: #0ecb81;">-</strong></span>
+                                <span>High <strong id="legend-high" style="color: #0ecb81;">-</strong></span>
+                                <span>Low <strong id="legend-low" style="color: #0ecb81;">-</strong></span>
+                                <span>Close <strong id="legend-close" style="color: #0ecb81;">-</strong></span>
+                                <span>CHANGE <strong id="legend-change" style="color: #0ecb81;">-</strong></span>
+                                <span>Range <strong id="legend-range" style="color: #475569;">-</strong></span>
+                            </div>
+                            <div id="chart-legend-line2" style="display: flex; align-items: center; gap: 12px; margin-top: 3px; flex-wrap: wrap;">
+                                <span id="legend-upper-wrap" style="color: #06b6d4; font-weight: 700; display: none;">Upper: <strong id="legend-upper" style="color: #06b6d4;">-</strong></span>
+                                <span style="color: #f59e0b; font-weight: 700;"><span id="legend-ema-label">Main Ind</span>: <strong id="legend-ema" style="color: #f59e0b;">-</strong></span>
+                                <span id="legend-lower-wrap" style="color: #ec4899; font-weight: 700; display: none;">Lower: <strong id="legend-lower" style="color: #ec4899;">-</strong></span>
+                                <span style="color: #8b5cf6; font-weight: 700;"><span id="legend-rsi-title">RSI (14)</span>: <strong id="legend-rsi" style="color: #8b5cf6;">-</strong> <span id="legend-rsi-badge" style="font-size: 0.7rem; font-weight: 800; padding: 1px 6px; border-radius: 4px; display: none;"></span></span>
+                            </div>
+                        </div>
+
+                        <!-- Binance Official Real-Time Ask / Bid & Countdown Pill Tag -->
+                        <div id="chart-bid-ask-box" style="position: absolute; right: 75px; top: 10px; z-index: 4; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; display: flex; align-items: center; gap: 4px; pointer-events: none;">
+                            <div style="background: rgba(246, 70, 93, 0.95); color: #fff; padding: 2px 7px; border-radius: 4px; font-weight: 700; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(246,70,93,0.2);">
+                                <span style="font-size: 0.62rem; opacity: 0.85;">Ask</span>
+                                <span id="live-ask-val">-</span>
+                            </div>
+                            <div style="background: rgba(14, 203, 129, 0.95); color: #fff; padding: 2px 7px; border-radius: 4px; font-weight: 700; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(14,203,129,0.2);">
+                                <span style="font-size: 0.62rem; opacity: 0.85;">Bid</span>
+                                <span id="live-bid-val">-</span>
+                            </div>
+                            <div id="live-candle-countdown" style="background: rgba(15, 23, 42, 0.85); color: #f8fafc; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 0.7rem;">
+                                00:00
+                            </div>
+                        </div>
+
+                        <!-- Loading Overlay -->
+                        <div id="chart-loading-overlay" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.85); z-index: 5; font-weight: 700; color: #64748b;">
+                            <i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px; color: #FF6A00;"></i> Memuat Live Chart Binance & Plotting Indikator...
+                        </div>
+                    </div>
+
+                    <!-- RSI (14) OSCILLATOR SUB-PANE -->
+                    <div id="live-bot-rsi-container" style="width: 100%; height: 110px; border-radius: 0 0 8px 8px; overflow: hidden; background: #ffffff; border: 1px solid var(--border-color); position: relative;">
+                        <div id="rsi-subpane-title" style="position: absolute; top: 6px; left: 12px; z-index: 4; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; font-weight: 700; color: #8b5cf6; pointer-events: none; background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(226,232,240,0.8);">
+                            RSI (14) <span style="color: #64748b; font-weight: 500; font-size: 0.68rem;">[OB: 70 / OS: 30]</span>
+                        </div>
+                    </div>
+                </section>
+
+
+
+                <!-- LIVE OPEN POSITIONS TABLE -->
+                <section class="bot-positions-section">
+                    <div class="section-title">
+                        <i class="fa-solid fa-chart-line"></i> Posisi Terbuka Real-Time (Live di Akun Demo Binance)
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Pair Symbol</th>
+                                    <th>Tipe Posisi</th>
+                                    <th>Ukuran (Qty)</th>
+                                    <th>Harga Entry</th>
+                                    <th>Harga Mark (Live)</th>
+                                    <th>Floating PnL (USDT)</th>
+                                    <th>Harga Likuidasi</th>
+                                    <th>Leverage</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bot-positions-tbody">
+                                <tr>
+                                    <td colspan="9" class="empty-cell">
+                                        <i class="fa-regular fa-folder-open"></i> Tidak ada posisi aktif saat ini. Bot sedang memindai peluang...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- LIVE TRADE EXECUTION HISTORY TABLE -->
+                <section class="bot-positions-section" style="margin-top: 1.5rem;">
+                    <div class="section-title">
+                        <i class="fa-solid fa-receipt"></i> Riwayat Transaksi & Eksekusi Order (Binance Demo Records)
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Waktu Transaksi (WIB)</th>
+                                    <th>Pair Symbol</th>
+                                    <th>Aksi / Side</th>
+                                    <th>Harga Eksekusi</th>
+                                    <th>Kuantitas</th>
+                                    <th>Nilai (USDT)</th>
+                                    <th>Realized PnL</th>
+                                    <th>Fee Komisi</th>
+                                    <th>Binance Order ID</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bot-trades-tbody">
+                                <tr>
+                                    <td colspan="9" class="empty-cell">
+                                        <i class="fa-regular fa-folder-open"></i> Memuat riwayat transaksi bursa...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- LIVE ACTIVITY LOG TERMINAL -->
+                <section class="bot-terminal-section">
+                    <div class="terminal-header">
+                        <div class="terminal-title">
+                            <i class="fa-solid fa-terminal"></i> Live Activity Console (Real-time Stream)
+                        </div>
+                        <div class="terminal-actions">
+                            <span class="terminal-status"><span class="pulse-dot green"></span> Live Stream Active</span>
+                        </div>
+                    </div>
+                    <div class="terminal-log-box" id="bot-terminal-logs">
+                        <div class="log-row info"><span class="log-time">00:00:00</span> <span class="log-tag">[SYSTEM]</span> Menunggu perintah start automation...</div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- PAIR TRADE DETAILS MODAL -->
+    <div class="modal-backdrop" id="trade-modal" style="display: none;" onclick="if(event.target===this) window.closeTradeLogModal()">
+        <div class="modal-content" style="max-width: 1020px;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span id="modal-pair-title">Detail Riwayat Trade [BTCUSDT]</span>
+                </div>
+                <button class="btn-close-modal" id="btn-close-modal" onclick="window.closeTradeLogModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive modal-table-wrap">
+                    <table class="data-table modal-trade-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 85px;"># & Posisi</th>
+                                <th style="width: 160px;">Entry (Waktu & In)</th>
+                                <th style="width: 140px;">Size & Margin</th>
+                                <th style="width: 160px;">Exit (Waktu & Out)</th>
+                                <th style="width: 145px;">Durasi & Alasan</th>
+                                <th style="width: 140px;">Net PnL & ROI</th>
+                                <th style="width: 110px; text-align: right;">Saldo Akhir</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modal-trades-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FUNDING SIMULATOR MODAL -->
+    <div class="modal-backdrop" id="simulator-modal" style="display: none;" onclick="if(event.target===this) window.closeSimulatorModal()">
+        <div class="modal-content" style="max-width: 650px;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-solid fa-calculator"></i>
+                    <span id="sim-modal-title">Kalkulator Simulasi Hit & Run Funding</span>
+                </div>
+                <button class="btn-close-modal" id="btn-close-sim-modal" onclick="window.closeSimulatorModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="sim-form-grid">
+                    <div class="sim-form-group">
+                        <label>Pair Target</label>
+                        <input type="text" id="sim-input-symbol" class="sim-input" value="FATCOINUSDT" readonly>
+                    </div>
+                    <div class="sim-form-group">
+                        <label>Funding Rate (% per 8 Jam)</label>
+                        <input type="number" id="sim-input-rate" class="sim-input" step="0.001" value="0.32">
+                    </div>
+                    <div class="sim-form-group">
+                        <label>Modal Alokasi (USDT)</label>
+                        <input type="number" id="sim-input-capital" class="sim-input" step="50" value="1000">
+                    </div>
+                    <div class="sim-form-group">
+                        <label>Durasi Eksekusi</label>
+                        <select id="sim-input-intervals" class="dropdown-custom" style="width: 100%;">
+                            <option value="1" selected>Hit & Run 2 Menit (1x Settlement)</option>
+                            <option value="3">Hold 1 Hari (3x Settlement)</option>
+                            <option value="9">Hold 3 Hari (9x Settlement)</option>
+                            <option value="30">Hold 10 Hari (30x Settlement)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="sim-result-card">
+                    <div class="sim-result-row">
+                        <span>Penerimaan Komisi Funding Kotor:</span>
+                        <span class="sim-val text-success" id="sim-gross-payout">+$3.20</span>
+                    </div>
+                    <div class="sim-result-row">
+                        <span>Biaya Transaksi Taker (0.10% Bolak-Balik):</span>
+                        <span class="sim-val text-danger" id="sim-fee-cost">-$1.00</span>
+                    </div>
+                    <div class="sim-divider"></div>
+                    <div class="sim-result-row total">
+                        <span>ESTIMASI PROFIT BERSIH DI KANTONG:</span>
+                        <span class="sim-val highlight" id="sim-net-profit">+$2.20 (+0.22%)</span>
+                    </div>
+                    <div class="sim-result-row sub">
+                        <span>Setara Imbal Hasil Tahunan (Annualized APY):</span>
+                        <span class="sim-val" id="sim-apy-val">+350.4% APY</span>
+                    </div>
+                </div>
+
+                <div class="sim-guidelines">
+                    <div class="guide-item">
+                        <i class="fa-solid fa-check text-success"></i>
+                        <span><strong>Waktu Eksekusi:</strong> Masuk di detik 58 sebelum pergantian jam, keluar di detik 02 setelah settlement.</span>
+                    </div>
+                    <div class="guide-item">
+                        <i class="fa-solid fa-shield-halved text-info"></i>
+                        <span><strong>Delta Netral:</strong> Modal pokok terlindungi dari fluktuasi naik/turun harga.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js?v=29.0"></script>
+</body>
+</html>
+
+
+
+
+
+
+
