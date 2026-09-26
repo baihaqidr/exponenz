@@ -2382,16 +2382,19 @@ function initLiveBotChart() {
             }
         });
 
-        // Candlestick Series (Binance Colors with Live Price Badge)
+        // Candlestick Series (Binance Official Crisp Colors with Live Price Badge)
         candleSeriesInstance = liveChartInstance.addCandlestickSeries({
             upColor: '#0ecb81',
             downColor: '#f6465d',
-            borderVisible: false,
+            borderVisible: true,
+            borderUpColor: '#0ecb81',
+            borderDownColor: '#f6465d',
             wickUpColor: '#0ecb81',
             wickDownColor: '#f6465d',
             lastValueVisible: true,
             priceLineVisible: true,
             priceLineWidth: 1,
+            priceLineColor: '#0ecb81',
             priceLineStyle: LightweightCharts.LineStyle.Dashed,
         });
 
