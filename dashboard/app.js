@@ -2058,20 +2058,31 @@ window.closeBotPosition = async function(symbol) {
 // --- 10. REAL-TIME BINANCE FUTURES TICKER STREAM (COINMARKETCAP / BINANCE LIVE TICKER) ---
 function updatePriceCell(symbol, currentPrice) {
     const priceCell = document.getElementById(`real-price-${symbol}`);
-    if (!priceCell || isNaN(currentPrice) || currentPrice <= 0) return;
-    
-    const oldPrice = parseFloat(priceCell.getAttribute('data-price') || currentPrice);
-    if (Math.abs(currentPrice - oldPrice) > 1e-8) {
-        priceCell.setAttribute('data-price', currentPrice);
-        priceCell.innerHTML = `<strong>$${formatExactPrice(currentPrice)}</strong>`;
+    if (priceCell && !isNaN(currentPrice) && currentPrice > 0) {
+        const oldPrice = parseFloat(priceCell.getAttribute('data-price') || currentPrice);
+        if (Math.abs(currentPrice - oldPrice) > 1e-8) {
+            priceCell.setAttribute('data-price', currentPrice);
+            priceCell.innerHTML = `<strong>$${formatExactPrice(currentPrice)}</strong>`;
 
-        priceCell.classList.remove('flash-green', 'flash-red');
-        void priceCell.offsetWidth; // trigger reflow
-        if (currentPrice > oldPrice) {
-            priceCell.classList.add('flash-green');
-        } else {
-            priceCell.classList.add('flash-red');
+            priceCell.classList.remove('flash-green', 'flash-red');
+            void priceCell.offsetWidth; // trigger reflow
+            if (currentPrice > oldPrice) {
+                priceCell.classList.add('flash-green');
+            } else {
+                priceCell.classList.add('flash-red');
+            }
         }
+    }
+
+    // Direct tick sync to active live forming candle on chart
+    if (symbol === currentStreamingSymbol && currentLiveCandle && candleSeriesInstance && !isNaN(currentPrice) && currentPrice > 0) {
+        currentLiveCandle.close = currentPrice;
+        if (currentPrice > currentLiveCandle.high) currentLiveCandle.high = currentPrice;
+        if (currentPrice < currentLiveCandle.low) currentLiveCandle.low = currentPrice;
+        candleSeriesInstance.update(currentLiveCandle);
+
+        const priceEl = document.getElementById('chart-live-price');
+        if (priceEl) priceEl.textContent = `$${formatCleanPrice(currentPrice)}`;
     }
 }
 
@@ -2625,9 +2636,20 @@ function initLiveBotChart() {
         // Initial fetch
         updateLiveBotChart();
 
-        // Polling update every 2.5 seconds to refresh markers and historical bars
+        // Refresh indicators/markers gently every 30s without resetting active candle ticks
         if (chartUpdateInterval) clearInterval(chartUpdateInterval);
-        chartUpdateInterval = setInterval(updateLiveBotChart, 2500);
+        chartUpdateInterval = setInterval(() => {
+            // Only refresh if candle time has elapsed
+            const nowSec = Math.floor(Date.now() / 1000);
+            let tfSeconds = 60;
+            if (currentChartTimeframe === '5m') tfSeconds = 300;
+            else if (currentChartTimeframe === '15m') tfSeconds = 900;
+            else if (currentChartTimeframe === '1h') tfSeconds = 3600;
+            
+            if (nowSec % tfSeconds < 5) {
+                updateLiveBotChart(false);
+            }
+        }, 5000);
 
     } catch (e) {
         console.error('Failed to initialize TradingView Lightweight Chart:', e);
@@ -3033,7 +3055,19 @@ async function updateLiveBotChart() {
         rsiSeriesInstance.setData(rsiSeries);
     }
 
-    if (isSymbolSwitch) {
+    // Initialize currentLiveCandle immediately from latest candle
+    if (candles && candles.length > 0) {
+        const lastBar = candles[candles.length - 1];
+        currentLiveCandle = {
+            time: lastBar.time,
+            open: lastBar.open,
+            high: lastBar.high,
+            low: lastBar.low,
+            close: lastBar.close
+        };
+    }
+
+    if (isSymbolSwitch || !chartWsConnection) {
         liveChartInstance.timeScale().fitContent();
         liveChartInstance.priceScale('right').applyOptions({ autoScale: true });
         if (liveRsiChartInstance) {

@@ -33,21 +33,23 @@ def _download_single_zip(url: str) -> pd.DataFrame:
         pass
     return None
 
-# ULTRA-FAST IN-MEMORY RAM CACHE (Auto-expires in 45 seconds for real-time fresh data)
+# ULTRA-FAST IN-MEMORY RAM CACHE (Fresh dynamic expiry for real-time live data)
 _RAM_KLINES_CACHE: Dict[str, Any] = {}
-_RAM_CACHE_EXPIRY_SEC = 45
 
 def fetch_fast_api_klines(symbol: str = "BTCUSDT", interval: str = "4h", total_candles: int = 3000) -> pd.DataFrame:
     """
-    Fetch 100% exact live klines matching Real Binance Mainnet market data with RAM cache.
+    Fetch 100% exact live klines matching Real Binance Mainnet market data with dynamic RAM cache.
     """
     symbol = symbol.upper().replace("/", "").replace("-", "").replace(":USDT", "")
     cache_key = f"{symbol}_{interval}_{total_candles}"
     now_t = time.time()
     
+    # 2s cache for short timeframes (1m, 5m), 15s for 15m/1h/4h
+    cache_expiry = 2 if interval in ["1m", "5m"] else 15
+
     if cache_key in _RAM_KLINES_CACHE:
         entry = _RAM_KLINES_CACHE[cache_key]
-        if now_t - entry["timestamp"] < _RAM_CACHE_EXPIRY_SEC:
+        if now_t - entry["timestamp"] < cache_expiry:
             return entry["df"].copy()
 
     limit = 1000
