@@ -35,6 +35,7 @@ def _download_single_zip(url: str) -> pd.DataFrame:
 
 # ULTRA-FAST IN-MEMORY RAM CACHE (Fresh dynamic expiry for real-time live data)
 _RAM_KLINES_CACHE: Dict[str, Any] = {}
+_RAM_CACHE_EXPIRY_SEC = 15
 
 def fetch_fast_api_klines(symbol: str = "BTCUSDT", interval: str = "4h", total_candles: int = 3000) -> pd.DataFrame:
     """

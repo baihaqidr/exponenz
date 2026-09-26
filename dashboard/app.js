@@ -2724,10 +2724,12 @@ function connectChartWebSocket(symbol, timeframe) {
         chartWsConnection = null;
     }
 
+    let binanceServerTimeOffset = 0;
+
     const wsUrls = [
-        'wss://fstream.binance.com/ws',
-        'wss://stream.binancefuture.com/ws',
-        `wss://fstream.binance.com/ws/${s}@kline_${interval}`
+        `wss://stream.binancefuture.com/stream?streams=${s}@kline_${interval}/${s}@bookTicker/${s}@aggTrade`,
+        `wss://fstream.binance.com/stream?streams=${s}@kline_${interval}/${s}@bookTicker/${s}@aggTrade`,
+        `wss://stream.binancefuture.com/ws/${s}@kline_${interval}`
     ];
     let currentUrlIdx = 0;
 
@@ -2742,17 +2744,6 @@ function connectChartWebSocket(symbol, timeframe) {
                     try { chartWsConnection.close(); } catch(e) {}
                     return;
                 }
-                try {
-                    chartWsConnection.send(JSON.stringify({
-                        method: "SUBSCRIBE",
-                        params: [
-                            `${s}@kline_${interval}`,
-                            `${s}@bookTicker`,
-                            `${s}@aggTrade`
-                        ],
-                        id: Date.now()
-                    }));
-                } catch (e) {}
             };
 
             chartWsConnection.onmessage = (event) => {
@@ -2760,15 +2751,21 @@ function connectChartWebSocket(symbol, timeframe) {
                     const ov = document.getElementById('chart-loading-overlay');
                     if (ov && ov.style.display !== 'none') ov.style.display = 'none';
 
-                    const msg = JSON.parse(event.data);
+                    const raw = JSON.parse(event.data);
+                    const msg = raw.data || raw;
+
+                    // Sync Binance Server Clock for 100% exact second countdown matching Binance
+                    if (msg.E) {
+                        binanceServerTimeOffset = msg.E - Date.now();
+                    }
                     
-                    // Strict Symbol & TF Filter
-                    if (msg.s && msg.s.toUpperCase() !== currentStreamingSymbol) return;
+                    // Strict Symbol Filter
+                    const eventSym = (msg.s || (msg.k ? msg.k.s : '')).toUpperCase();
+                    if (eventSym && eventSym !== currentStreamingSymbol) return;
                     
                     // Handle Kline stream event
                     const k = msg.k || (msg.e === 'kline' ? msg.k : null);
                     if (k && candleSeriesInstance) {
-                        if (k.s && k.s.toUpperCase() !== currentStreamingSymbol) return;
                         if (k.i && k.i !== currentStreamingTimeframe) return;
 
                         const candleTime = Math.floor(k.t / 1000);
@@ -2830,7 +2827,6 @@ function connectChartWebSocket(symbol, timeframe) {
 
                     // Handle Real-time Trade Execution (aggTrade)
                     if (msg.e === 'aggTrade' || (msg.p !== undefined && msg.q !== undefined)) {
-                        if (msg.s && msg.s.toUpperCase() !== currentStreamingSymbol) return;
                         const tradePrice = parseFloat(msg.p);
                         
                         const priceEl = document.getElementById('chart-live-price');
@@ -2840,8 +2836,10 @@ function connectChartWebSocket(symbol, timeframe) {
                         if (currentStreamingTimeframe === '5m') tfSec = 300;
                         else if (currentStreamingTimeframe === '15m') tfSec = 900;
                         else if (currentStreamingTimeframe === '1h') tfSec = 3600;
+                        else if (currentStreamingTimeframe === '4h') tfSec = 14400;
 
-                        const expectedCandleTime = Math.floor(Math.floor(Date.now() / 1000) / tfSec) * tfSec;
+                        const tradeTimeMs = msg.T || msg.E || Date.now();
+                        const expectedCandleTime = Math.floor(tradeTimeMs / 1000 / tfSec) * tfSec;
 
                         if (!currentLiveCandle || currentLiveCandle.time < expectedCandleTime) {
                             const prevClose = currentLiveCandle ? currentLiveCandle.close : tradePrice;
@@ -2882,8 +2880,6 @@ function connectChartWebSocket(symbol, timeframe) {
 
                     // Handle BookTicker stream event (Ask / Bid)
                     if (msg.b !== undefined && msg.a !== undefined) {
-                        if (msg.s && msg.s.toUpperCase() !== currentStreamingSymbol) return;
-                        
                         const bestBid = parseFloat(msg.b);
                         const bestAsk = parseFloat(msg.a);
 
@@ -2904,21 +2900,22 @@ function connectChartWebSocket(symbol, timeframe) {
             chartWsConnection.onclose = () => {
                 if (currentStreamingSymbol !== symbol.toUpperCase()) return;
                 currentUrlIdx++;
-                setTimeout(createWs, 2000);
+                setTimeout(createWs, 1500);
             };
         } catch (e) {}
     }
 
     createWs();
 
-    // Candle Countdown Timer (e.g. 00:45)
+    // Candle Countdown Timer (e.g. 00:45) - 100% Synchronized with Binance Server Clock
     if (candleCountdownInterval) clearInterval(candleCountdownInterval);
     function updateCountdown() {
-        const nowSec = Math.floor(Date.now() / 1000);
+        const nowSec = Math.floor((Date.now() + binanceServerTimeOffset) / 1000);
         let tfSeconds = 60;
         if (interval === '5m') tfSeconds = 300;
         else if (interval === '15m') tfSeconds = 900;
         else if (interval === '1h') tfSeconds = 3600;
+        else if (interval === '4h') tfSeconds = 14400;
 
         const remaining = tfSeconds - (nowSec % tfSeconds);
         const mm = String(Math.floor(remaining / 60)).padStart(2, '0');

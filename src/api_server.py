@@ -451,7 +451,10 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
 
     def _backtest_single_symbol(self, symbol: str, interval: str, strategy_id: str, leverage: float, risk_pct: float, candles: int) -> Dict[str, Any]:
         try:
-            df = fetch_binance_futures_klines(symbol=symbol, interval=interval, total_candles=candles, use_cache=False)
+            import importlib
+            import src.data_fetcher
+            importlib.reload(src.data_fetcher)
+            df = src.data_fetcher.fetch_binance_futures_klines(symbol=symbol, interval=interval, total_candles=candles, use_cache=False)
             if df is None or len(df) < 30:
                 return {
                     "symbol": symbol,
@@ -603,6 +606,9 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
 
     def handle_matrix(self, req: Dict[str, Any]):
         try:
+            import importlib
+            import src.data_fetcher
+            importlib.reload(src.data_fetcher)
             raw_symbols = req.get("symbols") or req.get("pairs") or DEFAULT_MATRIX_PAIRS
             # Clean & preserve unique order
             symbols = list(dict.fromkeys([str(s).upper().strip() for s in raw_symbols if s]))
