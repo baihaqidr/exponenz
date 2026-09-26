@@ -215,7 +215,7 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                     
                     for i in range(len(df_plot)):
                         row = df_plot.iloc[i]
-                        t_sec = int(row['timestamp'].timestamp())
+                        t_sec = int(row['open_time'] / 1000) if 'open_time' in row and pd.notnull(row['open_time']) else int(row['timestamp'].timestamp())
                         c_open = float(row['open'])
                         c_close = float(row['close'])
                         c_vol = float(row.get('volume', 0.0))
