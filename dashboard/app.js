@@ -2345,7 +2345,7 @@ function initLiveBotChart() {
             layout: {
                 background: { color: '#ffffff' },
                 textColor: '#334155',
-                fontFamily: "'JetBrains Mono', 'Space Grotesk', monospace",
+                fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
                 fontSize: 12
             },
             grid: {
@@ -2440,7 +2440,7 @@ function initLiveBotChart() {
                 layout: {
                     background: { color: '#ffffff' },
                     textColor: '#64748b',
-                    fontFamily: "'JetBrains Mono', monospace",
+                    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
                     fontSize: 11
                 },
                 grid: {

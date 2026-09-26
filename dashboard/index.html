@@ -4,15 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
     <title>EXPONENZ — Quantitative Intelligence Hub</title>
-    <!-- Google Fonts: Space Grotesk, JetBrains Mono, Inter -->
+    <!-- Google Fonts: Plus Jakarta Sans, Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- TradingView Lightweight Charts for Live Indicator & Candlestick Plotting -->
     <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
-    <link rel="stylesheet" href="style.css?v=6.0">
+    <link rel="stylesheet" href="style.css?v=36.0">
 </head>
 <body>
     <div class="app-container">
@@ -590,7 +590,7 @@
                     <!-- Chart Canvas Container (Main Candlestick & Overlays) -->
                     <div id="live-bot-chart-container" style="width: 100%; height: 350px; border-radius: 8px 8px 0 0; overflow: hidden; background: #ffffff; border: 1px solid var(--border-color); border-bottom: none; position: relative;">
                         <!-- Binance Style Live OHLC & Dynamic Indicator Hover Legend -->
-                        <div id="chart-ohlc-legend" style="position: absolute; top: 10px; left: 12px; z-index: 4; font-family: 'JetBrains Mono', 'Space Grotesk', monospace; font-size: 0.78rem; pointer-events: none; line-height: 1.45; background: rgba(255,255,255,0.94); backdrop-filter: blur(4px); padding: 5px 10px; border-radius: 6px; border: 1px solid rgba(226, 232, 240, 0.85); box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+                        <div id="chart-ohlc-legend" style="position: absolute; top: 10px; left: 12px; z-index: 4; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 0.78rem; pointer-events: none; line-height: 1.45; background: rgba(255,255,255,0.94); backdrop-filter: blur(4px); padding: 5px 10px; border-radius: 6px; border: 1px solid rgba(226, 232, 240, 0.85); box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
                             <div id="chart-legend-line1" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: #475569;">
                                 <span id="legend-time" style="color: #64748b; font-weight: 600;">--/--/-- --:--</span>
                                 <span>Open <strong id="legend-open" style="color: #0ecb81;">-</strong></span>
@@ -609,7 +609,7 @@
                         </div>
 
                         <!-- Binance Official Real-Time Ask / Bid & Countdown Pill Tag -->
-                        <div id="chart-bid-ask-box" style="position: absolute; right: 75px; top: 10px; z-index: 4; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; display: flex; align-items: center; gap: 4px; pointer-events: none;">
+                        <div id="chart-bid-ask-box" style="position: absolute; right: 75px; top: 10px; z-index: 4; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 0.72rem; display: flex; align-items: center; gap: 4px; pointer-events: none;">
                             <div style="background: rgba(246, 70, 93, 0.95); color: #fff; padding: 2px 7px; border-radius: 4px; font-weight: 700; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(246,70,93,0.2);">
                                 <span style="font-size: 0.62rem; opacity: 0.85;">Ask</span>
                                 <span id="live-ask-val">-</span>
@@ -631,7 +631,7 @@
 
                     <!-- RSI (14) OSCILLATOR SUB-PANE -->
                     <div id="live-bot-rsi-container" style="width: 100%; height: 110px; border-radius: 0 0 8px 8px; overflow: hidden; background: #ffffff; border: 1px solid var(--border-color); position: relative;">
-                        <div id="rsi-subpane-title" style="position: absolute; top: 6px; left: 12px; z-index: 4; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; font-weight: 700; color: #8b5cf6; pointer-events: none; background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(226,232,240,0.8);">
+                        <div id="rsi-subpane-title" style="position: absolute; top: 6px; left: 12px; z-index: 4; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 0.72rem; font-weight: 700; color: #8b5cf6; pointer-events: none; background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(226,232,240,0.8);">
                             RSI (14) <span style="color: #64748b; font-weight: 500; font-size: 0.68rem;">[OB: 70 / OS: 30]</span>
                         </div>
                     </div>
@@ -842,7 +842,7 @@
             } catch(e) {}
         })();
     </script>
-    <script src="app.js?v=34.0"></script>
+    <script src="app.js?v=36.0"></script>
 </body>
 </html>
 
