@@ -3206,7 +3206,6 @@ async function updateLiveBotChart() {
     }
 
     // Update Header Display
-    const titleEl = document.getElementById('live-chart-symbol-title');
     if (titleEl) titleEl.textContent = `${sym} (${tf})`;
 
     const priceEl = document.getElementById('chart-live-price');
