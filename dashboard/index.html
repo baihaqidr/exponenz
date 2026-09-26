@@ -819,7 +819,30 @@
         </div>
     </div>
 
-    <script src="app.js?v=29.0"></script>
+    <script>
+        // 0-ms instant visual pre-hydration for duplicated tabs & page reloads
+        (function() {
+            try {
+                var cachedRaw = localStorage.getItem('bot_active_state');
+                if (!cachedRaw) return;
+                var cached = JSON.parse(cachedRaw);
+                if (!cached) return;
+                if (cached.is_running) {
+                    var statusBadge = document.getElementById('bot-status-badge');
+                    var statusText = document.getElementById('bot-status-text');
+                    var btnStart = document.getElementById('btn-start-bot');
+                    var btnStop = document.getElementById('btn-stop-bot');
+                    if (statusBadge) statusBadge.className = 'bot-status-badge running';
+                    var wl = cached.watchlist || ['BTCUSDT'];
+                    var wlText = wl.length > 8 ? (wl.length + ' PAIRS AUTO-HUNT (' + wl.slice(0, 5).join(', ') + ' +' + (wl.length - 5) + ' lainnya)') : (wl.length + ' PAIR: ' + wl.join(', '));
+                    if (statusText) statusText.innerHTML = '<span class="pulse-dot green"></span> BOT ACTIVE (SCANNING ' + wlText + ')';
+                    if (btnStart) btnStart.style.display = 'none';
+                    if (btnStop) btnStop.style.display = 'inline-flex';
+                }
+            } catch(e) {}
+        })();
+    </script>
+    <script src="app.js?v=31.0"></script>
 </body>
 </html>
 

@@ -67,6 +67,102 @@ const state = {
     isLoading: false
 };
 
+// --- INSTANT 0-MS CLIENT HYDRATION FOR TAB DUPLICATION & RELOAD ---
+function fastHydrateBotState() {
+    try {
+        const cachedRaw = localStorage.getItem('bot_active_state');
+        if (!cachedRaw) return;
+        const cached = JSON.parse(cachedRaw);
+        if (!cached) return;
+
+        if (Array.isArray(cached.watchlist) && cached.watchlist.length > 0) {
+            state.botWatchlist = [...cached.watchlist];
+            if (cached.watchlist.length > 1) {
+                state.watchlistMode = 'multi';
+            }
+            if (!state.chartFocusSymbol || !cached.watchlist.includes(state.chartFocusSymbol)) {
+                state.chartFocusSymbol = cached.watchlist[0];
+            }
+        }
+        if (cached.active_strategy_id) {
+            state.selectedStrategy = cached.active_strategy_id;
+        }
+        if (cached.timeframe) {
+            state.selectedTimeframe = cached.timeframe;
+        }
+        if (cached.leverage) {
+            state.selectedLeverage = cached.leverage;
+        }
+
+        // Synchronously update DOM elements if available
+        const statusBadge = document.getElementById('bot-status-badge');
+        const statusText = document.getElementById('bot-status-text');
+        const btnStart = document.getElementById('btn-start-bot');
+        const btnStop = document.getElementById('btn-stop-bot');
+        const botStratSelect = document.getElementById('bot-strategy-select');
+        const botTfSelect = document.getElementById('bot-timeframe-select');
+        const botLevSelect = document.getElementById('bot-leverage-select');
+        const btnSingle = document.getElementById('mode-single-coin');
+        const btnMulti = document.getElementById('mode-multi-coin');
+
+        if (state.watchlistMode === 'multi' && btnMulti && btnSingle) {
+            btnMulti.classList.add('active');
+            btnSingle.classList.remove('active');
+        } else if (state.watchlistMode === 'single' && btnSingle && btnMulti) {
+            btnSingle.classList.add('active');
+            btnMulti.classList.remove('active');
+        }
+
+        if (botStratSelect && cached.active_strategy_id && document.activeElement !== botStratSelect) {
+            const stratId = (cached.active_strategy_id === 'price_ema_7') ? 'price_ema_crossover' : cached.active_strategy_id;
+            const hasOption = Array.from(botStratSelect.options).some(o => o.value === stratId);
+            if (hasOption) botStratSelect.value = stratId;
+        }
+        if (botTfSelect && cached.timeframe && document.activeElement !== botTfSelect) {
+            botTfSelect.value = cached.timeframe;
+        }
+        if (botLevSelect && cached.leverage && document.activeElement !== botLevSelect) {
+            botLevSelect.value = String(cached.leverage);
+        }
+
+        if (cached.is_running) {
+            if (statusBadge) statusBadge.className = 'bot-status-badge running';
+            const wl = state.botWatchlist || ['BTCUSDT'];
+            const wlText = wl.length > 8 ? `${wl.length} PAIRS AUTO-HUNT (${wl.slice(0, 5).join(', ')} +${wl.length - 5} lainnya)` : `${wl.length} PAIR: ${wl.join(', ')}`;
+            if (statusText) statusText.innerHTML = `<span class="pulse-dot green"></span> BOT ACTIVE (SCANNING ${wlText})`;
+            if (btnStart) btnStart.style.display = 'none';
+            if (btnStop) btnStop.style.display = 'inline-flex';
+        } else {
+            if (statusBadge) statusBadge.className = 'bot-status-badge';
+            if (statusText) statusText.innerHTML = `<span class="pulse-dot"></span> BOT STANDBY / READY`;
+            if (btnStart) btnStart.style.display = 'inline-flex';
+            if (btnStop) btnStop.style.display = 'none';
+        }
+
+        if (typeof renderWatchlistChips === 'function') {
+            renderWatchlistChips();
+        }
+    } catch (e) {
+        console.error('fastHydrateBotState error:', e);
+    }
+}
+
+// Preload state into memory immediately at script load
+try {
+    const cachedRaw = localStorage.getItem('bot_active_state');
+    if (cachedRaw) {
+        const cached = JSON.parse(cachedRaw);
+        if (cached && Array.isArray(cached.watchlist) && cached.watchlist.length > 0) {
+            state.botWatchlist = [...cached.watchlist];
+            state.chartFocusSymbol = cached.watchlist[0];
+            if (cached.watchlist.length > 1) state.watchlistMode = 'multi';
+        }
+        if (cached && cached.active_strategy_id) state.selectedStrategy = cached.active_strategy_id;
+        if (cached && cached.timeframe) state.selectedTimeframe = cached.timeframe;
+        if (cached && cached.leverage) state.selectedLeverage = cached.leverage;
+    }
+} catch (e) {}
+
 // Global formatters
 function formatCleanPrice(val) {
     if (val === undefined || val === null || isNaN(val)) return '0.00';
@@ -146,6 +242,9 @@ const simApyVal = document.getElementById('sim-apy-val');
 
 // --- 1. INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
+    // 0-ms instant hydration from cache
+    try { fastHydrateBotState(); } catch(e) { console.error('fastHydrate error:', e); }
+
     try { initClock(); } catch(e) { console.error('initClock error:', e); }
     try { setupEventListeners(); } catch(e) { console.error('setupEventListeners error:', e); }
     try { initBinanceLiveTickerStream(); } catch(e) { console.error('initTicker error:', e); }
@@ -157,6 +256,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     try { await runMasterMatrix(); } catch(e) { console.error('runMasterMatrix error:', e); }
     // Preload funding data in background
     try { loadLiveFundingRates(); } catch(e) { console.error('loadFunding error:', e); }
+
+    // Multi-tab instant sync listener
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'bot_active_state') {
+            fastHydrateBotState();
+        }
+    });
+
+    // Continuous 2s bot status polling
+    setInterval(loadBotStatus, 2000);
 });
 
 // --- 2. LIVE WIB CLOCK & COUNTDOWN ---
@@ -1542,14 +1651,62 @@ async function loadBotStatus() {
             }
         }
 
+        // Sync Timeframe & Leverage Dropdowns
+        const botTfSelect = document.getElementById('bot-timeframe-select');
+        if (botTfSelect && data.is_running && data.timeframe && document.activeElement !== botTfSelect) {
+            if (botTfSelect.value !== data.timeframe) botTfSelect.value = data.timeframe;
+        }
+        const botLevSelect = document.getElementById('bot-leverage-select');
+        if (botLevSelect && data.is_running && data.leverage && document.activeElement !== botLevSelect) {
+            if (botLevSelect.value !== String(data.leverage)) botLevSelect.value = String(data.leverage);
+        }
+
         if (data.is_running) {
+            // Persist to localStorage for 0ms instant load on duplicate tabs / refresh
+            localStorage.setItem('bot_active_state', JSON.stringify({
+                is_running: true,
+                watchlist: data.watchlist || state.botWatchlist,
+                active_strategy_id: data.active_strategy_id || state.selectedStrategy,
+                timeframe: data.timeframe || state.selectedTimeframe,
+                leverage: data.leverage || state.selectedLeverage || 3,
+                risk_pct: data.risk_pct || state.selectedRisk || 'fixed_250',
+                timestamp: Date.now()
+            }));
+
+            // Sync watchlist chips in state if changed on backend
+            if (Array.isArray(data.watchlist) && data.watchlist.length > 0) {
+                const isDiff = data.watchlist.length !== state.botWatchlist.length || 
+                               data.watchlist.some((s, idx) => s !== state.botWatchlist[idx]);
+                if (isDiff) {
+                    state.botWatchlist = [...data.watchlist];
+                    if (state.botWatchlist.length > 1) {
+                        state.watchlistMode = 'multi';
+                        const btnSingle = document.getElementById('mode-single-coin');
+                        const btnMulti = document.getElementById('mode-multi-coin');
+                        if (btnSingle && btnMulti) {
+                            btnMulti.classList.add('active');
+                            btnSingle.classList.remove('active');
+                        }
+                    }
+                    if (!state.chartFocusSymbol || !state.botWatchlist.includes(state.chartFocusSymbol)) {
+                        state.chartFocusSymbol = state.botWatchlist[0];
+                    }
+                    renderWatchlistChips();
+                }
+            }
+
             if (statusBadge) statusBadge.className = 'bot-status-badge running';
-            const wl = data.watchlist || ['BTCUSDT'];
+            const wl = data.watchlist || state.botWatchlist || ['BTCUSDT'];
             const wlText = wl.length > 8 ? `${wl.length} PAIRS AUTO-HUNT (${wl.slice(0, 5).join(', ')} +${wl.length - 5} lainnya)` : `${wl.length} PAIR: ${wl.join(', ')}`;
             if (statusText) statusText.innerHTML = `<span class="pulse-dot green"></span> BOT ACTIVE (SCANNING ${wlText})`;
             if (btnStart) btnStart.style.display = 'none';
             if (btnStop) btnStop.style.display = 'inline-flex';
         } else {
+            localStorage.setItem('bot_active_state', JSON.stringify({
+                is_running: false,
+                watchlist: state.botWatchlist,
+                timestamp: Date.now()
+            }));
             if (statusBadge) statusBadge.className = 'bot-status-badge';
             if (statusText) statusText.innerHTML = `<span class="pulse-dot"></span> BOT STANDBY / READY`;
             if (btnStart) btnStart.style.display = 'inline-flex';
@@ -1794,6 +1951,27 @@ async function startBotAutomation() {
 
     const watchlist = (state.botWatchlist && state.botWatchlist.length > 0) ? state.botWatchlist : ["ETHUSDT"];
 
+    // 0-ms instant optimistic UI & localStorage update
+    const statusBadge = document.getElementById('bot-status-badge');
+    const statusText = document.getElementById('bot-status-text');
+    const btnStart = document.getElementById('btn-start-bot');
+    const btnStop = document.getElementById('btn-stop-bot');
+    if (statusBadge) statusBadge.className = 'bot-status-badge running';
+    const wlText = watchlist.length > 8 ? `${watchlist.length} PAIRS AUTO-HUNT (${watchlist.slice(0, 5).join(', ')} +${watchlist.length - 5} lainnya)` : `${watchlist.length} PAIR: ${watchlist.join(', ')}`;
+    if (statusText) statusText.innerHTML = `<span class="pulse-dot green"></span> BOT ACTIVE (SCANNING ${wlText})`;
+    if (btnStart) btnStart.style.display = 'none';
+    if (btnStop) btnStop.style.display = 'inline-flex';
+
+    localStorage.setItem('bot_active_state', JSON.stringify({
+        is_running: true,
+        watchlist: watchlist,
+        active_strategy_id: strategy_id,
+        timeframe: timeframe,
+        leverage: leverage,
+        risk_pct: risk_pct,
+        timestamp: Date.now()
+    }));
+
     try {
         const res = await fetch('/api/bot/start', {
             method: 'POST',
@@ -1809,6 +1987,22 @@ async function startBotAutomation() {
 }
 
 async function stopBotAutomation() {
+    // 0-ms instant optimistic UI & localStorage update
+    const statusBadge = document.getElementById('bot-status-badge');
+    const statusText = document.getElementById('bot-status-text');
+    const btnStart = document.getElementById('btn-start-bot');
+    const btnStop = document.getElementById('btn-stop-bot');
+    if (statusBadge) statusBadge.className = 'bot-status-badge';
+    if (statusText) statusText.innerHTML = `<span class="pulse-dot"></span> BOT STANDBY / READY`;
+    if (btnStart) btnStart.style.display = 'inline-flex';
+    if (btnStop) btnStop.style.display = 'none';
+
+    localStorage.setItem('bot_active_state', JSON.stringify({
+        is_running: false,
+        watchlist: state.botWatchlist,
+        timestamp: Date.now()
+    }));
+
     try {
         const res = await fetch('/api/bot/stop', {
             method: 'POST',
