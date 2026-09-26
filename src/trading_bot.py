@@ -188,14 +188,23 @@ class LiveTradingBot:
         }
 
     def _run_loop(self):
+        last_heartbeat_time = time.time()
         while self.is_running:
             try:
+                now = time.time()
+                if now - last_heartbeat_time >= 25:
+                    last_heartbeat_time = now
+                    open_pos = self.engine.get_open_positions()
+                    pos_count = len(open_pos)
+                    pos_str = f" | {pos_count} Posisi Aktif" if pos_count > 0 else ""
+                    self._log("SCAN", f"🔍 Memindai {len(self.watchlist)} pairs ({self.timeframe}) - Algoritma aktif memantau sinyal candle bursa...{pos_str}")
+
                 self._scan_market()
             except Exception as e:
                 self._log("ERROR", f"Error pemindaian market: {e}")
 
             # Polling kilat 500ms agar tepat mengeksekusi di detik :00 saat pergantian lilin
-            for _ in range(5):
+            for _ in range(10):
                 if not self.is_running:
                     break
                 time.sleep(0.1)
@@ -225,11 +234,6 @@ class LiveTradingBot:
                 closed_ema = float(closed_candle.get("ema_7", closed_candle.get("ema_main", closed_close)))
                 closed_high = float(closed_candle.get("high", closed_close))
                 closed_low = float(closed_candle.get("low", closed_close))
-
-                # Proteksi awal saat start bot
-                if sym not in self.last_traded_candles:
-                    self.last_traded_candles[sym] = closed_time
-                    return
 
                 # Wajib HANYA mengevaluasi saat lilin baru resmi close
                 if self.last_traded_candles.get(sym) == closed_time:

@@ -1911,6 +1911,7 @@ function renderBotLogs(logs) {
         if (tag === 'SUCCESS' || tag === 'START') tagColor = '#10b981';
         if (tag === 'WARNING' || tag === 'SIGNAL' || tag === 'ORDER') tagColor = '#f59e0b';
         if (tag === 'ERROR' || tag === 'REJECT') tagColor = '#f43f5e';
+        if (tag === 'SCAN') tagColor = '#38bdf8';
 
         const timeStr = log.time || log.timestamp || '00:00:00';
 
