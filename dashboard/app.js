@@ -163,16 +163,19 @@ try {
     }
 } catch (e) {}
 
-// Global formatters
+// Global formatters with Binance thousand separators
 function formatCleanPrice(val) {
     if (val === undefined || val === null || isNaN(val)) return '0.00';
     const num = Number(val);
     if (num === 0) return '0.00';
-    if (num < 0.0001) return num.toFixed(8);
-    if (num < 0.01) return num.toFixed(6);
-    if (num < 0.1) return num.toFixed(5);
-    if (num < 50.0) return num.toFixed(4);
-    return num.toFixed(2);
+    let decimals = 2;
+    if (num < 0.0001) decimals = 8;
+    else if (num < 0.01) decimals = 6;
+    else if (num < 0.1) decimals = 5;
+    else if (num < 50.0) decimals = 4;
+    else decimals = 2;
+
+    return num.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
 function formatExactPrice(val) {
