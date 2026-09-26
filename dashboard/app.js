@@ -370,16 +370,7 @@ function setupEventListeners() {
     if (botTfSelectEl) {
         botTfSelectEl.addEventListener('change', (e) => {
             const tfVal = e.target.value;
-            state.selectedTimeframe = tfVal;
-            // Sinkronisasi otomatis ke tombol Timeframe Tab Backtest Matriks
-            if (timeframeGroup) {
-                timeframeGroup.querySelectorAll('.tf-btn').forEach(b => {
-                    if (b.getAttribute('data-tf') === tfVal) b.classList.add('active');
-                    else b.classList.remove('active');
-                });
-            }
             changeChartTimeframe(tfVal);
-            runMasterMatrix();
         });
     }
 
@@ -402,11 +393,14 @@ function setupEventListeners() {
             e.target.classList.add('active');
             const tfVal = e.target.getAttribute('data-tf');
             state.selectedTimeframe = tfVal;
-            // Sinkronisasi otomatis ke dropdown Timeframe Tab Live Bot
-            if (botTfSelectEl && botTfSelectEl.value !== tfVal) {
-                botTfSelectEl.value = tfVal;
+            // Sinkronisasi ke dropdown Timeframe Tab Live Bot HANYA jika timeframe didukung oleh chart live bot (1m, 5m, 15m, 1h, 4h)
+            const validBotTfs = ['1m', '5m', '15m', '1h', '4h'];
+            if (validBotTfs.includes(tfVal)) {
+                if (botTfSelectEl && botTfSelectEl.value !== tfVal) {
+                    botTfSelectEl.value = tfVal;
+                }
+                changeChartTimeframe(tfVal);
             }
-            changeChartTimeframe(tfVal);
             runMasterMatrix();
         });
     });
@@ -3073,6 +3067,8 @@ async function updateLiveBotChart() {
     lastFetchedCandles = candles;
     currentStrategyTitle = stratName;
 
+    const latestClose = (candles && candles.length > 0) ? candles[candles.length - 1].close : 0;
+
     // Determine precision dynamically from symbol and latest price matching Binance Futures
     const symUpper = sym.toUpperCase();
     if (symUpper.includes('BTC') || latestClose >= 20000) {
@@ -3235,12 +3231,19 @@ async function updateLiveBotChart() {
 }
 
 function changeChartTimeframe(tf) {
-    currentChartTimeframe = tf;
+    const validTfs = ['1m', '5m', '15m', '1h', '4h'];
+    const chosenTf = validTfs.includes(tf) ? tf : '1m';
+    currentChartTimeframe = chosenTf;
     const btns = document.querySelectorAll('#chart-tf-buttons .tf-btn');
     btns.forEach(b => {
-        if (b.getAttribute('data-chart-tf') === tf) b.classList.add('active');
+        if (b.getAttribute('data-chart-tf') === chosenTf) b.classList.add('active');
         else b.classList.remove('active');
     });
+
+    const botTfSelect = document.getElementById('bot-timeframe-select');
+    if (botTfSelect && botTfSelect.value !== chosenTf) {
+        botTfSelect.value = chosenTf;
+    }
 
     const overlay = document.getElementById('chart-loading-overlay');
     if (overlay) overlay.style.display = 'flex';
