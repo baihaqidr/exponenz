@@ -95,7 +95,7 @@ def fetch_fast_api_klines(symbol: str = "BTCUSDT", interval: str = "4h", total_c
     if all_rows:
         cols = ['open_time', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_volume', 'count', 'taker_buy_volume', 'taker_buy_quote_volume', 'ignore']
         df = pd.DataFrame(all_rows, columns=cols[:len(all_rows[0])])
-        df['timestamp'] = pd.to_datetime(df['open_time'], unit='ms', utc=True)
+        df['timestamp'] = pd.to_datetime(df['open_time'], unit='ms')
         for c in ['open_time', 'open', 'high', 'low', 'close', 'volume', 'quote_volume']:
             if c in df.columns:
                 df[c] = df[c].astype(float)

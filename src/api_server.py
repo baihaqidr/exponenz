@@ -476,7 +476,9 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                 }
 
             # Check if pair is delisted/frozen (latest candle older than 45 days)
-            latest_time = df['timestamp'].iloc[-1]
+            latest_time = pd.to_datetime(df['timestamp'].iloc[-1])
+            if hasattr(latest_time, 'tzinfo') and latest_time.tzinfo is not None:
+                latest_time = latest_time.tz_localize(None)
             if latest_time < (pd.Timestamp.now() - pd.Timedelta(days=45)):
                 return {
                     "symbol": symbol,
