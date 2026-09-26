@@ -163,17 +163,35 @@ try {
     }
 } catch (e) {}
 
-// Global formatters with Binance thousand separators
-function formatCleanPrice(val) {
-    if (val === undefined || val === null || isNaN(val)) return '0.00';
+// Global formatters with Binance thousand separators and exact Futures tick precision
+function formatCleanPrice(val, customPrecision) {
+    if (val === undefined || val === null || isNaN(val)) return '0.0';
     const num = Number(val);
-    if (num === 0) return '0.00';
+    if (num === 0) return '0.0';
+    
     let decimals = 2;
-    if (num < 0.0001) decimals = 8;
-    else if (num < 0.01) decimals = 6;
-    else if (num < 0.1) decimals = 5;
-    else if (num < 50.0) decimals = 4;
-    else decimals = 2;
+    if (customPrecision !== undefined && customPrecision !== null) {
+        decimals = customPrecision;
+    } else {
+        const sym = (state && state.chartFocusSymbol) ? state.chartFocusSymbol.toUpperCase() : '';
+        if (sym.includes('BTC') || num >= 20000) {
+            decimals = 1; // Binance Futures BTCUSDT tickSize is 0.1 (1 decimal place)
+        } else if (sym.includes('ETH') || sym.includes('BNB') || sym.includes('SOL') || num >= 50.0) {
+            decimals = 2;
+        } else if (sym.includes('NEAR') || sym.includes('SUI')) {
+            decimals = 3;
+        } else if (num < 0.0001) {
+            decimals = 8;
+        } else if (num < 0.01) {
+            decimals = 6;
+        } else if (num < 0.1) {
+            decimals = 5;
+        } else if (num < 50.0) {
+            decimals = 4;
+        } else {
+            decimals = 2;
+        }
+    }
 
     return num.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
@@ -2821,28 +2839,47 @@ function connectChartWebSocket(symbol, timeframe) {
                         const priceEl = document.getElementById('chart-live-price');
                         if (priceEl) priceEl.textContent = `$${formatCleanPrice(tradePrice)}`;
 
-                        if (currentLiveCandle && candleSeriesInstance) {
+                        let tfSec = 60;
+                        if (currentStreamingTimeframe === '5m') tfSec = 300;
+                        else if (currentStreamingTimeframe === '15m') tfSec = 900;
+                        else if (currentStreamingTimeframe === '1h') tfSec = 3600;
+
+                        const expectedCandleTime = Math.floor(Math.floor(Date.now() / 1000) / tfSec) * tfSec;
+
+                        if (!currentLiveCandle || currentLiveCandle.time < expectedCandleTime) {
+                            const prevClose = currentLiveCandle ? currentLiveCandle.close : tradePrice;
+                            currentLiveCandle = {
+                                time: expectedCandleTime,
+                                open: prevClose,
+                                high: Math.max(prevClose, tradePrice),
+                                low: Math.min(prevClose, tradePrice),
+                                close: tradePrice
+                            };
+                        } else {
                             currentLiveCandle.close = tradePrice;
                             if (tradePrice > currentLiveCandle.high) currentLiveCandle.high = tradePrice;
                             if (tradePrice < currentLiveCandle.low) currentLiveCandle.low = tradePrice;
+                        }
+
+                        if (candleSeriesInstance) {
                             candleSeriesInstance.update(currentLiveCandle);
+                        }
 
-                            if (emaLineSeriesInstance && lastFetchedEma && lastFetchedEma.length > 0) {
-                                let prevEma = lastFetchedEma[lastFetchedEma.length - 1].value;
-                                const multiplier = 2.0 / (7.0 + 1.0);
-                                const liveEmaVal = (tradePrice - prevEma) * multiplier + prevEma;
-                                currentLiveEma = liveEmaVal;
-                                emaLineSeriesInstance.update({
-                                    time: currentLiveCandle.time,
-                                    value: liveEmaVal
-                                });
-                                const emaLegendEl = document.getElementById('chart-ema-legend');
-                                if (emaLegendEl) emaLegendEl.textContent = `EMA 7: $${formatCleanPrice(liveEmaVal)}`;
-                            }
+                        if (emaLineSeriesInstance && lastFetchedEma && lastFetchedEma.length > 0) {
+                            let prevEma = lastFetchedEma[lastFetchedEma.length - 1].value;
+                            const multiplier = 2.0 / (7.0 + 1.0);
+                            const liveEmaVal = (tradePrice - prevEma) * multiplier + prevEma;
+                            currentLiveEma = liveEmaVal;
+                            emaLineSeriesInstance.update({
+                                time: currentLiveCandle.time,
+                                value: liveEmaVal
+                            });
+                            const emaLegendEl = document.getElementById('chart-ema-legend');
+                            if (emaLegendEl) emaLegendEl.textContent = `EMA 7: $${formatCleanPrice(liveEmaVal)}`;
+                        }
 
-                            if (!isUserHoveringHistoricalBar) {
-                                updateChartLegend(currentLiveCandle, currentLiveEma, currentLiveRsi, currentLiveUpper, currentLiveLower);
-                            }
+                        if (!isUserHoveringHistoricalBar) {
+                            updateChartLegend(currentLiveCandle, currentLiveEma, currentLiveRsi, currentLiveUpper, currentLiveLower);
                         }
                     }
 
@@ -3011,13 +3048,33 @@ async function updateLiveBotChart() {
     lastFetchedCandles = candles;
     currentStrategyTitle = stratName;
 
-    // Determine precision dynamically from latest price
-    const latestClose = candles[candles.length - 1].close;
-    if (latestClose < 0.0001) { precision = 8; minMove = 0.00000001; }
-    else if (latestClose < 0.01) { precision = 6; minMove = 0.000001; }
-    else if (latestClose < 0.1) { precision = 5; minMove = 0.00001; }
-    else if (latestClose < 50.0) { precision = 4; minMove = 0.0001; }
-    else { precision = 2; minMove = 0.01; }
+    // Determine precision dynamically from symbol and latest price matching Binance Futures
+    const symUpper = sym.toUpperCase();
+    if (symUpper.includes('BTC') || latestClose >= 20000) {
+        precision = 1; // Binance Futures BTCUSDT tickSize is 0.1 (1 decimal)
+        minMove = 0.1;
+    } else if (symUpper.includes('ETH') || symUpper.includes('BNB') || symUpper.includes('SOL') || latestClose >= 50.0) {
+        precision = 2;
+        minMove = 0.01;
+    } else if (symUpper.includes('NEAR') || symUpper.includes('SUI')) {
+        precision = 3;
+        minMove = 0.001;
+    } else if (latestClose < 0.0001) {
+        precision = 8;
+        minMove = 0.00000001;
+    } else if (latestClose < 0.01) {
+        precision = 6;
+        minMove = 0.000001;
+    } else if (latestClose < 0.1) {
+        precision = 5;
+        minMove = 0.00001;
+    } else if (latestClose < 50.0) {
+        precision = 4;
+        minMove = 0.0001;
+    } else {
+        precision = 2;
+        minMove = 0.01;
+    }
 
     const pOptions = {
         priceFormat: {
