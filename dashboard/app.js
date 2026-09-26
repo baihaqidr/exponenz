@@ -2947,6 +2947,13 @@ async function updateLiveBotChart() {
     const botStratSelect = document.getElementById('bot-strategy-select');
     const currentStratId = botStratSelect ? botStratSelect.value : (state.selectedStrategy || 'price_ema_crossover');
 
+    // IMMEDIATELY lock streaming symbol and update UI title to prevent old ticker ticks from bleeding in
+    currentStreamingSymbol = sym.toUpperCase();
+    currentStreamingTimeframe = tf;
+
+    const titleEl = document.getElementById('live-chart-symbol-title');
+    if (titleEl) titleEl.textContent = `${sym} (${tf})`;
+
     const reqId = ++activeChartRequestId;
     const isSymbolSwitch = (lastChartSymbol !== sym || lastChartTf !== tf);
 
@@ -2962,7 +2969,7 @@ async function updateLiveBotChart() {
         lastFetchedLower = [];
         lastFetchedRsi = [];
 
-        // 1. Immediately disconnect old websocket so ticks from old pair or raw ticks don't clash
+        // 1. Immediately disconnect old websocket so ticks from old pair don't clash
         if (chartWsConnection) {
             try {
                 chartWsConnection.onmessage = null;
@@ -2973,7 +2980,7 @@ async function updateLiveBotChart() {
             chartWsConnection = null;
         }
 
-        // 2. Clear old chart series immediately to eliminate price scale glitch
+        // 2. Clear old chart series immediately and reset autoScale to eliminate price scale glitch
         try {
             candleSeriesInstance.setData([]);
             if (emaLineSeriesInstance) emaLineSeriesInstance.setData([]);
@@ -2981,6 +2988,8 @@ async function updateLiveBotChart() {
             if (lowerBandSeriesInstance) lowerBandSeriesInstance.setData([]);
             if (rsiSeriesInstance) rsiSeriesInstance.setData([]);
             candleSeriesInstance.setMarkers([]);
+            liveChartInstance.priceScale('right').applyOptions({ autoScale: true });
+            if (liveRsiChartInstance) liveRsiChartInstance.priceScale('right').applyOptions({ autoScale: true });
         } catch (e) {}
 
         const overlay = document.getElementById('chart-loading-overlay');
@@ -2988,7 +2997,7 @@ async function updateLiveBotChart() {
         setTimeout(() => {
             const ov = document.getElementById('chart-loading-overlay');
             if (ov) ov.style.display = 'none';
-        }, 1200);
+        }, 1000);
     }
 
     let candles = [];
