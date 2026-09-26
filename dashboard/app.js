@@ -3071,10 +3071,18 @@ async function updateLiveBotChart() {
     }
 
     if (isSymbolSwitch || !chartWsConnection) {
-        liveChartInstance.timeScale().fitContent();
+        if (candles.length > 0) {
+            const totalBars = candles.length;
+            const visibleBars = 75; // Binance official standard zoom (~75 candles)
+            const fromLogical = Math.max(0, totalBars - visibleBars);
+            const toLogical = totalBars + 5;
+            liveChartInstance.timeScale().setVisibleLogicalRange({ from: fromLogical, to: toLogical });
+            if (liveRsiChartInstance) {
+                liveRsiChartInstance.timeScale().setVisibleLogicalRange({ from: fromLogical, to: toLogical });
+            }
+        }
         liveChartInstance.priceScale('right').applyOptions({ autoScale: true });
         if (liveRsiChartInstance) {
-            liveRsiChartInstance.timeScale().fitContent();
             liveRsiChartInstance.priceScale('right').applyOptions({ autoScale: true });
         }
         // Connect websocket only after new candle data has loaded to prevent scale glitch
