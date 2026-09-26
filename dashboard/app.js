@@ -2763,6 +2763,9 @@ function connectChartWebSocket(symbol, timeframe) {
 
             chartWsConnection.onmessage = (event) => {
                 try {
+                    const ov = document.getElementById('chart-loading-overlay');
+                    if (ov && ov.style.display !== 'none') ov.style.display = 'none';
+
                     const msg = JSON.parse(event.data);
                     
                     // Strict Symbol & TF Filter
@@ -2982,6 +2985,10 @@ async function updateLiveBotChart() {
 
         const overlay = document.getElementById('chart-loading-overlay');
         if (overlay) overlay.style.display = 'flex';
+        setTimeout(() => {
+            const ov = document.getElementById('chart-loading-overlay');
+            if (ov) ov.style.display = 'none';
+        }, 1200);
     }
 
     let candles = [];
@@ -2998,7 +3005,11 @@ async function updateLiveBotChart() {
         // Fetch accurate strategy indicators and markers calculated directly from server API (1000 candles to match backtest range)
         const resLocal = await fetch(`/api/chart/klines?symbol=${encodeURIComponent(sym)}&timeframe=${tf}&strategy=${encodeURIComponent(currentStratId)}&limit=1000`);
         const dataLocal = await resLocal.json();
-        if (reqId !== activeChartRequestId) return; // Discard outdated async responses
+        if (reqId !== activeChartRequestId) {
+            const overlay = document.getElementById('chart-loading-overlay');
+            if (overlay) overlay.style.display = 'none';
+            return; // Discard outdated async responses
+        }
 
         if (dataLocal.success && dataLocal.candles && dataLocal.candles.length > 0) {
             candles = dataLocal.candles;
@@ -3020,7 +3031,11 @@ async function updateLiveBotChart() {
         try {
             const directUrl = `https://fapi.binance.com/fapi/v1/klines?symbol=${encodeURIComponent(sym)}&interval=${tf}&limit=500`;
             const res = await fetch(directUrl);
-            if (reqId !== activeChartRequestId) return;
+            if (reqId !== activeChartRequestId) {
+                const overlay = document.getElementById('chart-loading-overlay');
+                if (overlay) overlay.style.display = 'none';
+                return;
+            }
             if (res.ok) {
                 const raw = await res.json();
                 if (Array.isArray(raw) && raw.length > 0) {
@@ -3037,11 +3052,12 @@ async function updateLiveBotChart() {
         } catch (e) {}
     }
 
+    const overlayEl = document.getElementById('chart-loading-overlay');
+    if (overlayEl) overlayEl.style.display = 'none';
+
     if (reqId !== activeChartRequestId) return;
 
     if (!candles || candles.length === 0) {
-        const overlay = document.getElementById('chart-loading-overlay');
-        if (overlay) overlay.style.display = 'none';
         return;
     }
 
