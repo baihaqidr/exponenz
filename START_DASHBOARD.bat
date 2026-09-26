@@ -17,9 +17,6 @@ if errorlevel 1 (
 echo [*] Menjalankan Web Dashboard Server di http://localhost:5000 ...
 echo [*] Browser akan terbuka otomatis dalam 1-2 detik...
 echo.
-echo Tekan [CTRL + C] di jendela ini kapan saja jika ingin mematikan server.
-echo =======================================================================
-echo.
 
 python run_dashboard.py
 

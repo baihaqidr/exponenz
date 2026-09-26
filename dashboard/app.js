@@ -2536,11 +2536,13 @@ function initLiveBotChart() {
         }
 
         let isSyncingCrosshair = false;
+        let isUserHoveringHistoricalBar = false;
 
         // Crosshair Hover Event - Realtime OHLC, EMA & RSI Inspector (Synced with RSI Subpane)
         liveChartInstance.subscribeCrosshairMove((param) => {
             if (isSyncingCrosshair) return;
             if (!param || !param.time || !param.seriesData) {
+                isUserHoveringHistoricalBar = false;
                 const activeC = currentLiveCandle || (lastFetchedCandles && lastFetchedCandles.length > 0 ? lastFetchedCandles[lastFetchedCandles.length - 1] : null);
                 const activeE = currentLiveEma || (lastFetchedEma && lastFetchedEma.length > 0 ? lastFetchedEma[lastFetchedEma.length - 1].value : null);
                 const activeR = currentLiveRsi || (lastFetchedRsi && lastFetchedRsi.length > 0 ? lastFetchedRsi[lastFetchedRsi.length - 1].value : null);
@@ -2554,6 +2556,12 @@ function initLiveBotChart() {
             const cData = param.seriesData.get(candleSeriesInstance);
             const eData = param.seriesData.get(emaLineSeriesInstance);
             const emaVal = eData ? eData.value : null;
+
+            if (currentLiveCandle && param.time !== currentLiveCandle.time) {
+                isUserHoveringHistoricalBar = true;
+            } else {
+                isUserHoveringHistoricalBar = false;
+            }
 
             // Find matching RSI point at this exact timestamp
             let rsiVal = null;
@@ -2628,6 +2636,24 @@ function initLiveBotChart() {
                 }
             });
         }
+
+        // Auto reset legend to live moving candle when mouse leaves chart area
+        const resetToLiveCandle = () => {
+            isUserHoveringHistoricalBar = false;
+            if (liveChartInstance) {
+                try { liveChartInstance.clearCrosshairPosition(); } catch (e) {}
+            }
+            if (liveRsiChartInstance) {
+                try { liveRsiChartInstance.clearCrosshairPosition(); } catch (e) {}
+            }
+            const activeC = currentLiveCandle || (lastFetchedCandles && lastFetchedCandles.length > 0 ? lastFetchedCandles[lastFetchedCandles.length - 1] : null);
+            const activeE = currentLiveEma || (lastFetchedEma && lastFetchedEma.length > 0 ? lastFetchedEma[lastFetchedEma.length - 1].value : null);
+            const activeR = currentLiveRsi || (lastFetchedRsi && lastFetchedRsi.length > 0 ? lastFetchedRsi[lastFetchedRsi.length - 1].value : null);
+            updateChartLegend(activeC, activeE, activeR);
+        };
+
+        if (container) container.addEventListener('mouseleave', resetToLiveCandle);
+        if (rsiContainer) rsiContainer.addEventListener('mouseleave', resetToLiveCandle);
 
         // Responsive resize
         window.addEventListener('resize', () => {
@@ -2781,8 +2807,10 @@ function connectChartWebSocket(symbol, timeframe) {
                         const priceEl = document.getElementById('chart-live-price');
                         if (priceEl) priceEl.textContent = `$${formatCleanPrice(closePrice)}`;
 
-                        // Update Top Legend
-                        updateChartLegend(liveBar, currentLiveEma, currentLiveRsi);
+                        // Update Top Legend if not hovering historical bar
+                        if (!isUserHoveringHistoricalBar) {
+                            updateChartLegend(liveBar, currentLiveEma, currentLiveRsi, currentLiveUpper, currentLiveLower);
+                        }
                     }
 
                     // Handle Real-time Trade Execution (aggTrade)
@@ -2811,7 +2839,10 @@ function connectChartWebSocket(symbol, timeframe) {
                                 const emaLegendEl = document.getElementById('chart-ema-legend');
                                 if (emaLegendEl) emaLegendEl.textContent = `EMA 7: $${formatCleanPrice(liveEmaVal)}`;
                             }
-                            updateChartLegend(currentLiveCandle, currentLiveEma, currentLiveRsi);
+
+                            if (!isUserHoveringHistoricalBar) {
+                                updateChartLegend(currentLiveCandle, currentLiveEma, currentLiveRsi, currentLiveUpper, currentLiveLower);
+                            }
                         }
                     }
 
