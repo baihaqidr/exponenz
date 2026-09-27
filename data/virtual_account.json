@@ -1,0 +1,60 @@
+{
+  "wallet_balance": 4998.354,
+  "positions": {},
+  "trades": [
+    {
+      "id": 47067316,
+      "order_id": 47067316,
+      "symbol": "KAITOUSDT",
+      "side": "SELL",
+      "action": "CLOSE",
+      "price": 0.3536,
+      "qty": 703.0,
+      "quote_qty": 248.58,
+      "realized_pnl": -1.5466,
+      "commission": 0.0994,
+      "time": "2026-09-27 07:57:53 WIB",
+      "timestamp_ms": 1790470673169
+    },
+    {
+      "id": 46813781,
+      "order_id": 46813781,
+      "symbol": "KAITOUSDT",
+      "side": "BUY",
+      "price": 0.3558,
+      "qty": 703.0,
+      "quote_qty": 250.13,
+      "realized_pnl": 0.0,
+      "commission": 0.1001,
+      "time": "2026-09-27 07:15:37 WIB",
+      "timestamp_ms": 1790468137818
+    }
+  ],
+  "leverages": {
+    "FXSUSDT": 3,
+    "IDUSDT": 3,
+    "KAVAUSDT": 3,
+    "AVAXUSDT": 3,
+    "SYRUPUSDT": 3,
+    "FLOWUSDT": 3,
+    "ORCAUSDT": 3,
+    "POLUSDT": 3,
+    "JTOUSDT": 3,
+    "LDOUSDT": 3,
+    "PAXGUSDT": 3,
+    "XLMUSDT": 3,
+    "DOTUSDT": 3,
+    "EIGENUSDT": 3,
+    "CAKEUSDT": 3,
+    "PLUMEUSDT": 3,
+    "AXSUSDT": 3,
+    "1000SHIBUSDT": 3,
+    "AVNTUSDT": 3,
+    "1000BONKUSDT": 3,
+    "SUSDT": 3,
+    "ZKUSDT": 3,
+    "KAITOUSDT": 3,
+    "WAXPUSDT": 3
+  },
+  "updated_at": "2026-09-27 07:57:53"
+}
