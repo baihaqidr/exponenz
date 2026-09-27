@@ -245,6 +245,10 @@
                             <span id="matrix-title">Master Backtest Matrix [Breakdown PnL Bulanan Seluruh Pair]</span>
                         </div>
                         <div class="matrix-actions" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <div class="matrix-search-box">
+                                <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; color: #94A3B8; font-size: 0.8rem; pointer-events: none;"></i>
+                                <input type="text" id="matrix-search-input" class="matrix-search-input" placeholder="🔍 Cari koin di matriks..." oninput="onMatrixSearch(this.value)">
+                            </div>
                             <button id="btn-sync-top10-to-bot" class="btn-secondary" style="background: rgba(255, 106, 0, 0.12); color: #FF6A00; border: 1px solid rgba(255, 106, 0, 0.3); font-weight: 700;" onclick="syncTop10PnlToBotWatchlist()">
                                 <i class="fa-solid fa-crown"></i> 👑 Pasang Top 10 Koin Cuan Tertinggi ke Bot
                             </button>
@@ -646,17 +650,17 @@
                         <i class="fa-solid fa-chart-line"></i> Posisi Terbuka Real-Time (Live di Akun Demo Binance)
                     </div>
                     <div class="table-responsive">
-                        <table class="data-table">
-                            <thead>
+                        <table class="data-table" id="bot-positions-table">
+                            <thead id="bot-positions-thead">
                                 <tr>
-                                    <th>Pair Symbol</th>
-                                    <th>Tipe Posisi</th>
-                                    <th>Ukuran (Qty)</th>
-                                    <th>Harga Entry</th>
-                                    <th>Harga Mark (Live)</th>
-                                    <th>Floating PnL (USDT)</th>
-                                    <th>Harga Likuidasi</th>
-                                    <th>Leverage</th>
+                                    <th class="sortable-th" onclick="sortPositionsBy('symbol')">Pair Symbol <span class="sort-icon" id="pos-sort-symbol"><i class="fa-solid fa-sort"></i></span></th>
+                                    <th class="sortable-th" onclick="sortPositionsBy('side')">Tipe Posisi <span class="sort-icon" id="pos-sort-side"><i class="fa-solid fa-sort"></i></span></th>
+                                    <th class="sortable-th" onclick="sortPositionsBy('qty')">Ukuran (Qty) <span class="sort-icon" id="pos-sort-qty"><i class="fa-solid fa-sort"></i></span></th>
+                                    <th class="sortable-th" onclick="sortPositionsBy('entry_price')">Harga Entry <span class="sort-icon" id="pos-sort-entry_price"><i class="fa-solid fa-sort"></i></span></th>
+                                    <th class="sortable-th" onclick="sortPositionsBy('mark_price')">Harga Mark (Live) <span class="sort-icon" id="pos-sort-mark_price"><i class="fa-solid fa-sort"></i></span></th>
+                                    <th class="sortable-th" onclick="sortPositionsBy('unrealized_pnl')">Floating PnL (USDT) <span class="sort-icon" id="pos-sort-unrealized_pnl"><i class="fa-solid fa-sort-down active"></i></span></th>
+                                    <th class="sortable-th" onclick="sortPositionsBy('liquidation_price')">Harga Likuidasi <span class="sort-icon" id="pos-sort-liquidation_price"><i class="fa-solid fa-sort"></i></span></th>
+                                    <th class="sortable-th" onclick="sortPositionsBy('leverage')">Leverage <span class="sort-icon" id="pos-sort-leverage"><i class="fa-solid fa-sort"></i></span></th>
                                     <th>Aksi</th>
                                 </tr>
                             </thead>
@@ -843,7 +847,7 @@
             } catch(e) {}
         })();
     </script>
-    <script src="app.js?v=46.0"></script>
+    <script src="app.js?v=47.0"></script>
 </body>
 </html>
 

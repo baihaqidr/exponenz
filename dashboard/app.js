@@ -1173,6 +1173,27 @@ function formatIndicatorChips(indObj) {
     return chipsHtml;
 }
 
+let matrixSortField = 'net_profit';
+let matrixSortOrder = 'desc';
+let matrixSearchQuery = '';
+
+function sortMatrixBy(field) {
+    if (matrixSortField === field) {
+        matrixSortOrder = matrixSortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+        matrixSortField = field;
+        matrixSortOrder = (field === 'symbol') ? 'asc' : 'desc';
+    }
+    if (state.matrixData) renderMatrixTable(state.matrixData);
+}
+window.sortMatrixBy = sortMatrixBy;
+
+function onMatrixSearch(query) {
+    matrixSearchQuery = (query || '').trim().toLowerCase();
+    if (state.matrixData) renderMatrixTable(state.matrixData);
+}
+window.onMatrixSearch = onMatrixSearch;
+
 function renderMatrixTable(data) {
     const thead = document.getElementById('matrix-thead');
     const tbody = document.getElementById('matrix-tbody');
@@ -1183,26 +1204,63 @@ function renderMatrixTable(data) {
         return m.year === state.selectedYear;
     });
 
+    function getSortIcon(field) {
+        if (matrixSortField !== field) return '<span class="sort-icon"><i class="fa-solid fa-sort"></i></span>';
+        return matrixSortOrder === 'asc' 
+            ? '<span class="sort-icon active"><i class="fa-solid fa-sort-up"></i></span>'
+            : '<span class="sort-icon active"><i class="fa-solid fa-sort-down"></i></span>';
+    }
+
     let theadHtml = `
         <tr>
-            <th class="sticky-col">PAIR</th>
-            <th>HARGA REAL</th>
+            <th class="sticky-col sortable-th" onclick="sortMatrixBy('symbol')" title="Klik untuk urutkan berdasarkan Pair">PAIR ${getSortIcon('symbol')}</th>
+            <th class="sortable-th" onclick="sortMatrixBy('last_price')" title="Klik untuk urutkan berdasarkan Harga">HARGA REAL ${getSortIcon('last_price')}</th>
             <th>INDIKATOR REALTIME</th>
-            <th>TOTAL NET PNL</th>
-            <th>WIN RATE</th>
-            <th>PROFIT FACTOR</th>
-            <th>MAX DD</th>
-            <th>TRADES</th>
+            <th class="sortable-th" onclick="sortMatrixBy('net_profit')" title="Klik untuk urutkan berdasarkan Net PnL">TOTAL NET PNL ${getSortIcon('net_profit')}</th>
+            <th class="sortable-th" onclick="sortMatrixBy('win_rate')" title="Klik untuk urutkan berdasarkan Win Rate">WIN RATE ${getSortIcon('win_rate')}</th>
+            <th class="sortable-th" onclick="sortMatrixBy('profit_factor')" title="Klik untuk urutkan berdasarkan Profit Factor">PROFIT FACTOR ${getSortIcon('profit_factor')}</th>
+            <th class="sortable-th" onclick="sortMatrixBy('max_drawdown')" title="Klik untuk urutkan berdasarkan Drawdown">MAX DD ${getSortIcon('max_drawdown')}</th>
+            <th class="sortable-th" onclick="sortMatrixBy('total_trades')" title="Klik untuk urutkan berdasarkan Jumlah Trade">TRADES ${getSortIcon('total_trades')}</th>
             <th>DETAIL</th>
     `;
     filteredMonths.forEach(m => {
-        theadHtml += `<th>${m.label}</th>`;
+        theadHtml += `<th class="sortable-th" onclick="sortMatrixBy('month_${m.key}')" title="Klik untuk urutkan bulan ${m.label}">${m.label} ${getSortIcon('month_' + m.key)}</th>`;
     });
     theadHtml += `</tr>`;
     thead.innerHTML = theadHtml;
 
+    // Filter & Sort matrix rows
+    let rows = [...(data.matrix_rows || [])];
+    if (matrixSearchQuery) {
+        rows = rows.filter(r => (r.symbol || '').toLowerCase().includes(matrixSearchQuery));
+    }
+
+    rows.sort((a, b) => {
+        let aVal, bVal;
+        if (matrixSortField === 'symbol') {
+            aVal = a.symbol || '';
+            bVal = b.symbol || '';
+            return matrixSortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        } else if (matrixSortField.startsWith('month_')) {
+            const mKey = matrixSortField.replace('month_', '');
+            aVal = a.monthly_pnl ? (a.monthly_pnl[mKey] || 0) : 0;
+            bVal = b.monthly_pnl ? (b.monthly_pnl[mKey] || 0) : 0;
+        } else {
+            aVal = a[matrixSortField];
+            bVal = b[matrixSortField];
+        }
+        aVal = (aVal === undefined || aVal === null || isNaN(aVal)) ? 0 : Number(aVal);
+        bVal = (bVal === undefined || bVal === null || isNaN(bVal)) ? 0 : Number(bVal);
+        return matrixSortOrder === 'asc' ? (aVal - bVal) : (bVal - aVal);
+    });
+
     tbody.innerHTML = '';
-    data.matrix_rows.forEach(row => {
+    if (rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${9 + filteredMonths.length}" class="empty-cell"><i class="fa-solid fa-magnifying-glass"></i> Tidak ada koin yang cocok dengan pencarian "<strong>${matrixSearchQuery}</strong>".</td></tr>`;
+        return;
+    }
+
+    rows.forEach(row => {
         const tr = document.createElement('tr');
         const pnl = row.net_profit;
         const pnlColor = pnl > 0 ? 'text-profit' : (pnl < 0 ? 'text-loss' : 'text-muted');
@@ -1215,7 +1273,10 @@ function renderMatrixTable(data) {
 
         let rowHtml = `
             <td class="sticky-col pair-name">
-                <strong>${row.symbol}</strong>
+                <button type="button" class="pos-pair-clickable" onclick="setChartFocus('${row.symbol}'); switchTab('bot');" title="Klik untuk fokus Live Chart ke ${row.symbol}">
+                    <strong>${row.symbol}</strong>
+                    <i class="fa-solid fa-chart-line"></i>
+                </button>
             </td>
             <td class="font-mono real-price-cell" id="real-price-${row.symbol}" data-price="${row.last_price || 0}">
                 <strong>${lastPriceFormatted}</strong>
@@ -1854,9 +1915,52 @@ function renderBotTradesTable(binanceTrades, localTrades) {
     }
 }
 
+let positionsSortField = 'unrealized_pnl';
+let positionsSortOrder = 'desc';
+let lastKnownBotPositions = [];
+
+function sortPositionsBy(field) {
+    if (positionsSortField === field) {
+        positionsSortOrder = positionsSortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+        positionsSortField = field;
+        positionsSortOrder = (field === 'symbol' || field === 'side') ? 'asc' : 'desc';
+    }
+    updatePositionsHeaderSortIcons();
+    renderBotPositionsTable(lastKnownBotPositions);
+}
+window.sortPositionsBy = sortPositionsBy;
+
+function onPositionPairClick(symbol) {
+    if (!symbol) return;
+    setChartFocus(symbol);
+    const chartCard = document.querySelector('.bot-chart-section') || document.getElementById('live-bot-chart-container');
+    if (chartCard) {
+        chartCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+window.onPositionPairClick = onPositionPairClick;
+
+function updatePositionsHeaderSortIcons() {
+    const fields = ['symbol', 'side', 'qty', 'entry_price', 'mark_price', 'unrealized_pnl', 'liquidation_price', 'leverage'];
+    fields.forEach(f => {
+        const iconEl = document.getElementById(`pos-sort-${f}`);
+        if (!iconEl) return;
+        if (positionsSortField === f) {
+            iconEl.innerHTML = positionsSortOrder === 'asc' 
+                ? '<i class="fa-solid fa-sort-up active"></i>' 
+                : '<i class="fa-solid fa-sort-down active"></i>';
+        } else {
+            iconEl.innerHTML = '<i class="fa-solid fa-sort"></i>';
+        }
+    });
+}
+
 function renderBotPositionsTable(positions) {
     const tbody = document.getElementById('bot-positions-tbody');
     if (!tbody) return;
+
+    lastKnownBotPositions = positions || [];
 
     if (!positions || positions.length === 0) {
         tbody.innerHTML = `
@@ -1869,6 +1973,8 @@ function renderBotPositionsTable(positions) {
         return;
     }
 
+    updatePositionsHeaderSortIcons();
+
     function formatCleanPrice(val) {
         if (val === undefined || val === null || isNaN(val)) return '-';
         const num = Number(val);
@@ -1879,8 +1985,43 @@ function renderBotPositionsTable(positions) {
         return num.toFixed(2);
     }
 
+    let sortedPositions = [...positions];
+    sortedPositions.sort((a, b) => {
+        let aVal, bVal;
+        if (positionsSortField === 'symbol') {
+            aVal = a.symbol || '';
+            bVal = b.symbol || '';
+            return positionsSortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        } else if (positionsSortField === 'side') {
+            aVal = a.position_amt > 0 ? 'LONG' : 'SHORT';
+            bVal = b.position_amt > 0 ? 'LONG' : 'SHORT';
+            return positionsSortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        } else if (positionsSortField === 'qty') {
+            aVal = Math.abs(Number(a.position_amt || 0));
+            bVal = Math.abs(Number(b.position_amt || 0));
+        } else if (positionsSortField === 'entry_price') {
+            aVal = Number(a.entry_price || 0);
+            bVal = Number(b.entry_price || 0);
+        } else if (positionsSortField === 'mark_price') {
+            aVal = Number(a.mark_price || 0);
+            bVal = Number(b.mark_price || 0);
+        } else if (positionsSortField === 'unrealized_pnl') {
+            aVal = Number(a.unrealized_pnl || 0);
+            bVal = Number(b.unrealized_pnl || 0);
+        } else if (positionsSortField === 'liquidation_price') {
+            aVal = Number(a.liquidation_price || 0);
+            bVal = Number(b.liquidation_price || 0);
+        } else if (positionsSortField === 'leverage') {
+            aVal = Number(a.leverage || 0);
+            bVal = Number(b.leverage || 0);
+        }
+        aVal = (aVal === undefined || aVal === null || isNaN(aVal)) ? 0 : Number(aVal);
+        bVal = (bVal === undefined || bVal === null || isNaN(bVal)) ? 0 : Number(bVal);
+        return positionsSortOrder === 'asc' ? (aVal - bVal) : (bVal - aVal);
+    });
+
     tbody.innerHTML = '';
-    positions.forEach(pos => {
+    sortedPositions.forEach(pos => {
         const tr = document.createElement('tr');
         const isLong = pos.position_amt > 0;
         const sideBadge = isLong 
@@ -1892,7 +2033,12 @@ function renderBotPositionsTable(positions) {
         const pnlSign = pnl >= 0 ? '+' : '-';
 
         tr.innerHTML = `
-            <td><strong>${pos.symbol}</strong></td>
+            <td>
+                <button type="button" class="pos-pair-clickable" onclick="onPositionPairClick('${pos.symbol}')" title="Klik untuk langsung ganti chart ke ${pos.symbol}">
+                    <strong>${pos.symbol}</strong>
+                    <i class="fa-solid fa-chart-line"></i>
+                </button>
+            </td>
             <td>${sideBadge}</td>
             <td class="font-mono">${Math.abs(pos.position_amt)}</td>
             <td class="font-mono">$${formatCleanPrice(pos.entry_price)}</td>
