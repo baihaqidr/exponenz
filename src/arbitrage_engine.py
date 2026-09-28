@@ -129,6 +129,16 @@ class ArbitrageEngine:
                         raw_rate = float(d.get("lastFundingRate", 0.0))
                         next_time = int(d.get("nextFundingTime", 0))
                         mark_p = float(d.get("markPrice", 0.0))
+                        
+                        # Deduksi interval dari timestamp settlement jika belum ada
+                        if interval_hrs not in [1, 2, 4, 8] or interval_hrs == 8:
+                            if next_time and next_time > 0:
+                                dt_u = datetime.fromtimestamp(next_time / 1000, tz=timezone.utc)
+                                if dt_u.hour in [0, 8, 16]: interval_hrs = 8
+                                elif dt_u.hour in [4, 12, 20]: interval_hrs = 4
+                                elif dt_u.hour % 2 == 0: interval_hrs = 2
+                                else: interval_hrs = 1
+
                         return {
                             "funding_rate": raw_rate,
                             "funding_pct": raw_rate * 100.0,

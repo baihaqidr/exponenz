@@ -125,8 +125,23 @@ class FundingRateScanner:
                 else:
                     spread_pct = 0.0
 
-                # Hitung Funding Interval & Frekuensi Per Hari (e.g. 8H = 3x, 4H = 6x, 2H = 12x, 1H = 24x)
-                interval_hours = funding_intervals.get(sym, 8)
+                # Hitung Funding Interval Akurat (Membaca API fundingInfo & menganalisa nextFundingTime)
+                interval_hours = funding_intervals.get(sym)
+                if not interval_hours or interval_hours not in [1, 2, 4, 8]:
+                    if next_time_ms and next_time_ms > 0:
+                        dt_utc = datetime.fromtimestamp(next_time_ms / 1000, tz=timezone.utc)
+                        hr_utc = dt_utc.hour
+                        if hr_utc in [0, 8, 16]:
+                            interval_hours = 8
+                        elif hr_utc in [4, 12, 20]:
+                            interval_hours = 4
+                        elif hr_utc % 2 == 0:
+                            interval_hours = 2
+                        else:
+                            interval_hours = 1
+                    else:
+                        interval_hours = 8
+
                 times_per_day = 24.0 / max(1, interval_hours)
                 interval_label = f"{interval_hours}H"
 
