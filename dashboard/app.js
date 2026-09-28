@@ -1513,6 +1513,14 @@ function updateTopTargetHero(pairs) {
         });
     }
 
+    const fundingFilterIntervalEl = document.getElementById('funding-filter-interval');
+    if (fundingFilterIntervalEl) {
+        fundingFilterIntervalEl.addEventListener('change', (e) => {
+            state.fundingFilterInterval = e.target.value;
+            filterAndRenderFundingTable();
+        });
+    }
+
 function sortFundingBy(field) {
     if (state.fundingSortField === field) {
         state.fundingSortOrder = state.fundingSortOrder === 'asc' ? 'desc' : 'asc';
@@ -1557,6 +1565,13 @@ function filterAndRenderFundingTable() {
         filtered = filtered.filter(p => p.has_spot === true);
     } else if (state.fundingFilterSpot === 'futures_only') {
         filtered = filtered.filter(p => p.has_spot === false);
+    }
+
+    // Interval filter
+    if (state.fundingFilterInterval === 'fast') {
+        filtered = filtered.filter(p => p.funding_interval_hours && p.funding_interval_hours < 8);
+    } else if (state.fundingFilterInterval === '8h') {
+        filtered = filtered.filter(p => !p.funding_interval_hours || p.funding_interval_hours === 8);
     }
 
     // Rate filter
