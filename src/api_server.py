@@ -153,6 +153,16 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                 "total_pairs": len(rates),
                 "pairs": rates
             })
+        elif parsed.path == "/api/arbitrage/positions":
+            from src.arbitrage_engine import arbitrage_engine
+            positions = arbitrage_engine.get_active_positions_details()
+            self.send_json({
+                "success": True,
+                "count": len(positions),
+                "positions": positions,
+                "history": arbitrage_engine.trade_history[:50],
+                "is_auto_running": arbitrage_engine.is_auto_running
+            })
         elif parsed.path == "/api/chart/klines":
             qs = urllib.parse.parse_qs(parsed.query)
             sym = qs.get("symbol", ["ETHUSDT"])[0].upper().strip()
@@ -421,6 +431,21 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
             sym = body.get("symbol")
             res = trading_bot.engine.close_position(sym)
             self.send_json(res)
+        elif parsed.path == "/api/arbitrage/open":
+            from src.arbitrage_engine import arbitrage_engine
+            sym = body.get("symbol", "BTCUSDT")
+            notional = float(body.get("notional_usd", 500.0))
+            res = arbitrage_engine.open_arbitrage(sym, notional)
+            self.send_json(res)
+        elif parsed.path == "/api/arbitrage/close":
+            from src.arbitrage_engine import arbitrage_engine
+            sym = body.get("symbol", "")
+            res = arbitrage_engine.close_arbitrage(sym)
+            self.send_json(res)
+        elif parsed.path == "/api/arbitrage/harvest":
+            from src.arbitrage_engine import arbitrage_engine
+            res = arbitrage_engine.check_and_harvest_funding()
+            self.send_json({"status": "success", "harvested": res})
         elif parsed.path == "/api/backtest":
             self.handle_backtest(body)
         elif parsed.path == "/api/funding/simulate":

@@ -381,6 +381,22 @@
                             </tbody>
                         </table>
                     </div>
+                <!-- ACTIVE ARBITRAGE POSITIONS PANEL -->
+                <section class="card arbitrage-active-card" id="arbitrage-active-card" style="display: none; margin-bottom: 24px; border: 1.5px solid #10b981; background: linear-gradient(180deg, rgba(16, 185, 129, 0.05) 0%, rgba(255, 255, 255, 0.95) 100%);">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(16, 185, 129, 0.2); padding-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="pulse-dot green"></span>
+                            <h3 style="font-size: 1.1rem; font-weight: 800; color: #065f46; margin: 0;">
+                                <i class="fa-solid fa-shield-halved"></i> Posisi Arbitrase Aktif (Delta-Neutral Cash & Carry Demo)
+                            </h3>
+                        </div>
+                        <div style="font-size: 0.82rem; font-weight: 700; color: #047857; background: #d1fae5; padding: 4px 12px; border-radius: 20px;">
+                            <i class="fa-solid fa-sync fa-spin"></i> Auto-Harvest & Auto-Rebalance Aktif
+                        </div>
+                    </div>
+                    <div id="arbitrage-active-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; margin-top: 16px;">
+                        <!-- Rendered dynamically by app.js -->
+                    </div>
                 </section>
             </div>
 

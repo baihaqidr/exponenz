@@ -1577,6 +1577,9 @@ function filterAndRenderFundingTable() {
                 </span>
             </td>
             <td>
+                <button class="btn-log-action" style="background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #10b981; font-weight: 700; margin-right: 6px;" onclick="openDemoArbitrageQuick('${pair.symbol}')">
+                    <i class="fa-solid fa-bolt"></i> Snipe Demo
+                </button>
                 <button class="btn-log-action" style="background: rgba(99, 102, 241, 0.2); border-color: var(--accent-indigo); color: #818cf8;" onclick='window.openFundingSimulatorFromRow(${JSON.stringify(pair).replace(/'/g, "&apos;")})'>
                     <i class="fa-solid fa-calculator"></i> Simulasi
                 </button>
@@ -3398,10 +3401,158 @@ window.changeChartTimeframe = changeChartTimeframe;
 window.initLiveBotChart = initLiveBotChart;
 window.updateLiveBotChart = updateLiveBotChart;
 
+// --- 11. DEMO ARBITRAGE (FUNDING RATE CASH & CARRY) CONTROLLER ---
+async function openDemoArbitrageQuick(symbol) {
+    const rawCap = prompt(`Buka Posisi Arbitrase Delta-Neutral [${symbol}]\n\nMasukkan Total Modal Demo USDT:\n(Contoh: 500 = $250 Spot Long + $250 Futures Short 1x)\n\nModal otomatis di-rebalance seimbang saat ditutup.`, "500");
+    if (!rawCap) return;
+    const notional = parseFloat(rawCap) || 500;
+
+    try {
+        const res = await fetch('/api/arbitrage/open', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ symbol: symbol, notional_usd: notional })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            alert(`✅ ${data.message}\n\nBot sekarang aktif memanen bunga transferan funding fee setiap 8 jam dan posisi harga saling mengunci (Delta-Neutral).`);
+            loadArbitragePositions();
+            loadBotStatus();
+        } else {
+            alert(`⚠️ ${data.message || 'Gagal membuka posisi arbitrase'}`);
+        }
+    } catch (e) {
+        alert('Terjadi kesalahan koneksi saat membuka arbitrase demo.');
+    }
+}
+
+async function closeDemoArbitrage(symbol) {
+    if (!confirm(`Konfirmasi Tutup Posisi Arbitrase [${symbol}] & Auto-Rebalance Saldo?`)) return;
+
+    try {
+        const res = await fetch('/api/arbitrage/close', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ symbol: symbol })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            const t = data.trade || {};
+            alert(`🎉 Posisi Arbitrase ${symbol} Berhasil Ditutup!\n\n` +
+                  `💰 Akumulasi Bunga Funding: +$${t.harvested_funding_fee || 0} USDT\n` +
+                  `⚖️ Selisih Delta Harga: $${t.price_delta_pnl || 0} USDT\n` +
+                  `📈 Total Profit Bersih: $${t.net_profit || 0} USDT (${t.roi_pct || 0}%)\n\n` +
+                  `🔄 ${t.rebalance_note || 'Saldo Spot & Futures otomatis seimbang kembali.'}`);
+            loadArbitragePositions();
+            loadBotStatus();
+        } else {
+            alert(`⚠️ ${data.message || 'Gagal menutup posisi arbitrase'}`);
+        }
+    } catch (e) {
+        alert('Terjadi kesalahan koneksi saat menutup arbitrase demo.');
+    }
+}
+
+async function loadArbitragePositions() {
+    const cardEl = document.getElementById('arbitrage-active-card');
+    const listEl = document.getElementById('arbitrage-active-list');
+    if (!cardEl || !listEl) return;
+
+    try {
+        const res = await fetch('/api/arbitrage/positions');
+        const data = await res.json();
+        if (!data.success || !data.positions || data.positions.length === 0) {
+            cardEl.style.display = 'none';
+            return;
+        }
+
+        cardEl.style.display = 'block';
+        listEl.innerHTML = '';
+
+        data.positions.forEach(pos => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.style.background = '#ffffff';
+            card.style.border = '1px solid #10b981';
+            card.style.borderRadius = '12px';
+            card.style.padding = '14px';
+            card.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.08)';
+
+            const netColor = pos.total_net_pnl >= 0 ? '#10b981' : '#f43f5e';
+            const netSign = pos.total_net_pnl >= 0 ? '+' : '';
+
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px dashed #e2e8f0; padding-bottom: 8px;">
+                    <div>
+                        <strong style="font-size: 1.1rem; color: #0f172a;">${pos.symbol}</strong>
+                        <span style="font-size: 0.72rem; font-weight: 800; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 6px; margin-left: 6px;">
+                            🛡️ DELTA-NEUTRAL 1X
+                        </span>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="font-size: 0.75rem; color: #64748b;">Total Modal:</span>
+                        <strong style="font-size: 0.95rem; color: #0f172a;">$${pos.notional_total.toFixed(2)}</strong>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-size: 0.8rem;">
+                    <div style="background: #f8fafc; padding: 8px; border-radius: 8px; border-left: 3px solid #10b981;">
+                        <div style="font-weight: 700; color: #059669;"><i class="fa-solid fa-arrow-trend-up"></i> Spot Leg (Long)</div>
+                        <div>Entry: <strong>$${pos.spot_leg.entry_price}</strong></div>
+                        <div>Alokasi: $${pos.spot_leg.allocated_usd.toFixed(2)}</div>
+                    </div>
+                    <div style="background: #f8fafc; padding: 8px; border-radius: 8px; border-left: 3px solid #f43f5e;">
+                        <div style="font-weight: 700; color: #e11d48;"><i class="fa-solid fa-arrow-trend-down"></i> Futures Leg (Short 1x)</div>
+                        <div>Entry: <strong>$${pos.futures_leg.entry_price}</strong></div>
+                        <div>Alokasi: $${pos.futures_leg.allocated_usd.toFixed(2)}</div>
+                    </div>
+                </div>
+
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <span style="font-size: 0.8rem; color: #166534; font-weight: 600;">
+                            <i class="fa-solid fa-coins text-warning"></i> Bunga Funding Dipanen (${pos.harvest_count}x Siklus):
+                        </span>
+                        <strong style="color: #15803d; font-size: 0.95rem;">+$${pos.accumulated_funding_reward.toFixed(4)} USDT</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.76rem; color: #15803d;">
+                        <span>Settlement Berikutnya:</span>
+                        <strong><i class="fa-regular fa-clock"></i> ${pos.countdown_str}</strong>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 10px;">
+                    <div>
+                        <div style="font-size: 0.72rem; color: #64748b;">Total Net Profit Saat Ini:</div>
+                        <div style="font-size: 1.05rem; font-weight: 800; color: ${netColor};">
+                            ${netSign}$${pos.total_net_pnl.toFixed(2)} (${netSign}${pos.roi_pct.toFixed(2)}%)
+                        </div>
+                    </div>
+                    <button class="btn-log-action" style="background: #fef2f2; border-color: #fecaca; color: #dc2626; font-weight: 700; padding: 6px 14px; border-radius: 6px;" onclick="closeDemoArbitrage('${pos.symbol}')">
+                        <i class="fa-solid fa-xmark"></i> Tutup & Rebalance
+                    </button>
+                </div>
+            `;
+            listEl.appendChild(card);
+        });
+    } catch (e) {
+        console.error('Failed to load arbitrage positions:', e);
+    }
+}
+
+window.openDemoArbitrageQuick = openDemoArbitrageQuick;
+window.closeDemoArbitrage = closeDemoArbitrage;
+window.loadArbitragePositions = loadArbitragePositions;
+
+// Poll arbitrage positions periodically
+setInterval(loadArbitragePositions, 4000);
+
 // Auto initialize chart when switching to bot tab or on DOM load
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(initLiveBotChart, 300);
+    setTimeout(loadArbitragePositions, 600);
 });
+
 
 
 
