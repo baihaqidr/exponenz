@@ -3,7 +3,7 @@ import json
 import time
 import requests
 import urllib3
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Any, Optional
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -11,9 +11,13 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 class ArbitrageEngine:
     """
     Mesin Otomasi Arbitrase Funding Rate (Cash & Carry Delta-Neutral) Binance.
-    - Membuka pasangan posisi seimbang: [Spot Long + Futures Short 1x]
-    - Otomatis memanen bunga transferan Funding Fee setiap siklus settlement (07:00, 15:00, 23:00 WIB)
-    - Otomatis melakukan Rebalance saldo ketika posisi ditutup.
+    Mendukung 2 Arah Eksekusi Presisi:
+    1. Positive Carry (Funding Rate > 0%):
+       - Beli Spot (Long) + Short Futures 1x
+       - Menerima bunga transferan funding dari trader Long Futures.
+    2. Reverse Carry (Funding Rate < 0% - contoh SAGA & ONE):
+       - Long Futures 1x (Beli diskon) + Short Spot (Jual premium)
+       - Menerima bunga transferan funding dari trader Short Futures.
     """
     def __init__(self, data_file: str = "data/arbitrage_positions.json"):
         self.data_file = data_file
@@ -58,19 +62,40 @@ class ArbitrageEngine:
         sym = symbol.upper().strip()
         spot_p = 0.0
         fut_p = 0.0
-        try:
-            r_fut = requests.get(f"https://fapi.binance.com/fapi/v1/ticker/price?symbol={sym}", verify=False, timeout=3)
-            if r_fut.status_code == 200:
-                fut_p = float(r_fut.json().get("price", 0.0))
-        except Exception:
-            pass
+        
+        # Primary: Futures Price
+        fut_urls = [
+            f"https://fapi.binance.com/fapi/v1/ticker/price?symbol={sym}",
+            f"https://testnet.binancefuture.com/fapi/v1/ticker/price?symbol={sym}"
+        ]
+        for u in fut_urls:
+            try:
+                r_fut = requests.get(u, verify=False, timeout=3)
+                if r_fut.status_code == 200:
+                    fut_p = float(r_fut.json().get("price", 0.0))
+                    if fut_p > 0: break
+            except Exception:
+                continue
 
-        try:
-            r_spot = requests.get(f"https://api.binance.com/api/v3/ticker/price?symbol={sym}", verify=False, timeout=3)
-            if r_spot.status_code == 200:
-                spot_p = float(r_spot.json().get("price", 0.0))
-        except Exception:
-            pass
+        # Primary: Spot Price (Binance Vision)
+        spot_sym = sym
+        spot_mult = 1.0
+        if sym.startswith("1000"):
+            spot_sym = sym[4:]
+            spot_mult = 1000.0
+
+        spot_urls = [
+            f"https://data-api.binance.vision/api/v3/ticker/price?symbol={spot_sym}",
+            f"https://api.binance.com/api/v3/ticker/price?symbol={spot_sym}"
+        ]
+        for u in spot_urls:
+            try:
+                r_spot = requests.get(u, verify=False, timeout=3)
+                if r_spot.status_code == 200:
+                    spot_p = float(r_spot.json().get("price", 0.0)) * spot_mult
+                    if spot_p > 0: break
+            except Exception:
+                continue
 
         if spot_p == 0.0 and fut_p > 0.0:
             spot_p = fut_p
@@ -82,27 +107,34 @@ class ArbitrageEngine:
     def get_symbol_funding_info(self, symbol: str) -> Dict[str, Any]:
         """Tarik rate funding live dan jadwal settlement terdekat"""
         sym = symbol.upper().strip()
-        try:
-            r = requests.get(f"https://fapi.binance.com/fapi/v1/premiumIndex?symbol={sym}", verify=False, timeout=3)
-            if r.status_code == 200:
-                d = r.json()
-                if isinstance(d, dict):
-                    raw_rate = float(d.get("lastFundingRate", 0.0))
-                    next_time = int(d.get("nextFundingTime", 0))
-                    mark_p = float(d.get("markPrice", 0.0))
-                    return {
-                        "funding_rate": raw_rate,
-                        "funding_pct": raw_rate * 100.0,
-                        "next_funding_time": next_time,
-                        "mark_price": mark_p
-                    }
-        except Exception:
-            pass
+        fut_urls = [
+            f"https://fapi.binance.com/fapi/v1/premiumIndex?symbol={sym}",
+            f"https://testnet.binancefuture.com/fapi/v1/premiumIndex?symbol={sym}"
+        ]
+        for u in fut_urls:
+            try:
+                r = requests.get(u, verify=False, timeout=3)
+                if r.status_code == 200:
+                    d = r.json()
+                    if isinstance(d, dict):
+                        raw_rate = float(d.get("lastFundingRate", 0.0))
+                        next_time = int(d.get("nextFundingTime", 0))
+                        mark_p = float(d.get("markPrice", 0.0))
+                        return {
+                            "funding_rate": raw_rate,
+                            "funding_pct": raw_rate * 100.0,
+                            "next_funding_time": next_time,
+                            "mark_price": mark_p
+                        }
+            except Exception:
+                continue
         return {"funding_rate": 0.0001, "funding_pct": 0.01, "next_funding_time": int(time.time()*1000) + 28800000, "mark_price": 0.0}
 
     def open_arbitrage(self, symbol: str, notional_total: float = 500.0) -> Dict[str, Any]:
         """
-        Buka Posisi Arbitrase Delta-Neutral 50% Spot Long + 50% Futures Short 1x
+        Buka Posisi Arbitrase Delta-Neutral yang Arahnya Otomatis Disesuaikan:
+        - Jika Funding Rate >= 0: Positive Carry (Spot Long + Futures Short 1x)
+        - Jika Funding Rate < 0: Reverse Carry (Futures Long 1x + Spot Short)
         """
         sym = symbol.upper().strip()
         if sym in self.positions:
@@ -116,24 +148,43 @@ class ArbitrageEngine:
             return {"status": "error", "message": f"Gagal membaca harga pasar live Binance untuk {sym}"}
 
         funding_info = self.get_symbol_funding_info(sym)
+        raw_funding = funding_info["funding_rate"]
+        is_reverse_carry = (raw_funding < 0)
+
         half_notional = notional_total / 2.0
-        qty = round(half_notional / spot_p, 4) if spot_p > 1.0 else round(half_notional / spot_p, 1)
+        ref_price = spot_p if not is_reverse_carry else fut_p
+        qty = round(half_notional / ref_price, 4) if ref_price > 1.0 else round(half_notional / ref_price, 1)
 
         now_dt = datetime.now()
         now_wib = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+        # Hitung Basis Spread Awal
+        if is_reverse_carry:
+            spread_at_entry = ((spot_p - fut_p) / fut_p) * 100.0 # Spot premium
+            carry_name = "REVERSE CARRY"
+            guide = "Futures Long 1x + Short Spot"
+        else:
+            spread_at_entry = ((fut_p - spot_p) / spot_p) * 100.0 # Futures premium
+            carry_name = "POSITIVE CARRY"
+            guide = "Spot Long + Futures Short 1x"
 
         pos_data = {
             "symbol": sym,
             "status": "OPEN",
             "opened_at": now_wib,
             "opened_ts": int(time.time() * 1000),
+            "carry_type": carry_name,
+            "is_reverse_carry": is_reverse_carry,
             "notional_total": notional_total,
             "allocated_spot_usd": half_notional,
             "allocated_futures_usd": half_notional,
+            "spot_side": "SHORT" if is_reverse_carry else "LONG",
+            "futures_side": "LONG 1X" if is_reverse_carry else "SHORT 1X",
             "spot_entry_price": spot_p,
             "futures_entry_price": fut_p,
+            "spread_at_entry_pct": round(spread_at_entry, 3),
             "quantity": qty,
-            "funding_rate_at_entry": funding_info["funding_rate"],
+            "funding_rate_at_entry": raw_funding,
             "funding_pct_at_entry": funding_info["funding_pct"],
             "current_funding_pct": funding_info["funding_pct"],
             "accumulated_funding_reward": 0.0,
@@ -146,7 +197,7 @@ class ArbitrageEngine:
         self._save_state()
         return {
             "status": "success",
-            "message": f"Berhasil membuka posisi Arbitrase {sym} (Spot Long ${half_notional:.2f} + Futures Short ${half_notional:.2f})",
+            "message": f"Berhasil membuka posisi Arbitrase {sym} [{carry_name}: {guide}] (Total Modal: ${notional_total:.2f})",
             "position": pos_data
         }
 
@@ -166,16 +217,22 @@ class ArbitrageEngine:
         qty = pos["quantity"]
         spot_entry_val = pos["allocated_spot_usd"]
         fut_entry_val = pos["allocated_futures_usd"]
+        is_reverse = pos.get("is_reverse_carry", False)
 
-        # Hitung PnL Spot & Futures
-        spot_exit_val = qty * curr_spot_p
-        spot_pnl = spot_exit_val - spot_entry_val
+        # Hitung PnL Spot & Futures sesuai arah Carry
+        if is_reverse:
+            # Reverse Carry: Short Spot + Long Futures
+            spot_pnl = (pos["spot_entry_price"] - curr_spot_p) * qty
+            fut_pnl = (curr_fut_p - pos["futures_entry_price"]) * qty
+        else:
+            # Positive Carry: Long Spot + Short Futures
+            spot_pnl = (curr_spot_p - pos["spot_entry_price"]) * qty
+            fut_pnl = (pos["futures_entry_price"] - curr_fut_p) * qty
 
-        # Futures Short PnL: (Entry Price - Exit Price) * Qty
-        fut_pnl = (pos["futures_entry_price"] - curr_fut_p) * qty
+        spot_exit_val = spot_entry_val + spot_pnl
         fut_exit_val = fut_entry_val + fut_pnl
 
-        # Delta PnL harga (mendekati $0 karena saling mengunci)
+        # Delta PnL harga (konvergensi spread)
         price_delta_pnl = spot_pnl + fut_pnl
 
         # Total Keuntungan = Delta Harga + Akumulasi Bunga Funding Fee
@@ -187,7 +244,7 @@ class ArbitrageEngine:
 
         trade_record = {
             "symbol": sym,
-            "type": "ARBITRAGE (CASH & CARRY)",
+            "type": f"ARBITRAGE ({pos.get('carry_type', 'CASH & CARRY')})",
             "opened_at": pos["opened_at"],
             "closed_at": now_wib,
             "notional_total": pos["notional_total"],
@@ -223,13 +280,12 @@ class ArbitrageEngine:
 
         for sym, pos in list(self.positions.items()):
             next_ts = pos.get("next_funding_time", 0)
-            # Tarik info live rate
             f_info = self.get_symbol_funding_info(sym)
             pos["current_funding_pct"] = f_info["funding_pct"]
 
-            # Jika waktu settlement sudah terlewati atau update cycle
+            # Jika waktu settlement sudah terlewati
             if now_ts >= next_ts and next_ts > 0:
-                rate = f_info["funding_rate"]
+                rate = abs(f_info["funding_rate"]) # Selalu positif karena arah posisi sudah disesuaikan
                 fut_val = pos.get("allocated_futures_usd", pos["notional_total"] / 2.0)
                 reward = fut_val * rate
                 pos["accumulated_funding_reward"] = round(pos.get("accumulated_funding_reward", 0.0) + reward, 4)
@@ -261,10 +317,16 @@ class ArbitrageEngine:
             curr_fut_p = prices["futures"] if prices["futures"] > 0 else pos["futures_entry_price"]
 
             qty = pos["quantity"]
-            spot_pnl = (curr_spot_p - pos["spot_entry_price"]) * qty
-            fut_pnl = (pos["futures_entry_price"] - curr_fut_p) * qty
-            price_delta_pnl = spot_pnl + fut_pnl
+            is_reverse = pos.get("is_reverse_carry", False)
 
+            if is_reverse:
+                spot_pnl = (pos["spot_entry_price"] - curr_spot_p) * qty
+                fut_pnl = (curr_fut_p - pos["futures_entry_price"]) * qty
+            else:
+                spot_pnl = (curr_spot_p - pos["spot_entry_price"]) * qty
+                fut_pnl = (pos["futures_entry_price"] - curr_fut_p) * qty
+
+            price_delta_pnl = spot_pnl + fut_pnl
             harvested = pos.get("accumulated_funding_reward", 0.0)
             total_net_pnl = price_delta_pnl + harvested
             roi_pct = (total_net_pnl / pos["notional_total"]) * 100.0
@@ -280,14 +342,18 @@ class ArbitrageEngine:
             res.append({
                 "symbol": sym,
                 "opened_at": pos["opened_at"],
+                "carry_type": pos.get("carry_type", "POSITIVE CARRY"),
+                "is_reverse_carry": is_reverse,
                 "notional_total": pos["notional_total"],
                 "spot_leg": {
+                    "side": pos.get("spot_side", "LONG"),
                     "entry_price": pos["spot_entry_price"],
                     "current_price": curr_spot_p,
                     "allocated_usd": pos["allocated_spot_usd"],
                     "pnl": round(spot_pnl, 2)
                 },
                 "futures_leg": {
+                    "side": pos.get("futures_side", "SHORT 1X"),
                     "entry_price": pos["futures_entry_price"],
                     "current_price": curr_fut_p,
                     "allocated_usd": pos["allocated_futures_usd"],

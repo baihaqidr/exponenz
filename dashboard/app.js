@@ -3598,13 +3598,17 @@ async function loadArbitragePositions() {
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-size: 0.8rem;">
-                    <div style="background: #f8fafc; padding: 8px; border-radius: 8px; border-left: 3px solid #10b981;">
-                        <div style="font-weight: 700; color: #059669;"><i class="fa-solid fa-arrow-trend-up"></i> Spot Leg (Long)</div>
+                    <div style="background: #f8fafc; padding: 8px; border-radius: 8px; border-left: 3px solid ${pos.spot_leg.side === 'LONG' ? '#10b981' : '#f43f5e'};">
+                        <div style="font-weight: 700; color: ${pos.spot_leg.side === 'LONG' ? '#059669' : '#e11d48'};">
+                            <i class="fa-solid ${pos.spot_leg.side === 'LONG' ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'}"></i> Spot Leg (${pos.spot_leg.side || 'SPOT'})
+                        </div>
                         <div>Entry: <strong>$${pos.spot_leg.entry_price}</strong></div>
                         <div>Alokasi: $${pos.spot_leg.allocated_usd.toFixed(2)}</div>
                     </div>
-                    <div style="background: #f8fafc; padding: 8px; border-radius: 8px; border-left: 3px solid #f43f5e;">
-                        <div style="font-weight: 700; color: #e11d48;"><i class="fa-solid fa-arrow-trend-down"></i> Futures Leg (Short 1x)</div>
+                    <div style="background: #f8fafc; padding: 8px; border-radius: 8px; border-left: 3px solid ${pos.futures_leg.side.includes('LONG') ? '#10b981' : '#f43f5e'};">
+                        <div style="font-weight: 700; color: ${pos.futures_leg.side.includes('LONG') ? '#059669' : '#e11d48'};">
+                            <i class="fa-solid ${pos.futures_leg.side.includes('LONG') ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'}"></i> Futures Leg (${pos.futures_leg.side || 'FUTURES'})
+                        </div>
                         <div>Entry: <strong>$${pos.futures_leg.entry_price}</strong></div>
                         <div>Alokasi: $${pos.futures_leg.allocated_usd.toFixed(2)}</div>
                     </div>
