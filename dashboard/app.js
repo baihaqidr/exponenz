@@ -2092,14 +2092,41 @@ function renderBotPositionsTable(positions) {
     tbody.innerHTML = '';
     sortedPositions.forEach(pos => {
         const tr = document.createElement('tr');
+        const isArb = pos.is_arbitrage || pos.side === 'ARBITRAGE';
         const isLong = pos.position_amt > 0;
-        const sideBadge = isLong 
-            ? '<span class="tag-badge long"><i class="fa-solid fa-arrow-trend-up"></i> LONG</span>' 
-            : '<span class="tag-badge short"><i class="fa-solid fa-arrow-trend-down"></i> SHORT</span>';
+
+        let sideBadge = '';
+        if (isArb) {
+            sideBadge = '<span class="tag-badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; border: 1px solid #10b981; font-weight: 800;"><i class="fa-solid fa-shield-halved"></i> ARBITRAGE (HEDGE)</span>';
+        } else if (isLong) {
+            sideBadge = '<span class="tag-badge long"><i class="fa-solid fa-arrow-trend-up"></i> LONG</span>';
+        } else {
+            sideBadge = '<span class="tag-badge short"><i class="fa-solid fa-arrow-trend-down"></i> SHORT</span>';
+        }
         
         const pnl = pos.unrealized_pnl || 0.0;
         const pnlColor = pnl > 0 ? 'text-profit' : (pnl < 0 ? 'text-loss' : 'text-muted');
         const pnlSign = pnl >= 0 ? '+' : '-';
+
+        const liqDisplay = isArb 
+            ? '<span style="color: #10b981; font-weight: 700; font-size: 0.78rem;"><i class="fa-solid fa-shield"></i> Aman (Delta-0)</span>' 
+            : `$${formatCleanPrice(pos.liquidation_price)}`;
+
+        const levDisplay = isArb
+            ? '<span class="tag-badge" style="background: rgba(16, 185, 129, 0.2); color: #059669; font-weight: 700;">1x Hedge</span>'
+            : `<span class="tag-badge" style="background: rgba(99, 102, 241, 0.2); color: #818cf8;">${pos.leverage}x</span>`;
+
+        const actionBtn = isArb
+            ? `<button class="btn-log-action" style="background: #fef2f2; border-color: #fca5a5; color: #dc2626; font-weight: 700;" onclick="window.closeBotPosition('${pos.symbol}')">
+                   <i class="fa-solid fa-xmark"></i> Tutup & Rebalance
+               </button>`
+            : `<button class="btn-log-action" style="background: rgba(244, 63, 94, 0.2); border-color: #f43f5e; color: #f43f5e;" onclick="window.closeBotPosition('${pos.symbol}')">
+                   <i class="fa-solid fa-xmark"></i> Close Market
+               </button>`;
+
+        const subPnl = isArb && pos.accumulated_funding 
+            ? `<div style="font-size: 0.7rem; color: #10b981; font-weight: 600;">(+$${Number(pos.accumulated_funding).toFixed(4)} Bunga)</div>` 
+            : '';
 
         tr.innerHTML = `
             <td>
@@ -2112,14 +2139,13 @@ function renderBotPositionsTable(positions) {
             <td class="font-mono">${Math.abs(pos.position_amt)}</td>
             <td class="font-mono">$${formatCleanPrice(pos.entry_price)}</td>
             <td class="font-mono" style="font-weight: 700;">$${formatCleanPrice(pos.mark_price)}</td>
-            <td class="font-mono ${pnlColor}" style="font-weight: 700;">${pnlSign}$${Math.abs(pnl).toFixed(2)}</td>
-            <td class="font-mono text-loss">$${formatCleanPrice(pos.liquidation_price)}</td>
-            <td><span class="tag-badge" style="background: rgba(99, 102, 241, 0.2); color: #818cf8;">${pos.leverage}x</span></td>
-            <td>
-                <button class="btn-log-action" style="background: rgba(244, 63, 94, 0.2); border-color: #f43f5e; color: #f43f5e;" onclick="window.closeBotPosition('${pos.symbol}')">
-                    <i class="fa-solid fa-xmark"></i> Close Market
-                </button>
+            <td class="font-mono ${pnlColor}" style="font-weight: 700;">
+                ${pnlSign}$${Math.abs(pnl).toFixed(2)}
+                ${subPnl}
             </td>
+            <td class="font-mono text-loss">${liqDisplay}</td>
+            <td>${levDisplay}</td>
+            <td>${actionBtn}</td>
         `;
         tbody.appendChild(tr);
     });

@@ -233,6 +233,31 @@ class BinanceExecutionEngine:
                 "margin_type": "cross"
             })
 
+        # Integrate Arbitrage Engine Open Positions
+        try:
+            from src.arbitrage_engine import arbitrage_engine
+            arb_list = arbitrage_engine.get_active_positions_details()
+            for arb in arb_list:
+                sym = arb["symbol"]
+                active_virtual.append({
+                    "symbol": sym,
+                    "position_amt": arb["quantity"],
+                    "side": "ARBITRAGE",
+                    "entry_price": arb["spot_leg"]["entry_price"],
+                    "mark_price": arb["spot_leg"]["current_price"],
+                    "unrealized_pnl": round(arb["total_net_pnl"], 2),
+                    "liquidation_price": 0.0,
+                    "leverage": 1,
+                    "margin_type": "Delta-Neutral",
+                    "is_arbitrage": True,
+                    "accumulated_funding": arb.get("accumulated_funding_reward", 0.0),
+                    "harvest_count": arb.get("harvest_count", 0),
+                    "spot_entry": arb["spot_leg"]["entry_price"],
+                    "fut_entry": arb["futures_leg"]["entry_price"]
+                })
+        except Exception:
+            pass
+
         if changed:
             self._save_virtual_account()
 
@@ -374,6 +399,19 @@ class BinanceExecutionEngine:
 
     def close_position(self, symbol: str) -> Dict[str, Any]:
         """Tutup posisi aktif"""
+        # Coba tutup posisi arbitrase jika ada
+        try:
+            from src.arbitrage_engine import arbitrage_engine
+            if symbol in arbitrage_engine.positions:
+                res = arbitrage_engine.close_arbitrage(symbol)
+                if res.get("status") == "success":
+                    net_pnl = res.get("trade", {}).get("net_profit", 0.0)
+                    self.virtual_wallet_balance += net_pnl
+                    self._save_virtual_account()
+                    return res
+        except Exception:
+            pass
+
         # Coba tutup di Binance resmi jika ada key
         if self._has_valid_api_key():
             try:
