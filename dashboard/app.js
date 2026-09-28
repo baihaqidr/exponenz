@@ -3597,20 +3597,33 @@ async function loadArbitragePositions() {
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-size: 0.8rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; font-size: 0.8rem;">
                     <div style="background: #f8fafc; padding: 8px; border-radius: 8px; border-left: 3px solid ${pos.spot_leg.side === 'LONG' ? '#10b981' : '#f43f5e'};">
                         <div style="font-weight: 700; color: ${pos.spot_leg.side === 'LONG' ? '#059669' : '#e11d48'};">
                             <i class="fa-solid ${pos.spot_leg.side === 'LONG' ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'}"></i> Spot Leg (${pos.spot_leg.side || 'SPOT'})
                         </div>
-                        <div>Entry: <strong>$${pos.spot_leg.entry_price}</strong></div>
+                        <div>Entry: <strong>$${pos.spot_leg.entry_price}</strong> (Live: $${pos.spot_leg.current_price})</div>
                         <div>Alokasi: $${pos.spot_leg.allocated_usd.toFixed(2)}</div>
                     </div>
                     <div style="background: #f8fafc; padding: 8px; border-radius: 8px; border-left: 3px solid ${pos.futures_leg.side.includes('LONG') ? '#10b981' : '#f43f5e'};">
                         <div style="font-weight: 700; color: ${pos.futures_leg.side.includes('LONG') ? '#059669' : '#e11d48'};">
                             <i class="fa-solid ${pos.futures_leg.side.includes('LONG') ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'}"></i> Futures Leg (${pos.futures_leg.side || 'FUTURES'})
                         </div>
-                        <div>Entry: <strong>$${pos.futures_leg.entry_price}</strong></div>
+                        <div>Entry: <strong>$${pos.futures_leg.entry_price}</strong> (Live: $${pos.futures_leg.current_price})</div>
                         <div>Alokasi: $${pos.futures_leg.allocated_usd.toFixed(2)}</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; font-size: 0.78rem;">
+                    <div style="background: #f1f5f9; padding: 8px; border-radius: 8px;">
+                        <span style="color: #475569; display: block; font-weight: 600;">📊 Basis Spread Pasar:</span>
+                        <strong style="color: #0f172a; font-size: 0.92rem;">${pos.spread_current_pct !== undefined ? pos.spread_current_pct.toFixed(3) : (pos.spread_entry_pct || 0).toFixed(3)}%</strong>
+                        <span style="color: #94a3b8; font-size: 0.7rem;">(Entry: ${(pos.spread_entry_pct || 0).toFixed(3)}%)</span>
+                    </div>
+                    <div style="background: #eff6ff; padding: 8px; border-radius: 8px;">
+                        <span style="color: #1e40af; display: block; font-weight: 600;">⚡ Live Funding Rate (8H):</span>
+                        <strong style="color: ${pos.current_funding_pct < 0 ? '#dc2626' : '#16a34a'}; font-size: 0.92rem;">${(pos.current_funding_pct || 0).toFixed(4)}%</strong>
+                        <span style="color: #64748b; font-size: 0.7rem;">(Bunga Binance)</span>
                     </div>
                 </div>
 

@@ -339,6 +339,13 @@ class ArbitrageEngine:
             s = sec_left % 60
             cd_str = f"{h:02d}h {m:02d}m {s:02d}s"
 
+            # Hitung Live Basis Spread
+            curr_spread_pct = 0.0
+            if is_reverse:
+                curr_spread_pct = ((curr_spot_p - curr_fut_p) / curr_fut_p * 100.0) if curr_fut_p > 0 else 0.0
+            else:
+                curr_spread_pct = ((curr_fut_p - curr_spot_p) / curr_spot_p * 100.0) if curr_spot_p > 0 else 0.0
+
             res.append({
                 "symbol": sym,
                 "opened_at": pos["opened_at"],
@@ -360,6 +367,9 @@ class ArbitrageEngine:
                     "pnl": round(fut_pnl, 2)
                 },
                 "quantity": qty,
+                "spread_entry_pct": pos.get("spread_at_entry_pct", 0.0),
+                "spread_current_pct": round(curr_spread_pct, 3),
+                "funding_rate_entry_pct": pos.get("funding_pct_at_entry", 0.0),
                 "current_funding_pct": pos.get("current_funding_pct", 0.0),
                 "harvest_count": pos.get("harvest_count", 0),
                 "accumulated_funding_reward": round(harvested, 4),

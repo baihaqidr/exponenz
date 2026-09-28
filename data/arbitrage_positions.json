@@ -1,0 +1,36 @@
+{
+  "positions": {
+    "SAGAUSDT": {
+      "symbol": "SAGAUSDT",
+      "status": "OPEN",
+      "opened_at": "2026-09-28 11:39:34",
+      "opened_ts": 1790570374791,
+      "carry_type": "REVERSE CARRY",
+      "is_reverse_carry": true,
+      "notional_total": 500.0,
+      "allocated_spot_usd": 250.0,
+      "allocated_futures_usd": 250.0,
+      "spot_side": "SHORT",
+      "futures_side": "LONG 1X",
+      "spot_entry_price": 0.02616,
+      "futures_entry_price": 0.0258,
+      "spread_at_entry_pct": 1.395,
+      "quantity": 9689.9,
+      "funding_rate_at_entry": -0.01331466,
+      "funding_pct_at_entry": -1.331466,
+      "current_funding_pct": -1.331466,
+      "accumulated_funding_reward": 0.0,
+      "harvest_count": 0,
+      "next_funding_time": 1790582400000,
+      "last_harvest_time": "2026-09-28 11:39:34"
+    }
+  },
+  "history": [],
+  "is_auto_running": false,
+  "auto_config": {
+    "max_pairs": 3,
+    "notional_per_pair": 500.0,
+    "min_funding_rate_pct": 0.03
+  },
+  "updated_at": "2026-09-28 11:39:34"
+}
