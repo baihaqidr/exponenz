@@ -105,12 +105,21 @@ class ArbitrageEngine:
         return {"spot": spot_p, "futures": fut_p}
 
     def get_symbol_funding_info(self, symbol: str) -> Dict[str, Any]:
-        """Tarik rate funding live dan jadwal settlement terdekat"""
+        """Tarik rate funding live dan jadwal settlement terdekat beserta interval aslinya (1H, 2H, 4H, 8H)"""
         sym = symbol.upper().strip()
         fut_urls = [
             f"https://fapi.binance.com/fapi/v1/premiumIndex?symbol={sym}",
             f"https://testnet.binancefuture.com/fapi/v1/premiumIndex?symbol={sym}"
         ]
+        
+        # Check funding interval
+        interval_hrs = 8
+        try:
+            from src.funding_scanner import funding_scanner
+            interval_hrs = funding_scanner._get_funding_intervals().get(sym, 8)
+        except Exception:
+            pass
+
         for u in fut_urls:
             try:
                 r = requests.get(u, verify=False, timeout=3)
@@ -123,12 +132,21 @@ class ArbitrageEngine:
                         return {
                             "funding_rate": raw_rate,
                             "funding_pct": raw_rate * 100.0,
+                            "funding_interval_hours": interval_hrs,
+                            "funding_interval_label": f"{interval_hrs}H",
                             "next_funding_time": next_time,
                             "mark_price": mark_p
                         }
             except Exception:
                 continue
-        return {"funding_rate": 0.0001, "funding_pct": 0.01, "next_funding_time": int(time.time()*1000) + 28800000, "mark_price": 0.0}
+        return {
+            "funding_rate": 0.0001,
+            "funding_pct": 0.01,
+            "funding_interval_hours": interval_hrs,
+            "funding_interval_label": f"{interval_hrs}H",
+            "next_funding_time": int(time.time()*1000) + (interval_hrs * 3600 * 1000),
+            "mark_price": 0.0
+        }
 
     def open_arbitrage(self, symbol: str, notional_total: float = 500.0) -> Dict[str, Any]:
         """
@@ -186,6 +204,8 @@ class ArbitrageEngine:
             "quantity": qty,
             "funding_rate_at_entry": raw_funding,
             "funding_pct_at_entry": funding_info["funding_pct"],
+            "funding_interval_hours": funding_info.get("funding_interval_hours", 8),
+            "funding_interval_label": funding_info.get("funding_interval_label", "8H"),
             "current_funding_pct": funding_info["funding_pct"],
             "accumulated_funding_reward": 0.0,
             "harvest_count": 0,
@@ -370,6 +390,8 @@ class ArbitrageEngine:
                 "spread_entry_pct": pos.get("spread_at_entry_pct", 0.0),
                 "spread_current_pct": round(curr_spread_pct, 3),
                 "funding_rate_entry_pct": pos.get("funding_pct_at_entry", 0.0),
+                "funding_interval_hours": pos.get("funding_interval_hours", 8),
+                "funding_interval_label": pos.get("funding_interval_label", "8H"),
                 "current_funding_pct": pos.get("current_funding_pct", 0.0),
                 "harvest_count": pos.get("harvest_count", 0),
                 "accumulated_funding_reward": round(harvested, 4),

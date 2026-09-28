@@ -1632,11 +1632,13 @@ function filterAndRenderFundingTable() {
             ? `<span class="tag-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981;"><i class="fa-solid fa-check"></i> Spot & Futures</span>`
             : `<span class="tag-badge" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid #f43f5e;"><i class="fa-solid fa-ban"></i> Futures Only</span>`;
 
+        const intervalBadge = pair.funding_interval_label ? `<span style="font-size: 0.72rem; color: #64748b; font-weight: 500; margin-left: 4px;">(${pair.funding_interval_label})</span>` : `<span style="font-size: 0.72rem; color: #64748b; font-weight: 500; margin-left: 4px;">(8H)</span>`;
+
         tr.innerHTML = `
             <td><strong>${pair.symbol}</strong></td>
             <td>${spotBadgeHtml}</td>
             <td class="${rateColor} font-mono" style="font-size: 1.05rem; font-weight: 700;">
-                ${rateSign}${rate.toFixed(4)}%
+                ${rateSign}${rate.toFixed(4)}% ${intervalBadge}
             </td>
             <td class="font-mono">${rateSign}${apy.toFixed(1)}% APY</td>
             <td class="font-mono ${basisColor}" style="font-weight: 600;">
@@ -3621,7 +3623,7 @@ async function loadArbitragePositions() {
                         <span style="color: #94a3b8; font-size: 0.7rem;">(Entry: ${(pos.spread_entry_pct || 0).toFixed(3)}%)</span>
                     </div>
                     <div style="background: #eff6ff; padding: 8px; border-radius: 8px;">
-                        <span style="color: #1e40af; display: block; font-weight: 600;">⚡ Live Funding Rate (8H):</span>
+                        <span style="color: #1e40af; display: block; font-weight: 600;">⚡ Live Funding Rate (${pos.funding_interval_label || '8H'}):</span>
                         <strong style="color: ${pos.current_funding_pct < 0 ? '#dc2626' : '#16a34a'}; font-size: 0.92rem;">${(pos.current_funding_pct || 0).toFixed(4)}%</strong>
                         <span style="color: #64748b; font-size: 0.7rem;">(Bunga Binance)</span>
                     </div>

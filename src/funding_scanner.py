@@ -14,10 +14,46 @@ class FundingRateScanner:
     """
     def __init__(self, min_volume_24h_usd: float = 100_000):
         self.min_volume_24h_usd = min_volume_24h_usd
+        self._interval_cache = {}
+        self._interval_cache_ts = 0
+
+    def _get_funding_intervals(self) -> Dict[str, int]:
+        now = time.time()
+        if self._interval_cache and (now - self._interval_cache_ts < 600):
+            return self._interval_cache
+
+        intervals = {}
+        urls = [
+            'https://testnet.binancefuture.com/fapi/v1/fundingInfo',
+            'https://fapi.binance.com/fapi/v1/fundingInfo'
+        ]
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        for u in urls:
+            try:
+                res = requests.get(u, headers=headers, verify=False, timeout=4)
+                if res.status_code == 200:
+                    data = res.json()
+                    if isinstance(data, list):
+                        for item in data:
+                            sym = item.get('symbol')
+                            hrs = item.get('fundingIntervalHours', 8)
+                            if sym and hrs:
+                                intervals[sym] = int(hrs)
+                        if intervals:
+                            break
+            except Exception:
+                continue
+
+        if intervals:
+            self._interval_cache = intervals
+            self._interval_cache_ts = now
+        return intervals
 
     def get_live_funding_rates(self) -> List[Dict[str, Any]]:
         results = []
         try:
+            funding_intervals = self._get_funding_intervals()
+
             # 1. Fetch Official Binance Futures Premium Index (with multi-tier fallback)
             r_fut = None
             fut_urls = [
@@ -89,6 +125,11 @@ class FundingRateScanner:
                 else:
                     spread_pct = 0.0
 
+                # Hitung Funding Interval & Frekuensi Per Hari (e.g. 8H = 3x, 4H = 6x, 2H = 12x, 1H = 24x)
+                interval_hours = funding_intervals.get(sym, 8)
+                times_per_day = 24.0 / max(1, interval_hours)
+                interval_label = f"{interval_hours}H"
+
                 # Hitung Countdown Waktu Gajian
                 seconds_left = max(0, int((next_time_ms - now_ts) / 1000))
                 hours = seconds_left // 3600
@@ -96,10 +137,8 @@ class FundingRateScanner:
                 seconds = seconds_left % 60
                 countdown_str = f"{hours:02d}h {minutes:02d}m {seconds:02d}s"
 
-                # Hitung APY Tahunan
-                apy = abs(funding_pct) * 3 * 365 # 3x sehari dasar
-                if abs(funding_pct) > 0.20:
-                    apy = abs(funding_pct) * 24 * 365
+                # Hitung APY Tahunan Berdasarkan Interval Asli
+                apy = abs(funding_pct) * times_per_day * 365.0
 
                 # Kategori Carry
                 if funding_pct >= 0:
@@ -144,6 +183,9 @@ class FundingRateScanner:
                     "funding_rate": funding_pct,
                     "funding_rate_pct": funding_pct,
                     "funding_rate_raw": raw_rate,
+                    "funding_interval_hours": interval_hours,
+                    "funding_interval_label": interval_label,
+                    "times_per_day": times_per_day,
                     "apy": apy,
                     "carry_type": carry_type,
                     "action_guide": action_guide,
