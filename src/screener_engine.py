@@ -63,14 +63,40 @@ class BollingerScreenerEngine:
         self.symbols_cache_ts = now
         return self.symbols_cache[:limit]
 
+    def _calculate_rsi(self, closes: np.ndarray, period: int = 14) -> float:
+        if len(closes) < period + 1:
+            return 50.0
+        deltas = np.diff(closes)
+        seed = deltas[:period]
+        up = seed[seed >= 0].sum() / period
+        down = -seed[seed < 0].sum() / period
+        if down == 0:
+            return 100.0
+        rs = up / down
+        rsi = 100.0 - (100.0 / (1.0 + rs))
+
+        # Wilder's Smoothing
+        for delta in deltas[period:]:
+            up_val = delta if delta > 0 else 0.0
+            down_val = -delta if delta < 0 else 0.0
+            up = (up * (period - 1) + up_val) / period
+            down = (down * (period - 1) + down_val) / period
+            if down == 0:
+                rsi = 100.0
+            else:
+                rs = up / down
+                rsi = 100.0 - (100.0 / (1.0 + rs))
+        return float(rsi)
+
     def _fetch_klines_and_calc_bb(self, symbol: str, timeframe: str = "15m", period: int = 20, std_dev: float = 2.0) -> Optional[Dict[str, Any]]:
         clean_sym = symbol.upper().strip()
         spot_sym = clean_sym[4:] if clean_sym.startswith("1000") else clean_sym
 
-        # Fetch Klines
+        # Fetch Klines (70 candles for accurate RSI 14 & BB 20)
+        limit_count = 70
         urls = [
-            f"https://data-api.binance.vision/api/v3/klines?symbol={spot_sym}&interval={timeframe}&limit={period + 30}",
-            f"https://testnet.binancefuture.com/fapi/v1/klines?symbol={clean_sym}&interval={timeframe}&limit={period + 30}"
+            f"https://data-api.binance.vision/api/v3/klines?symbol={spot_sym}&interval={timeframe}&limit={limit_count}",
+            f"https://testnet.binancefuture.com/fapi/v1/klines?symbol={clean_sym}&interval={timeframe}&limit={limit_count}"
         ]
         headers = {'User-Agent': 'Mozilla/5.0'}
         candles = None
@@ -97,6 +123,9 @@ class BollingerScreenerEngine:
             curr_price = float(closes[-1])
             curr_volume = float(volumes[-1])
 
+            # Hitung RSI (14 period)
+            rsi = self._calculate_rsi(closes, period=14)
+
             # Hitung Bollinger Bands (SMA 20 & Standard Deviation 2.0)
             window_closes = closes[-period:]
             sma = float(np.mean(window_closes))
@@ -111,7 +140,7 @@ class BollingerScreenerEngine:
             else:
                 bandwidth_pct = 0.0
 
-            # %B (Posisi relatif harga di dalam band: <0 = tembus bawah, >1 = tembus atas)
+            # %B (Posisi relatif harga di dalam band: <0 = tembus bawah, >100 = tembus atas)
             band_range = upper_band - lower_band
             if band_range > 0:
                 percent_b = ((curr_price - lower_band) / band_range) * 100.0
@@ -121,18 +150,37 @@ class BollingerScreenerEngine:
             # 24h change estimasi dari candle awal
             price_change_pct = ((curr_price - closes[0]) / closes[0]) * 100.0 if closes[0] > 0 else 0.0
 
-            # Klasifikasi Kondisi Bollinger
-            if percent_b >= 100.0:
-                signal = "SUPER BREAKOUT (ABOVE UPPER)"
+            # Klasifikasi Kondisi Bollinger & RSI Combo
+            is_oversold_combo = (curr_price <= lower_band or percent_b <= 0.0) and (rsi <= 30.0)
+            is_overbought_combo = (curr_price >= upper_band or percent_b >= 100.0) and (rsi >= 70.0)
+
+            if is_oversold_combo:
+                signal = "SUPER OVERSOLD (RSI < 30 & BELOW LOWER)"
                 signal_color = "#10b981"
+                signal_badge = "🚀 OVERSOLD LONG (RSI<30)"
+            elif is_overbought_combo:
+                signal = "SUPER OVERBOUGHT (RSI > 70 & ABOVE UPPER)"
+                signal_color = "#f43f5e"
+                signal_badge = "⚠️ OVERBOUGHT SHORT (RSI>70)"
+            elif percent_b >= 100.0:
+                signal = "SUPER BREAKOUT (ABOVE UPPER)"
+                signal_color = "#38bdf8"
                 signal_badge = "🔥 TEMBUS UPPER"
             elif percent_b <= 0.0:
                 signal = "SUPER DUMP (BELOW LOWER)"
-                signal_color = "#f43f5e"
-                signal_badge = "⚠️ TEMBUS LOWER"
+                signal_color = "#fb7185"
+                signal_badge = "📉 TEMBUS LOWER"
+            elif rsi <= 30.0:
+                signal = "RSI OVERSOLD (RSI < 30)"
+                signal_color = "#34d399"
+                signal_badge = "💎 RSI OVERSOLD"
+            elif rsi >= 70.0:
+                signal = "RSI OVERBOUGHT (RSI > 70)"
+                signal_color = "#f87171"
+                signal_badge = "⚡ RSI OVERBOUGHT"
             elif bandwidth_pct >= 12.0:
                 signal = "SUPER EXPANSION (HIGH VOLATILITY)"
-                signal_color = "#3b82f6"
+                signal_color = "#60a5fa"
                 signal_badge = "⚡ SUPER EXPANSION"
             elif bandwidth_pct <= 3.0:
                 signal = "SUPER SQUEEZE (READY TO EXPLODE)"
@@ -147,6 +195,7 @@ class BollingerScreenerEngine:
                 "symbol": clean_sym,
                 "timeframe": timeframe,
                 "current_price": curr_price,
+                "rsi": round(rsi, 2),
                 "upper_band": round(upper_band, 6) if upper_band < 1 else round(upper_band, 4),
                 "mid_band": round(sma, 6) if sma < 1 else round(sma, 4),
                 "lower_band": round(lower_band, 6) if lower_band < 1 else round(lower_band, 4),
@@ -156,6 +205,7 @@ class BollingerScreenerEngine:
                 "signal": signal,
                 "signal_color": signal_color,
                 "signal_badge": signal_badge,
+                "is_oversold_combo": is_oversold_combo,
                 "volume": round(curr_volume, 2)
             }
         except Exception as e:

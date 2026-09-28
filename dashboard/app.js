@@ -3754,7 +3754,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(loadArbitragePositions, 600);
 });
 
-// --- 13. BOLLINGER BANDS EXTREME VOLATILITY SCREENER CONTROLLER ---
+// --- 13. BOLLINGER BANDS & RSI (14) VOLATILITY SCREENER CONTROLLER ---
 state.screenerData = [];
 state.filteredScreenerData = [];
 state.screenerTimeframe = '15m';
@@ -3762,6 +3762,37 @@ state.screenerStatusFilter = 'all';
 state.screenerSearch = '';
 state.screenerSortField = 'bandwidth_pct';
 state.screenerSortOrder = 'desc';
+
+function calcRsiClient(closes, period = 14) {
+    if (!closes || closes.length < period + 1) return 50.0;
+    const deltas = [];
+    for (let i = 1; i < closes.length; i++) {
+        deltas.push(closes[i] - closes[i - 1]);
+    }
+    let up = 0, down = 0;
+    for (let i = 0; i < period; i++) {
+        if (deltas[i] >= 0) up += deltas[i];
+        else down += -deltas[i];
+    }
+    up /= period;
+    down /= period;
+    if (down === 0) return 100.0;
+    let rs = up / down;
+    let rsi = 100.0 - (100.0 / (1.0 + rs));
+
+    for (let i = period; i < deltas.length; i++) {
+        const upVal = deltas[i] > 0 ? deltas[i] : 0;
+        const downVal = deltas[i] < 0 ? -deltas[i] : 0;
+        up = (up * (period - 1) + upVal) / period;
+        down = (down * (period - 1) + downVal) / period;
+        if (down === 0) rsi = 100.0;
+        else {
+            rs = up / down;
+            rsi = 100.0 - (100.0 / (1.0 + rs));
+        }
+    }
+    return rsi;
+}
 
 async function clientSideBollingerScan(timeframe = '15m') {
     const symbols = [
@@ -3778,13 +3809,16 @@ async function clientSideBollingerScan(timeframe = '15m') {
     const promises = symbols.map(async (sym) => {
         try {
             const spotSym = sym.startsWith('1000') ? sym.slice(4) : sym;
-            const res = await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${spotSym}&interval=${timeframe}&limit=${period + 10}`);
+            const res = await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${spotSym}&interval=${timeframe}&limit=65`);
             if (!res.ok) return;
             const candles = await res.json();
             if (!Array.isArray(candles) || candles.length < period) return;
 
             const closes = candles.map(c => parseFloat(c[4]));
             const currPrice = closes[closes.length - 1];
+
+            // RSI 14
+            const rsi = calcRsiClient(closes, 14);
 
             // SMA 20
             const slice = closes.slice(-period);
@@ -3800,21 +3834,40 @@ async function clientSideBollingerScan(timeframe = '15m') {
             const bandRange = upperBand - lowerBand;
             const percentB = bandRange > 0 ? ((currPrice - lowerBand) / bandRange) * 100.0 : 50.0;
 
+            const isOversoldCombo = (currPrice <= lowerBand || percentB <= 0.0) && (rsi <= 30.0);
+            const isOverboughtCombo = (currPrice >= upperBand || percentB >= 100.0) && (rsi >= 70.0);
+
             let signal = "NORMAL VOLATILITY";
             let signalColor = "#64748b";
             let signalBadge = "NORMAL";
 
-            if (percentB >= 100.0) {
-                signal = "SUPER BREAKOUT (ABOVE UPPER)";
+            if (isOversoldCombo) {
+                signal = "SUPER OVERSOLD (RSI < 30 & BELOW LOWER)";
                 signalColor = "#10b981";
+                signalBadge = "🚀 OVERSOLD LONG (RSI<30)";
+            } else if (isOverboughtCombo) {
+                signal = "SUPER OVERBOUGHT (RSI > 70 & ABOVE UPPER)";
+                signalColor = "#f43f5e";
+                signalBadge = "⚠️ OVERBOUGHT SHORT (RSI>70)";
+            } else if (percentB >= 100.0) {
+                signal = "SUPER BREAKOUT (ABOVE UPPER)";
+                signalColor = "#38bdf8";
                 signalBadge = "🔥 TEMBUS UPPER";
             } else if (percentB <= 0.0) {
                 signal = "SUPER DUMP (BELOW LOWER)";
-                signalColor = "#f43f5e";
-                signalBadge = "⚠️ TEMBUS LOWER";
+                signalColor = "#fb7185";
+                signalBadge = "📉 TEMBUS LOWER";
+            } else if (rsi <= 30.0) {
+                signal = "RSI OVERSOLD (RSI < 30)";
+                signalColor = "#34d399";
+                signalBadge = "💎 RSI OVERSOLD";
+            } else if (rsi >= 70.0) {
+                signal = "RSI OVERBOUGHT (RSI > 70)";
+                signalColor = "#f87171";
+                signalBadge = "⚡ RSI OVERBOUGHT";
             } else if (bandwidthPct >= 12.0) {
                 signal = "SUPER EXPANSION (HIGH VOLATILITY)";
-                signalColor = "#3b82f6";
+                signalColor = "#60a5fa";
                 signalBadge = "⚡ SUPER EXPANSION";
             } else if (bandwidthPct <= 3.5) {
                 signal = "SUPER SQUEEZE (READY TO EXPLODE)";
@@ -3826,6 +3879,7 @@ async function clientSideBollingerScan(timeframe = '15m') {
                 symbol: sym,
                 timeframe: timeframe,
                 current_price: currPrice,
+                rsi: Number(rsi.toFixed(2)),
                 upper_band: upperBand,
                 mid_band: sma,
                 lower_band: lowerBand,
@@ -3833,7 +3887,8 @@ async function clientSideBollingerScan(timeframe = '15m') {
                 percent_b: percentB,
                 signal: signal,
                 signal_color: signalColor,
-                signal_badge: signalBadge
+                signal_badge: signalBadge,
+                is_oversold_combo: isOversoldCombo
             });
         } catch (e) {}
     });
@@ -3851,8 +3906,8 @@ async function loadBollingerScreenerData(forceRefresh = false) {
     if (forceRefresh || state.screenerData.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="loading-cell">
-                    <i class="fa-solid fa-spinner fa-spin"></i> Menghitung Bollinger Band Width (${state.screenerTimeframe}) di seluruh pair aktif Binance...
+                <td colspan="10" class="loading-cell">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Menghitung Bollinger Bands & RSI (14) [${state.screenerTimeframe}] di seluruh pair aktif Binance...
                 </td>
             </tr>
         `;
@@ -3881,10 +3936,10 @@ async function loadBollingerScreenerData(forceRefresh = false) {
             updateScreenerKPIs(pairs);
             filterAndRenderScreenerTable();
         } else {
-            tbody.innerHTML = `<tr><td colspan="9" class="error-cell">Gagal memuat data screening Bollinger Bands.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="error-cell">Gagal memuat data screening Bollinger Bands.</td></tr>`;
         }
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="9" class="error-cell">Terjadi kesalahan saat screening data pasar.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="error-cell">Terjadi kesalahan saat screening data pasar.</td></tr>`;
     }
 }
 
@@ -3892,17 +3947,28 @@ function updateScreenerKPIs(pairs) {
     if (!pairs || pairs.length === 0) return;
     const topExpEl = document.getElementById('screener-top-expansion');
     const topSqEl = document.getElementById('screener-top-squeeze');
+    const topRevEl = document.getElementById('screener-top-reversal');
 
     // Sort by bandwidth to get max and min
     const sorted = [...pairs].sort((a, b) => (b.bandwidth_pct || 0) - (a.bandwidth_pct || 0));
     const topExp = sorted[0];
     const topSq = sorted[sorted.length - 1];
 
+    // Count reversal long candidates (RSI <= 30 & Below Lower Band)
+    const reversalCount = pairs.filter(p => (Number(p.rsi || 50) <= 30.0) && (Number(p.percent_b || 50) <= 0.0 || Number(p.current_price) <= Number(p.lower_band))).length;
+
     if (topExpEl && topExp) {
-        topExpEl.innerHTML = `${topExp.symbol} <span style="font-size: 0.85rem; color: #60a5fa;">(${topExp.bandwidth_pct.toFixed(1)}%)</span>`;
+        topExpEl.innerHTML = `${topExp.symbol} <span style="font-size: 0.85rem; color: #60a5fa;">(${Number(topExp.bandwidth_pct).toFixed(1)}%)</span>`;
     }
     if (topSqEl && topSq) {
-        topSqEl.innerHTML = `${topSq.symbol} <span style="font-size: 0.85rem; color: #f59e0b;">(${topSq.bandwidth_pct.toFixed(1)}%)</span>`;
+        topSqEl.innerHTML = `${topSq.symbol} <span style="font-size: 0.85rem; color: #f59e0b;">(${Number(topSq.bandwidth_pct).toFixed(1)}%)</span>`;
+    }
+    if (topRevEl) {
+        if (reversalCount > 0) {
+            topRevEl.innerHTML = `<span style="color: #10b981; font-weight: 800;">🔥 ${reversalCount} Pair Siap Entry</span>`;
+        } else {
+            topRevEl.innerHTML = `<span style="color: #94a3b8; font-weight: 600;">0 Pair (Market Stabil)</span>`;
+        }
     }
 }
 
@@ -3920,12 +3986,19 @@ function changeScreenerTimeframe(tf) {
     loadBollingerScreenerData(true);
 }
 
+function applyScreenerQuickFilter(statusKey) {
+    state.screenerStatusFilter = statusKey;
+    const selectEl = document.getElementById('screener-filter-status');
+    if (selectEl) selectEl.value = statusKey;
+    filterAndRenderScreenerTable();
+}
+
 function sortScreenerBy(field) {
     if (state.screenerSortField === field) {
         state.screenerSortOrder = state.screenerSortOrder === 'asc' ? 'desc' : 'asc';
     } else {
         state.screenerSortField = field;
-        state.screenerSortOrder = 'desc';
+        state.screenerSortOrder = (field === 'rsi') ? 'asc' : 'desc'; // Default RSI to ASC (mencari yang paling oversold)
     }
 
     // Update icons
@@ -3950,14 +4023,26 @@ function filterAndRenderScreenerTable() {
     let filtered = [...state.screenerData];
 
     // Status filter
-    if (state.screenerStatusFilter === 'expansion') {
-        filtered = filtered.filter(p => p.bandwidth_pct >= 10.0);
+    if (state.screenerStatusFilter === 'rsi_bb_oversold') {
+        filtered = filtered.filter(p => {
+            const rsi = Number(p.rsi || 50);
+            const pb = Number(p.percent_b || 50);
+            const price = Number(p.current_price || 0);
+            const lower = Number(p.lower_band || 0);
+            return (rsi <= 30.0) && (pb <= 0.0 || price <= lower);
+        });
+    } else if (state.screenerStatusFilter === 'rsi_oversold') {
+        filtered = filtered.filter(p => Number(p.rsi || 50) <= 30.0);
+    } else if (state.screenerStatusFilter === 'rsi_overbought') {
+        filtered = filtered.filter(p => Number(p.rsi || 50) >= 70.0);
+    } else if (state.screenerStatusFilter === 'expansion') {
+        filtered = filtered.filter(p => Number(p.bandwidth_pct || 0) >= 10.0);
     } else if (state.screenerStatusFilter === 'squeeze') {
-        filtered = filtered.filter(p => p.bandwidth_pct <= 3.5);
+        filtered = filtered.filter(p => Number(p.bandwidth_pct || 0) <= 3.5);
     } else if (state.screenerStatusFilter === 'breakout') {
-        filtered = filtered.filter(p => p.percent_b >= 100.0);
+        filtered = filtered.filter(p => Number(p.percent_b || 0) >= 100.0);
     } else if (state.screenerStatusFilter === 'dump') {
-        filtered = filtered.filter(p => p.percent_b <= 0.0);
+        filtered = filtered.filter(p => Number(p.percent_b || 0) <= 0.0);
     }
 
     // Search query
@@ -3990,7 +4075,18 @@ function filterAndRenderScreenerTable() {
 
     tbody.innerHTML = '';
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="loading-cell">Tidak ada koin yang sesuai dengan filter screening.</td></tr>`;
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" class="loading-cell" style="padding: 30px 15px;">
+                    <div style="font-size: 1.1rem; font-weight: 700; color: #64748b; margin-bottom: 6px;">
+                        <i class="fa-solid fa-filter-circle-xmark"></i> Tidak Ada Koin yang Memenuhi Kriteria Filter
+                    </div>
+                    <div style="font-size: 0.85rem; color: #94a3b8;">
+                        Coba ubah Timeframe (misal ke 5m atau 15m) atau pilih filter <strong>Semua Status</strong> untuk melihat seluruh pair.
+                    </div>
+                </td>
+            </tr>
+        `;
         return;
     }
 
@@ -3998,6 +4094,7 @@ function filterAndRenderScreenerTable() {
         const tr = document.createElement('tr');
         const bw = Number(pair.bandwidth_pct || 0);
         const pb = Number(pair.percent_b || 0);
+        const rsi = Number(pair.rsi || 50);
 
         // Highlight bandwidth
         let bwColor = '#0f172a';
@@ -4013,15 +4110,41 @@ function filterAndRenderScreenerTable() {
         // %B Color
         let pbColor = '#64748b';
         if (pb >= 100.0) pbColor = 'text-profit';
-        else if (pb <= 0.0) pbColor = 'text-loss';
+        else if (pb <= 0.0) pbColor = 'text-loss font-bold';
+
+        // RSI Badge & Color
+        let rsiHtml = `<span class="font-mono" style="font-weight: 700; color: #475569;">${rsi.toFixed(1)}</span>`;
+        if (rsi <= 30.0) {
+            rsiHtml = `
+                <span class="tag-badge" style="background: rgba(16, 185, 129, 0.18); color: #059669; border: 1px solid rgba(16, 185, 129, 0.4); font-weight: 800;">
+                    🔥 ${rsi.toFixed(1)} OVERSOLD
+                </span>
+            `;
+        } else if (rsi >= 70.0) {
+            rsiHtml = `
+                <span class="tag-badge" style="background: rgba(244, 63, 94, 0.18); color: #e11d48; border: 1px solid rgba(244, 63, 94, 0.4); font-weight: 800;">
+                    ⚡ ${rsi.toFixed(1)} OVERBOUGHT
+                </span>
+            `;
+        }
+
+        // Special row styling for perfect Long Reversal setup
+        const isPerfectLongSetup = (rsi <= 30.0) && (pb <= 0.0 || pair.current_price <= pair.lower_band);
+        if (isPerfectLongSetup) {
+            tr.style.background = 'rgba(16, 185, 129, 0.05)';
+        }
 
         tr.innerHTML = `
-            <td><strong>${pair.symbol}</strong></td>
-            <td class="font-mono" style="font-size: 1.05rem; font-weight: 800; color: ${bwColor};">
-                ${bw.toFixed(2)}% ${bwBadge}
+            <td>
+                <strong>${pair.symbol}</strong>
+                ${isPerfectLongSetup ? '<span style="display:block; font-size:0.7rem; color:#10b981; font-weight:800;">🚀 REVERSAL LONG COMBO</span>' : ''}
             </td>
+            <td>${rsiHtml}</td>
             <td class="font-mono ${pbColor}" style="font-weight: 700;">
                 ${pb.toFixed(1)}%
+            </td>
+            <td class="font-mono" style="font-size: 1.02rem; font-weight: 800; color: ${bwColor};">
+                ${bw.toFixed(2)}% ${bwBadge}
             </td>
             <td>
                 <span class="tag-badge" style="background: ${pair.signal_color || '#10b981'}1a; color: ${pair.signal_color || '#10b981'}; border: 1px solid ${pair.signal_color || '#10b981'}; font-weight: 700;">
@@ -4031,7 +4154,7 @@ function filterAndRenderScreenerTable() {
             <td class="font-mono" style="font-weight: 700;">$${formatCleanPrice(pair.current_price)}</td>
             <td class="font-mono text-profit">$${formatCleanPrice(pair.upper_band)}</td>
             <td class="font-mono text-muted">$${formatCleanPrice(pair.mid_band)}</td>
-            <td class="font-mono text-loss">$${formatCleanPrice(pair.lower_band)}</td>
+            <td class="font-mono text-loss" style="font-weight: 700;">$${formatCleanPrice(pair.lower_band)}</td>
             <td>
                 <button class="btn-log-action" style="background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; color: #2563eb; font-weight: 700; margin-right: 4px;" onclick="addPairToBotWatchlist('${pair.symbol}')" title="Masukkan ke Watchlist Bot">
                     <i class="fa-solid fa-plus"></i> Watchlist
