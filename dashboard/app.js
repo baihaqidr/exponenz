@@ -1483,10 +1483,13 @@ async function loadLiveFundingRates() {
 function updateTopTargetHero(pairs) {
     if (!pairs || pairs.length === 0) return;
     const top = pairs[0];
-    topTargetSymbol.textContent = top.symbol;
-    topTargetRate.textContent = `${top.funding_rate_pct >= 0 ? '+' : ''}${top.funding_rate_pct.toFixed(4)}%`;
-    const sign = top.net_profit_1k >= 0 ? '+' : '-';
-    topTargetPayout.textContent = `Estimasi Net Profit Hit & Run: ${sign}$${Math.abs(top.net_profit_1k).toFixed(2)} per $1,000 (${top.apy.toFixed(1)}% APY)`;
+    if (topTargetSymbol) topTargetSymbol.textContent = top.symbol || 'SAGAUSDT';
+    const rateVal = top.funding_rate !== undefined ? top.funding_rate : (top.funding_rate_pct || 0);
+    if (topTargetRate) topTargetRate.textContent = `${rateVal >= 0 ? '+' : ''}${Number(rateVal).toFixed(4)}%`;
+    const net1k = top.net_profit_1k !== undefined ? top.net_profit_1k : 0;
+    const apyVal = top.apy !== undefined ? top.apy : 0;
+    const sign = net1k >= 0 ? '+' : '-';
+    if (topTargetPayout) topTargetPayout.textContent = `Estimasi Net Profit Hit & Run: ${sign}$${Math.abs(Number(net1k)).toFixed(2)} per $1,000 (${Number(apyVal).toFixed(1)}% APY)`;
 }
 
     state.fundingFilter = 'positive';
@@ -1501,7 +1504,20 @@ function updateTopTargetHero(pairs) {
     }
 
 function filterAndRenderFundingTable() {
-    let filtered = [...state.fundingData];
+    let filtered = [...(state.fundingData || [])];
+
+    // Normalize fields
+    filtered.forEach(p => {
+        if (p.funding_rate_pct === undefined) {
+            p.funding_rate_pct = p.funding_rate !== undefined ? p.funding_rate : 0;
+        }
+        if (p.basis_pct === undefined) {
+            p.basis_pct = p.spread_pct !== undefined ? p.spread_pct : 0;
+        }
+        if (p.spot_index_price === undefined) {
+            p.spot_index_price = p.spot_price !== undefined ? p.spot_price : p.futures_price;
+        }
+    });
 
     // Spot Availability filter
     if (state.fundingFilterSpot === 'spot_only') {
@@ -1525,8 +1541,11 @@ function filterAndRenderFundingTable() {
     }
 
     state.filteredFundingData = filtered;
-    fundingPairsCount.textContent = `Menampilkan ${filtered.length} dari ${state.fundingData.length} Pair Aktif Binance`;
+    if (fundingPairsCount) {
+        fundingPairsCount.textContent = `Menampilkan ${filtered.length} dari ${(state.fundingData || []).length} Pair Aktif Binance`;
+    }
 
+    if (!fundingTbody) return;
     fundingTbody.innerHTML = '';
     if (filtered.length === 0) {
         fundingTbody.innerHTML = `<tr><td colspan="10" class="loading-cell">Tidak ada pair yang sesuai dengan kriteria filter.</td></tr>`;
@@ -1545,12 +1564,17 @@ function filterAndRenderFundingTable() {
 
     filtered.slice(0, 50).forEach(pair => {
         const tr = document.createElement('tr');
-        const rateColor = pair.funding_rate_pct > 0 ? 'text-profit' : (pair.funding_rate_pct < 0 ? 'text-loss' : 'text-muted');
-        const rateSign = pair.funding_rate_pct > 0 ? '+' : '';
-        const netSign = pair.net_profit_1k > 0 ? '+' : '-';
-        const netColor = pair.net_profit_1k > 0 ? 'text-profit' : 'text-loss';
-        const basisColor = pair.basis_pct > 0 ? 'text-profit' : (pair.basis_pct < 0 ? 'text-loss' : 'text-muted');
-        const basisSign = pair.basis_pct > 0 ? '+' : '';
+        const rate = Number(pair.funding_rate_pct || 0);
+        const apy = Number(pair.apy || 0);
+        const basis = Number(pair.basis_pct || 0);
+        const net1k = Number(pair.net_profit_1k || 0);
+
+        const rateColor = rate > 0 ? 'text-profit' : (rate < 0 ? 'text-loss' : 'text-muted');
+        const rateSign = rate > 0 ? '+' : '';
+        const netSign = net1k > 0 ? '+' : '-';
+        const netColor = net1k > 0 ? 'text-profit' : 'text-loss';
+        const basisColor = basis > 0 ? 'text-profit' : (basis < 0 ? 'text-loss' : 'text-muted');
+        const basisSign = basis > 0 ? '+' : '';
 
         const spotBadgeHtml = pair.has_spot
             ? `<span class="tag-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981;"><i class="fa-solid fa-check"></i> Spot & Futures</span>`
@@ -1560,20 +1584,20 @@ function filterAndRenderFundingTable() {
             <td><strong>${pair.symbol}</strong></td>
             <td>${spotBadgeHtml}</td>
             <td class="${rateColor} font-mono" style="font-size: 1.05rem; font-weight: 700;">
-                ${rateSign}${pair.funding_rate_pct.toFixed(4)}%
+                ${rateSign}${rate.toFixed(4)}%
             </td>
-            <td class="font-mono">${rateSign}${pair.apy.toFixed(1)}% APY</td>
+            <td class="font-mono">${rateSign}${apy.toFixed(1)}% APY</td>
             <td class="font-mono ${basisColor}" style="font-weight: 600;">
-                ${basisSign}${pair.basis_pct.toFixed(3)}%
+                ${basisSign}${basis.toFixed(3)}%
             </td>
             <td class="font-mono">$${formatCleanPrice(pair.futures_price)}</td>
             <td class="font-mono text-muted">$${formatCleanPrice(pair.spot_index_price)}</td>
             <td class="${netColor} font-mono" style="font-weight: 700;">
-                ${netSign}$${Math.abs(pair.net_profit_1k).toFixed(2)}
+                ${netSign}$${Math.abs(net1k).toFixed(2)}
             </td>
             <td>
-                <span class="tag-badge" style="background: ${pair.status_color}22; color: ${pair.status_color}; border: 1px solid ${pair.status_color};">
-                    ${pair.status}
+                <span class="tag-badge" style="background: ${pair.status_color || '#10b981'}22; color: ${pair.status_color || '#10b981'}; border: 1px solid ${pair.status_color || '#10b981'};">
+                    ${pair.status || 'NORMAL'}
                 </span>
             </td>
             <td>
