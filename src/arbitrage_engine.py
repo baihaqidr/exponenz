@@ -309,6 +309,52 @@ class ArbitrageEngine:
             "trade": trade_record
         }
 
+    def rebalance_position(self, symbol: str) -> Dict[str, Any]:
+        """
+        Rebalance Manual / On-Demand:
+        Menyetarakan alokasi margin Spot dan Futures (50:50) saat posisi masih BERJALAN,
+        tanpa menutup posisi arbitrase dan tanpa slippage trading.
+        """
+        sym = symbol.upper().strip()
+        if sym not in self.positions:
+            return {"status": "error", "message": f"Posisi {sym} tidak ditemukan di daftar arbitrase"}
+
+        pos = self.positions[sym]
+        prices = self.get_live_prices(sym)
+        curr_spot_p = prices["spot"] if prices["spot"] > 0 else pos["spot_entry_price"]
+        curr_fut_p = prices["futures"] if prices["futures"] > 0 else pos["futures_entry_price"]
+
+        qty = pos["quantity"]
+        is_reverse = pos.get("is_reverse_carry", False)
+
+        if is_reverse:
+            spot_pnl = (pos["spot_entry_price"] - curr_spot_p) * qty
+            fut_pnl = (curr_fut_p - pos["futures_entry_price"]) * qty
+        else:
+            spot_pnl = (curr_spot_p - pos["spot_entry_price"]) * qty
+            fut_pnl = (pos["futures_entry_price"] - curr_fut_p) * qty
+
+        spot_val_now = pos["allocated_spot_usd"] + spot_pnl
+        fut_val_now = pos["allocated_futures_usd"] + fut_pnl
+        total_val_now = spot_val_now + fut_val_now
+
+        # Bagi rata 50:50 ke Spot dan Futures
+        target_half = total_val_now / 2.0
+        pos["notional_total"] = round(total_val_now, 2)
+        pos["allocated_spot_usd"] = round(target_half, 2)
+        pos["allocated_futures_usd"] = round(target_half, 2)
+        pos["spot_entry_price"] = curr_spot_p
+        pos["futures_entry_price"] = curr_fut_p
+        pos["last_rebalance_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        self._save_state()
+
+        return {
+            "status": "success",
+            "message": f"Berhasil Rebalance Saldo {sym}! Spot (${target_half:.2f}) & Futures (${target_half:.2f}) kini seimbang 50:50 tanpa mengganggu posisi.",
+            "position": pos
+        }
+
     def check_and_harvest_funding(self) -> List[Dict[str, Any]]:
         """
         Pengecekan rutin: Jika jadwal settlement terlewati, otomatis panen bunga transferan funding fee!

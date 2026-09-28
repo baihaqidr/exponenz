@@ -3601,6 +3601,28 @@ async function closeDemoArbitrage(symbol) {
     }
 }
 
+async function rebalanceDemoArbitrage(symbol) {
+    if (!confirm(`Eksekusi Rebalance Saldo Spot & Futures untuk [${symbol}] sekarang?\n\nAlokasi margin kedua dompet akan disetarakan kembali (50:50) secara instan tanpa menutup posisi dan tanpa slippage fee.`)) return;
+
+    try {
+        const res = await fetch('/api/arbitrage/rebalance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ symbol: symbol })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            alert(`✅ ${data.message}`);
+            loadArbitragePositions();
+            loadBotStatus();
+        } else {
+            alert(`⚠️ ${data.message || 'Gagal rebalance posisi'}`);
+        }
+    } catch (e) {
+        alert('Terjadi kesalahan koneksi saat me-rebalance arbitrase.');
+    }
+}
+
 async function loadArbitragePositions() {
     const cardEl = document.getElementById('arbitrage-active-card');
     const listEl = document.getElementById('arbitrage-active-list');
@@ -3686,16 +3708,21 @@ async function loadArbitragePositions() {
                     </div>
                 </div>
 
-                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 10px; gap: 8px;">
                     <div>
                         <div style="font-size: 0.72rem; color: #64748b;">Total Net Profit Saat Ini:</div>
                         <div style="font-size: 1.05rem; font-weight: 800; color: ${netColor};">
                             ${netSign}$${pos.total_net_pnl.toFixed(2)} (${netSign}${pos.roi_pct.toFixed(2)}%)
                         </div>
                     </div>
-                    <button class="btn-log-action" style="background: #fef2f2; border-color: #fecaca; color: #dc2626; font-weight: 700; padding: 6px 14px; border-radius: 6px;" onclick="closeDemoArbitrage('${pos.symbol}')">
-                        <i class="fa-solid fa-xmark"></i> Tutup & Rebalance
-                    </button>
+                    <div style="display: flex; gap: 6px;">
+                        <button class="btn-log-action" style="background: #f0fdf4; border-color: #bbf7d0; color: #16a34a; font-weight: 700; padding: 6px 10px; border-radius: 6px;" onclick="rebalanceDemoArbitrage('${pos.symbol}')" title="Setarakan saldo Spot & Futures (50:50) saat ini">
+                            <i class="fa-solid fa-arrows-rotate"></i> Rebalance Saldo
+                        </button>
+                        <button class="btn-log-action" style="background: #fef2f2; border-color: #fecaca; color: #dc2626; font-weight: 700; padding: 6px 12px; border-radius: 6px;" onclick="closeDemoArbitrage('${pos.symbol}')">
+                            <i class="fa-solid fa-xmark"></i> Tutup & Panen
+                        </button>
+                    </div>
                 </div>
             `;
             listEl.appendChild(card);
@@ -3707,6 +3734,7 @@ async function loadArbitragePositions() {
 
 window.openDemoArbitrageQuick = openDemoArbitrageQuick;
 window.closeDemoArbitrage = closeDemoArbitrage;
+window.rebalanceDemoArbitrage = rebalanceDemoArbitrage;
 window.loadArbitragePositions = loadArbitragePositions;
 
 // Poll arbitrage positions periodically

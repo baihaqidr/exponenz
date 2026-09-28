@@ -442,6 +442,11 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
             sym = body.get("symbol", "")
             res = arbitrage_engine.close_arbitrage(sym)
             self.send_json(res)
+        elif parsed.path == "/api/arbitrage/rebalance":
+            from src.arbitrage_engine import arbitrage_engine
+            sym = body.get("symbol", "")
+            res = arbitrage_engine.rebalance_position(sym)
+            self.send_json(res)
         elif parsed.path == "/api/arbitrage/harvest":
             from src.arbitrage_engine import arbitrage_engine
             res = arbitrage_engine.check_and_harvest_funding()
