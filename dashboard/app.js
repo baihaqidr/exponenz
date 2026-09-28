@@ -1494,6 +1494,8 @@ function updateTopTargetHero(pairs) {
 
     state.fundingFilter = 'positive';
     state.fundingFilterSpot = 'spot_only';
+    state.fundingSortField = 'funding_rate_pct';
+    state.fundingSortOrder = 'desc';
 
     const fundingFilterSpotEl = document.getElementById('funding-filter-spot');
     if (fundingFilterSpotEl) {
@@ -1502,6 +1504,29 @@ function updateTopTargetHero(pairs) {
             filterAndRenderFundingTable();
         });
     }
+
+function sortFundingBy(field) {
+    if (state.fundingSortField === field) {
+        state.fundingSortOrder = state.fundingSortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+        state.fundingSortField = field;
+        state.fundingSortOrder = 'desc';
+    }
+
+    // Update icons
+    const allIcons = document.querySelectorAll('#funding-table .sort-icon');
+    allIcons.forEach(ic => {
+        ic.className = 'fa-solid fa-sort sort-icon';
+    });
+
+    const activeIcon = document.getElementById(`sort-icon-fund-${field}`);
+    if (activeIcon) {
+        activeIcon.className = `fa-solid ${state.fundingSortOrder === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} sort-icon active`;
+    }
+
+    filterAndRenderFundingTable();
+}
+window.sortFundingBy = sortFundingBy;
 
 function filterAndRenderFundingTable() {
     let filtered = [...(state.fundingData || [])];
@@ -1539,6 +1564,23 @@ function filterAndRenderFundingTable() {
     if (state.fundingSearch) {
         filtered = filtered.filter(p => p.symbol.toLowerCase().includes(state.fundingSearch));
     }
+
+    // Sorting
+    const field = state.fundingSortField || 'funding_rate_pct';
+    const order = state.fundingSortOrder || 'desc';
+    filtered.sort((a, b) => {
+        let valA = a[field];
+        let valB = b[field];
+
+        if (typeof valA === 'string') {
+            const comp = valA.localeCompare(valB || '');
+            return order === 'asc' ? comp : -comp;
+        }
+
+        valA = Number(valA || 0);
+        valB = Number(valB || 0);
+        return order === 'asc' ? valA - valB : valB - valA;
+    });
 
     state.filteredFundingData = filtered;
     if (fundingPairsCount) {

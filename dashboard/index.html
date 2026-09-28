@@ -360,15 +360,15 @@
                         <table class="data-table" id="funding-table">
                             <thead>
                                 <tr>
-                                    <th>Pair Contract</th>
-                                    <th>Ketersediaan Spot</th>
-                                    <th>Funding Rate (8H)</th>
-                                    <th>Annualized APY</th>
-                                    <th>Basis Spread (Futures vs Spot)</th>
-                                    <th>Harga Futures</th>
-                                    <th>Harga Spot Index</th>
-                                    <th>Est. Net / $1,000</th>
-                                    <th>Status Peluang</th>
+                                    <th class="sortable-th" onclick="sortFundingBy('symbol')">Pair Contract <i class="fa-solid fa-sort sort-icon" id="sort-icon-fund-symbol"></i></th>
+                                    <th class="sortable-th" onclick="sortFundingBy('has_spot')">Ketersediaan Spot <i class="fa-solid fa-sort sort-icon" id="sort-icon-fund-has_spot"></i></th>
+                                    <th class="sortable-th" onclick="sortFundingBy('funding_rate_pct')">Funding Rate (8H) <i class="fa-solid fa-sort-down sort-icon active" id="sort-icon-fund-funding_rate_pct"></i></th>
+                                    <th class="sortable-th" onclick="sortFundingBy('apy')">Annualized APY <i class="fa-solid fa-sort sort-icon" id="sort-icon-fund-apy"></i></th>
+                                    <th class="sortable-th" onclick="sortFundingBy('basis_pct')">Basis Spread (Futures vs Spot) <i class="fa-solid fa-sort sort-icon" id="sort-icon-fund-basis_pct"></i></th>
+                                    <th class="sortable-th" onclick="sortFundingBy('futures_price')">Harga Futures <i class="fa-solid fa-sort sort-icon" id="sort-icon-fund-futures_price"></i></th>
+                                    <th class="sortable-th" onclick="sortFundingBy('spot_index_price')">Harga Spot Index <i class="fa-solid fa-sort sort-icon" id="sort-icon-fund-spot_index_price"></i></th>
+                                    <th class="sortable-th" onclick="sortFundingBy('net_profit_1k')">Est. Net / $1,000 <i class="fa-solid fa-sort sort-icon" id="sort-icon-fund-net_profit_1k"></i></th>
+                                    <th class="sortable-th" onclick="sortFundingBy('status')">Status Peluang <i class="fa-solid fa-sort sort-icon" id="sort-icon-fund-status"></i></th>
                                     <th>Aksi & Simulasi</th>
                                 </tr>
                             </thead>
