@@ -42,6 +42,9 @@
                     <button class="main-tab-btn" id="tab-btn-bot" data-tab="bot" onclick="switchTab('bot')">
                         <i class="fa-solid fa-robot"></i> 🤖 Live Bot Demo (Binance)
                     </button>
+                    <button class="main-tab-btn" id="tab-btn-screener" data-tab="screener" onclick="switchTab('screener')">
+                        <i class="fa-solid fa-satellite-dish"></i> 📡 Bollinger Screener
+                    </button>
                 </div>
             </div>
 
@@ -746,6 +749,106 @@
                     </div>
                     <div class="terminal-log-box" id="bot-terminal-logs">
                         <div class="log-row info"><span class="log-time">00:00:00</span> <span class="log-tag">[SYSTEM]</span> Menunggu perintah start automation...</div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ================= TAB 4: BOLLINGER BANDS EXTREME SCREENER VIEW ================= -->
+            <div id="view-screener" class="tab-view" style="display: none;">
+                <!-- HERO SCREENER HEADER & RADAR KPI -->
+                <section class="card hero-banner" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%); border: 1px solid #334155; color: #fff; margin-bottom: 20px; padding: 22px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+                        <div>
+                            <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 10px;">
+                                <span class="pulse-dot" style="background: #3b82f6;"></span>
+                                <span>LIVE BOLLINGER BANDS VOLATILITY RADAR</span>
+                            </div>
+                            <h2 style="font-size: 1.45rem; font-weight: 800; margin-bottom: 6px; color: #f8fafc;">
+                                📡 Screening Bollinger Bands Super Extreme Multi-Timeframe
+                            </h2>
+                            <p style="color: #94a3b8; font-size: 0.85rem; max-width: 680px; margin: 0; line-height: 1.5;">
+                                Mendeteksi koin dengan rentang <strong>Bandwidth % (BBW)</strong> terlebar (Super Expansion / Breakout Tren) vs tersempit (Super Squeeze / Akumulasi Ledakan) secara real-time dari 50+ pair aktif Binance Futures.
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 10px; padding: 10px 16px; min-width: 150px;">
+                                <span style="font-size: 0.72rem; color: #94a3b8; display: block;">🔥 Top Expansion (BBW Terbesar)</span>
+                                <strong id="screener-top-expansion" style="font-size: 1.1rem; color: #38bdf8;">--</strong>
+                            </div>
+                            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 10px; padding: 10px 16px; min-width: 150px;">
+                                <span style="font-size: 0.72rem; color: #94a3b8; display: block;">🎯 Top Squeeze (BBW Tersempit)</span>
+                                <strong id="screener-top-squeeze" style="font-size: 1.1rem; color: #fbbf24;">--</strong>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SCREENER CONTROLS & TIMEFRAME SELECTOR -->
+                <section class="card filter-bar" style="margin-bottom: 18px;">
+                    <div class="filter-left" style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap;">
+                        <!-- TIMEFRAME BUTTONS -->
+                        <div class="chart-timeframe-group" id="screener-tf-buttons">
+                            <span style="font-size: 0.78rem; font-weight: 700; color: #64748b; margin-right: 4px;">Timeframe:</span>
+                            <button class="tf-btn" data-screener-tf="5m" onclick="changeScreenerTimeframe('5m')">5m</button>
+                            <button class="tf-btn active" data-screener-tf="15m" onclick="changeScreenerTimeframe('15m')">15m</button>
+                            <button class="tf-btn" data-screener-tf="1h" onclick="changeScreenerTimeframe('1h')">1h</button>
+                            <button class="tf-btn" data-screener-tf="4h" onclick="changeScreenerTimeframe('4h')">4h</button>
+                            <button class="tf-btn" data-screener-tf="1d" onclick="changeScreenerTimeframe('1d')">1D</button>
+                        </div>
+
+                        <!-- SEARCH BOX -->
+                        <div class="search-box" style="min-width: 220px;">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="screener-search" placeholder="Cari pair (misal SAGA, PEPE)...">
+                        </div>
+
+                        <!-- PRESET FILTER -->
+                        <div class="filter-group">
+                            <label>Filter Status BB:</label>
+                            <select id="screener-filter-status" class="dropdown-custom sm">
+                                <option value="all" selected>⚡ Semua Status (Urutkan BBW Terbesar)</option>
+                                <option value="expansion">🔥 Super Expansion (BBW &gt; 10%)</option>
+                                <option value="squeeze">🎯 Super Squeeze (BBW &lt; 3.5%)</option>
+                                <option value="breakout">🚀 Tembus Upper Band (%B &gt; 100%)</option>
+                                <option value="dump">📉 Tembus Lower Band (%B &lt; 0%)</option>
+                            </select>
+                        </div>
+
+                        <button class="btn-log-action" style="background: #f8fafc; border-color: #cbd5e1; color: #0f172a; font-weight: 700; padding: 6px 14px; border-radius: 6px;" onclick="loadBollingerScreenerData(true)">
+                            <i class="fa-solid fa-arrows-rotate"></i> Scan Ulang
+                        </button>
+                    </div>
+
+                    <div class="filter-right" style="text-align: right;">
+                        <span id="screener-pairs-count" style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Menampilkan 0 Pair</span>
+                    </div>
+                </section>
+
+                <!-- SCREENER DATA TABLE -->
+                <section class="card">
+                    <div class="table-responsive">
+                        <table class="data-table" id="screener-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable-th" onclick="sortScreenerBy('symbol')">Pair Contract <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-symbol"></i></th>
+                                    <th class="sortable-th" onclick="sortScreenerBy('bandwidth_pct')">Bollinger Bandwidth (BBW %) <i class="fa-solid fa-sort-down sort-icon active" id="sort-icon-screen-bandwidth_pct"></i></th>
+                                    <th class="sortable-th" onclick="sortScreenerBy('percent_b')">%B (Posisi vs Band) <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-percent_b"></i></th>
+                                    <th class="sortable-th" onclick="sortScreenerBy('signal')">Status Bollinger <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-signal"></i></th>
+                                    <th class="sortable-th" onclick="sortScreenerBy('current_price')">Harga Live <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-current_price"></i></th>
+                                    <th class="sortable-th" onclick="sortScreenerBy('upper_band')">Upper Band (2.0σ) <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-upper_band"></i></th>
+                                    <th class="sortable-th" onclick="sortScreenerBy('mid_band')">Mid Band (SMA 20) <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-mid_band"></i></th>
+                                    <th class="sortable-th" onclick="sortScreenerBy('lower_band')">Lower Band (2.0σ) <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-lower_band"></i></th>
+                                    <th>Aksi Cepat</th>
+                                </tr>
+                            </thead>
+                            <tbody id="screener-tbody">
+                                <tr>
+                                    <td colspan="9" class="loading-cell">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Menghitung Bollinger Band Width real-time di seluruh pair Binance...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </section>
             </div>

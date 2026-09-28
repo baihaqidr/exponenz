@@ -348,6 +348,20 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                     self.send_json({"success": False, "error": "Gagal mengambil data candle Binance"})
             except Exception as e:
                 self.send_json({"success": False, "error": str(e)})
+        elif parsed.path == "/api/screener/bollinger":
+            try:
+                from src.screener_engine import bollinger_screener
+                tf = query_params.get("timeframe", ["15m"])[0]
+                limit = int(query_params.get("limit", [50])[0])
+                data = bollinger_screener.scan_all(timeframe=tf, limit=limit)
+                self.send_json({
+                    "success": True,
+                    "timeframe": tf,
+                    "count": len(data),
+                    "pairs": data
+                })
+            except Exception as e:
+                self.send_json({"success": False, "error": str(e), "pairs": []})
         elif parsed.path == "/api/bot/status":
             status = trading_bot.get_status()
             self.send_json(status)

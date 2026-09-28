@@ -207,9 +207,11 @@ window.formatExactPrice = formatExactPrice;
 const tabBtnMatrix = document.getElementById('tab-btn-matrix');
 const tabBtnFunding = document.getElementById('tab-btn-funding');
 const tabBtnBot = document.getElementById('tab-btn-bot');
+const tabBtnScreener = document.getElementById('tab-btn-screener');
 const viewMatrix = document.getElementById('view-matrix');
 const viewFunding = document.getElementById('view-funding');
 const viewBot = document.getElementById('view-bot');
+const viewScreener = document.getElementById('view-screener');
 const navMatrixControls = document.getElementById('nav-matrix-controls');
 const btnRunMatrix = document.getElementById('btn-run-matrix');
 const btnRefreshFunding = document.getElementById('btn-refresh-funding');
@@ -504,10 +506,12 @@ function switchTab(tab) {
     tabBtnMatrix.classList.remove('active');
     tabBtnFunding.classList.remove('active');
     if (tabBtnBot) tabBtnBot.classList.remove('active');
+    if (tabBtnScreener) tabBtnScreener.classList.remove('active');
 
     viewMatrix.style.display = 'none';
     viewFunding.style.display = 'none';
     if (viewBot) viewBot.style.display = 'none';
+    if (viewScreener) viewScreener.style.display = 'none';
 
     if (botPollInterval) {
         clearInterval(botPollInterval);
@@ -530,6 +534,10 @@ function switchTab(tab) {
         loadBotStatus();
         botPollInterval = setInterval(loadBotStatus, 3000);
         setTimeout(initLiveBotChart, 150);
+    } else if (tab === 'screener') {
+        if (tabBtnScreener) tabBtnScreener.classList.add('active');
+        if (viewScreener) viewScreener.style.display = 'block';
+        loadBollingerScreenerData();
     }
 }
 window.switchTab = switchTab;
@@ -3745,6 +3753,252 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(initLiveBotChart, 300);
     setTimeout(loadArbitragePositions, 600);
 });
+
+// --- 13. BOLLINGER BANDS EXTREME VOLATILITY SCREENER CONTROLLER ---
+state.screenerData = [];
+state.filteredScreenerData = [];
+state.screenerTimeframe = '15m';
+state.screenerStatusFilter = 'all';
+state.screenerSearch = '';
+state.screenerSortField = 'bandwidth_pct';
+state.screenerSortOrder = 'desc';
+
+async function loadBollingerScreenerData(forceRefresh = false) {
+    const tbody = document.getElementById('screener-tbody');
+    const countEl = document.getElementById('screener-pairs-count');
+    if (!tbody) return;
+
+    if (forceRefresh || state.screenerData.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" class="loading-cell">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Menghitung Bollinger Band Width (${state.screenerTimeframe}) di seluruh pair aktif Binance...
+                </td>
+            </tr>
+        `;
+    }
+
+    try {
+        const res = await fetch(`/api/screener/bollinger?timeframe=${state.screenerTimeframe}&limit=60`);
+        const data = await res.json();
+        if (data.success && data.pairs) {
+            state.screenerData = data.pairs;
+            updateScreenerKPIs(data.pairs);
+            filterAndRenderScreenerTable();
+        } else {
+            tbody.innerHTML = `<tr><td colspan="9" class="error-cell">Gagal memuat data screening Bollinger Bands.</td></tr>`;
+        }
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="9" class="error-cell">Terjadi kesalahan koneksi server saat screening.</td></tr>`;
+    }
+}
+
+function updateScreenerKPIs(pairs) {
+    if (!pairs || pairs.length === 0) return;
+    const topExpEl = document.getElementById('screener-top-expansion');
+    const topSqEl = document.getElementById('screener-top-squeeze');
+
+    // Sort by bandwidth to get max and min
+    const sorted = [...pairs].sort((a, b) => (b.bandwidth_pct || 0) - (a.bandwidth_pct || 0));
+    const topExp = sorted[0];
+    const topSq = sorted[sorted.length - 1];
+
+    if (topExpEl && topExp) {
+        topExpEl.innerHTML = `${topExp.symbol} <span style="font-size: 0.85rem; color: #60a5fa;">(${topExp.bandwidth_pct.toFixed(1)}%)</span>`;
+    }
+    if (topSqEl && topSq) {
+        topSqEl.innerHTML = `${topSq.symbol} <span style="font-size: 0.85rem; color: #f59e0b;">(${topSq.bandwidth_pct.toFixed(1)}%)</span>`;
+    }
+}
+
+function changeScreenerTimeframe(tf) {
+    const validTfs = ['5m', '15m', '1h', '4h', '1d'];
+    const chosenTf = validTfs.includes(tf) ? tf : '15m';
+    state.screenerTimeframe = chosenTf;
+
+    const btns = document.querySelectorAll('#screener-tf-buttons .tf-btn');
+    btns.forEach(b => {
+        if (b.getAttribute('data-screener-tf') === chosenTf) b.classList.add('active');
+        else b.classList.remove('active');
+    });
+
+    loadBollingerScreenerData(true);
+}
+
+function sortScreenerBy(field) {
+    if (state.screenerSortField === field) {
+        state.screenerSortOrder = state.screenerSortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+        state.screenerSortField = field;
+        state.screenerSortOrder = 'desc';
+    }
+
+    // Update icons
+    const allIcons = document.querySelectorAll('#screener-table .sort-icon');
+    allIcons.forEach(ic => {
+        ic.className = 'fa-solid fa-sort sort-icon';
+    });
+
+    const activeIcon = document.getElementById(`sort-icon-screen-${field}`);
+    if (activeIcon) {
+        activeIcon.className = `fa-solid ${state.screenerSortOrder === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} sort-icon active`;
+    }
+
+    filterAndRenderScreenerTable();
+}
+
+function filterAndRenderScreenerTable() {
+    const tbody = document.getElementById('screener-tbody');
+    const countEl = document.getElementById('screener-pairs-count');
+    if (!tbody) return;
+
+    let filtered = [...state.screenerData];
+
+    // Status filter
+    if (state.screenerStatusFilter === 'expansion') {
+        filtered = filtered.filter(p => p.bandwidth_pct >= 10.0);
+    } else if (state.screenerStatusFilter === 'squeeze') {
+        filtered = filtered.filter(p => p.bandwidth_pct <= 3.5);
+    } else if (state.screenerStatusFilter === 'breakout') {
+        filtered = filtered.filter(p => p.percent_b >= 100.0);
+    } else if (state.screenerStatusFilter === 'dump') {
+        filtered = filtered.filter(p => p.percent_b <= 0.0);
+    }
+
+    // Search query
+    if (state.screenerSearch) {
+        const q = state.screenerSearch.toLowerCase().trim();
+        filtered = filtered.filter(p => p.symbol.toLowerCase().includes(q));
+    }
+
+    // Sorting
+    const field = state.screenerSortField || 'bandwidth_pct';
+    const order = state.screenerSortOrder || 'desc';
+    filtered.sort((a, b) => {
+        let valA = a[field];
+        let valB = b[field];
+
+        if (typeof valA === 'string') {
+            const comp = valA.localeCompare(valB || '');
+            return order === 'asc' ? comp : -comp;
+        }
+
+        valA = Number(valA || 0);
+        valB = Number(valB || 0);
+        return order === 'asc' ? valA - valB : valB - valA;
+    });
+
+    state.filteredScreenerData = filtered;
+    if (countEl) {
+        countEl.textContent = `Menampilkan ${filtered.length} dari ${state.screenerData.length} Pair (${state.screenerTimeframe})`;
+    }
+
+    tbody.innerHTML = '';
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="loading-cell">Tidak ada koin yang sesuai dengan filter screening.</td></tr>`;
+        return;
+    }
+
+    filtered.forEach(pair => {
+        const tr = document.createElement('tr');
+        const bw = Number(pair.bandwidth_pct || 0);
+        const pb = Number(pair.percent_b || 0);
+
+        // Highlight bandwidth
+        let bwColor = '#0f172a';
+        let bwBadge = '';
+        if (bw >= 15.0) {
+            bwColor = '#2563eb';
+            bwBadge = `<span style="font-size: 0.7rem; font-weight: 800; background: #eff6ff; color: #1d4ed8; padding: 2px 6px; border-radius: 4px; margin-left: 4px;">⚡ SUPER WIDE</span>`;
+        } else if (bw <= 3.0) {
+            bwColor = '#d97706';
+            bwBadge = `<span style="font-size: 0.7rem; font-weight: 800; background: #fef3c7; color: #b45309; padding: 2px 6px; border-radius: 4px; margin-left: 4px;">🎯 TIGHT SQUEEZE</span>`;
+        }
+
+        // %B Color
+        let pbColor = '#64748b';
+        if (pb >= 100.0) pbColor = 'text-profit';
+        else if (pb <= 0.0) pbColor = 'text-loss';
+
+        tr.innerHTML = `
+            <td><strong>${pair.symbol}</strong></td>
+            <td class="font-mono" style="font-size: 1.05rem; font-weight: 800; color: ${bwColor};">
+                ${bw.toFixed(2)}% ${bwBadge}
+            </td>
+            <td class="font-mono ${pbColor}" style="font-weight: 700;">
+                ${pb.toFixed(1)}%
+            </td>
+            <td>
+                <span class="tag-badge" style="background: ${pair.signal_color || '#10b981'}1a; color: ${pair.signal_color || '#10b981'}; border: 1px solid ${pair.signal_color || '#10b981'}; font-weight: 700;">
+                    ${pair.signal_badge || pair.signal || 'NORMAL'}
+                </span>
+            </td>
+            <td class="font-mono" style="font-weight: 700;">$${formatCleanPrice(pair.current_price)}</td>
+            <td class="font-mono text-profit">$${formatCleanPrice(pair.upper_band)}</td>
+            <td class="font-mono text-muted">$${formatCleanPrice(pair.mid_band)}</td>
+            <td class="font-mono text-loss">$${formatCleanPrice(pair.lower_band)}</td>
+            <td>
+                <button class="btn-log-action" style="background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; color: #2563eb; font-weight: 700; margin-right: 4px;" onclick="addPairToBotWatchlist('${pair.symbol}')" title="Masukkan ke Watchlist Bot">
+                    <i class="fa-solid fa-plus"></i> Watchlist
+                </button>
+                <button class="btn-log-action" style="background: rgba(16, 185, 129, 0.15); border-color: #10b981; color: #059669; font-weight: 700;" onclick="testPairInBacktest('${pair.symbol}')" title="Uji Backtest Strategi">
+                    <i class="fa-solid fa-chart-line"></i> Backtest
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function addPairToBotWatchlist(symbol) {
+    if (!state.botWatchlist.includes(symbol)) {
+        state.botWatchlist.push(symbol);
+        state.watchlistMode = 'multi';
+        renderWatchlistChips();
+        updateBotWatchlistBackend();
+        alert(`✅ ${symbol} berhasil ditambahkan ke Watchlist Bot!\n\nBuka Tab 🤖 Live Bot Demo untuk melihat otomasi koin ini.`);
+    } else {
+        alert(`ℹ️ ${symbol} sudah ada di Watchlist Bot.`);
+    }
+}
+
+function testPairInBacktest(symbol) {
+    // Switch to Tab Matrix
+    switchTab('matrix');
+    // Set strategy to BB Reclaim or current
+    const stratSelect = document.getElementById('strategy-select');
+    if (stratSelect) {
+        stratSelect.value = 'bb_reclaim_sniper';
+        state.selectedStrategy = 'bb_reclaim_sniper';
+    }
+    runMasterMatrix();
+}
+
+// Bind Screener Filter Events
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('screener-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            state.screenerSearch = e.target.value;
+            filterAndRenderScreenerTable();
+        });
+    }
+
+    const filterStatus = document.getElementById('screener-filter-status');
+    if (filterStatus) {
+        filterStatus.addEventListener('change', (e) => {
+            state.screenerStatusFilter = e.target.value;
+            filterAndRenderScreenerTable();
+        });
+    }
+});
+
+window.changeScreenerTimeframe = changeScreenerTimeframe;
+window.sortScreenerBy = sortScreenerBy;
+window.loadBollingerScreenerData = loadBollingerScreenerData;
+window.addPairToBotWatchlist = addPairToBotWatchlist;
+window.testPairInBacktest = testPairInBacktest;
+
 
 
 
