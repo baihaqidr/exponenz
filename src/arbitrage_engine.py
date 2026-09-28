@@ -139,6 +139,12 @@ class ArbitrageEngine:
                                 elif dt_u.hour % 2 == 0: interval_hrs = 2
                                 else: interval_hrs = 1
 
+                        # Aturan Resmi Binance Dynamic Settlement Frequency
+                        if abs(raw_rate * 100.0) >= 1.0:
+                            interval_hrs = min(interval_hrs, 2)
+                        elif abs(raw_rate * 100.0) >= 0.40:
+                            interval_hrs = min(interval_hrs, 4)
+
                         return {
                             "funding_rate": raw_rate,
                             "funding_pct": raw_rate * 100.0,

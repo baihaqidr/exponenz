@@ -142,6 +142,14 @@ class FundingRateScanner:
                     else:
                         interval_hours = 8
 
+                # Aturan Resmi Binance Dynamic Funding Interval:
+                # Saat funding rate koin menyentuh level volatilitas tinggi (>= 0.40% atau >= 1.0%),
+                # Binance memotong interval settlement menjadi 4 Jam (4H), 2 Jam (2H), atau 1 Jam (1H).
+                if abs(funding_pct) >= 1.0:
+                    interval_hours = min(interval_hours, 2)
+                elif abs(funding_pct) >= 0.40:
+                    interval_hours = min(interval_hours, 4)
+
                 times_per_day = 24.0 / max(1, interval_hours)
                 interval_label = f"{interval_hours}H"
 
