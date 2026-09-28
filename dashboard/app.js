@@ -1485,11 +1485,25 @@ function updateTopTargetHero(pairs) {
     const top = pairs[0];
     if (topTargetSymbol) topTargetSymbol.textContent = top.symbol || 'SAGAUSDT';
     const rateVal = top.funding_rate !== undefined ? top.funding_rate : (top.funding_rate_pct || 0);
-    if (topTargetRate) topTargetRate.textContent = `${rateVal >= 0 ? '+' : ''}${Number(rateVal).toFixed(4)}%`;
+    
+    let intervalHours = top.funding_interval_hours;
+    if (!intervalHours || intervalHours === 8) {
+        if (Math.abs(rateVal) >= 1.0) intervalHours = 2;
+        else if (Math.abs(rateVal) >= 0.40) intervalHours = 4;
+        else intervalHours = 8;
+    }
+    const intervalLabel = `${intervalHours}H`;
+    const timesPerDay = 24.0 / intervalHours;
+    const apyVal = Math.abs(rateVal) * timesPerDay * 365.0;
+
+    if (topTargetRate) {
+        topTargetRate.innerHTML = `${rateVal >= 0 ? '+' : ''}${Number(rateVal).toFixed(4)}% <span style="font-size: 0.82rem; font-weight: 700; color: #b45309; background: #fef3c7; padding: 2px 6px; border-radius: 4px; border: 1px solid #fde68a;">⚡ ${intervalLabel}</span>`;
+    }
     const net1k = top.net_profit_1k !== undefined ? top.net_profit_1k : 0;
-    const apyVal = top.apy !== undefined ? top.apy : 0;
     const sign = net1k >= 0 ? '+' : '-';
-    if (topTargetPayout) topTargetPayout.textContent = `Estimasi Net Profit Hit & Run: ${sign}$${Math.abs(Number(net1k)).toFixed(2)} per $1,000 (${Number(apyVal).toFixed(1)}% APY)`;
+    if (topTargetPayout) {
+        topTargetPayout.textContent = `Estimasi Net Profit Hit & Run: ${sign}$${Math.abs(Number(net1k)).toFixed(2)} per $1,000 (${Number(apyVal).toFixed(1)}% APY)`;
+    }
 }
 
     state.fundingFilter = 'all';
@@ -1632,9 +1646,20 @@ function filterAndRenderFundingTable() {
     filtered.slice(0, 50).forEach(pair => {
         const tr = document.createElement('tr');
         const rate = Number(pair.funding_rate_pct || 0);
-        const apy = Number(pair.apy || 0);
         const basis = Number(pair.basis_pct || 0);
         const net1k = Number(pair.net_profit_1k || 0);
+
+        // Dynamic Interval Resolution (Aturan Resmi Binance Dynamic Settlement)
+        let intervalHours = pair.funding_interval_hours;
+        if (!intervalHours || intervalHours === 8) {
+            if (Math.abs(rate) >= 1.0) intervalHours = 2;
+            else if (Math.abs(rate) >= 0.40) intervalHours = 4;
+            else intervalHours = 8;
+        }
+        const intervalLabel = `${intervalHours}H`;
+        const isFastCycle = intervalHours < 8;
+        const timesPerDay = 24.0 / intervalHours;
+        const dynamicApy = Math.abs(rate) * timesPerDay * 365.0;
 
         const rateColor = rate > 0 ? 'text-profit' : (rate < 0 ? 'text-loss' : 'text-muted');
         const rateSign = rate > 0 ? '+' : '';
@@ -1647,7 +1672,9 @@ function filterAndRenderFundingTable() {
             ? `<span class="tag-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981;"><i class="fa-solid fa-check"></i> Spot & Futures</span>`
             : `<span class="tag-badge" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid #f43f5e;"><i class="fa-solid fa-ban"></i> Futures Only</span>`;
 
-        const intervalBadge = pair.funding_interval_label ? `<span style="font-size: 0.72rem; color: #64748b; font-weight: 500; margin-left: 4px;">(${pair.funding_interval_label})</span>` : `<span style="font-size: 0.72rem; color: #64748b; font-weight: 500; margin-left: 4px;">(8H)</span>`;
+        const intervalBadge = isFastCycle
+            ? `<span style="font-size: 0.72rem; background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-left: 4px;"><i class="fa-solid fa-bolt text-warning"></i> ${intervalLabel}</span>`
+            : `<span style="font-size: 0.72rem; color: #64748b; font-weight: 500; margin-left: 4px;">(${intervalLabel})</span>`;
 
         tr.innerHTML = `
             <td><strong>${pair.symbol}</strong></td>
@@ -1655,7 +1682,7 @@ function filterAndRenderFundingTable() {
             <td class="${rateColor} font-mono" style="font-size: 1.05rem; font-weight: 700;">
                 ${rateSign}${rate.toFixed(4)}% ${intervalBadge}
             </td>
-            <td class="font-mono">${rateSign}${apy.toFixed(1)}% APY</td>
+            <td class="font-mono">${rateSign}${dynamicApy.toFixed(1)}% APY</td>
             <td class="font-mono ${basisColor}" style="font-weight: 600;">
                 ${basisSign}${basis.toFixed(3)}%
             </td>
