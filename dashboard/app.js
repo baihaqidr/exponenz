@@ -1488,8 +1488,9 @@ function updateTopTargetHero(pairs) {
     
     let intervalHours = top.funding_interval_hours;
     if (!intervalHours || intervalHours === 8) {
-        if (Math.abs(rateVal) >= 1.0) intervalHours = 2;
-        else if (Math.abs(rateVal) >= 0.40) intervalHours = 4;
+        if (Math.abs(rateVal) >= 1.50) intervalHours = 1;
+        else if (Math.abs(rateVal) >= 0.80) intervalHours = 2;
+        else if (Math.abs(rateVal) >= 0.35) intervalHours = 4;
         else intervalHours = 8;
     }
     const intervalLabel = `${intervalHours}H`;
@@ -1652,8 +1653,9 @@ function filterAndRenderFundingTable() {
         // Dynamic Interval Resolution (Aturan Resmi Binance Dynamic Settlement)
         let intervalHours = pair.funding_interval_hours;
         if (!intervalHours || intervalHours === 8) {
-            if (Math.abs(rate) >= 1.0) intervalHours = 2;
-            else if (Math.abs(rate) >= 0.40) intervalHours = 4;
+            if (Math.abs(rate) >= 1.50) intervalHours = 1;
+            else if (Math.abs(rate) >= 0.80) intervalHours = 2;
+            else if (Math.abs(rate) >= 0.35) intervalHours = 4;
             else intervalHours = 8;
         }
         const intervalLabel = `${intervalHours}H`;
