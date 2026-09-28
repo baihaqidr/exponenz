@@ -339,12 +339,13 @@
                         </div>
 
                         <div class="filter-group">
-                            <label>Filter Minimal Rate:</label>
+                            <label>Filter Peluang Arbitrase:</label>
                             <select id="funding-filter-rate" class="dropdown-custom sm">
-                                <option value="all">Semua Rate</option>
-                                <option value="positive" selected>Hanya Positif (&gt; 0%)</option>
-                                <option value="high_yield">&gt; +0.03% (High Yield)</option>
-                                <option value="hot">&gt; +0.10% (🔥 Hot Snipe Target)</option>
+                                <option value="all" selected>🔥 Semua Peluang (Bunga Tertinggi Positif & Negatif)</option>
+                                <option value="positive">Hanya Positif (&gt; 0% - Beli Spot + Short Futures)</option>
+                                <option value="negative">Hanya Negatif (&lt; 0% - Beli Futures + Short Spot)</option>
+                                <option value="high_yield">&gt; 0.03% (High Yield)</option>
+                                <option value="hot">&gt; 0.10% (🚀 Super Arbitrage)</option>
                             </select>
                         </div>
                     </div>

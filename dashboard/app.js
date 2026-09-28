@@ -1492,7 +1492,7 @@ function updateTopTargetHero(pairs) {
     if (topTargetPayout) topTargetPayout.textContent = `Estimasi Net Profit Hit & Run: ${sign}$${Math.abs(Number(net1k)).toFixed(2)} per $1,000 (${Number(apyVal).toFixed(1)}% APY)`;
 }
 
-    state.fundingFilter = 'positive';
+    state.fundingFilter = 'all';
     state.fundingFilterSpot = 'spot_only';
     state.fundingSortField = 'funding_rate_pct';
     state.fundingSortOrder = 'desc';
@@ -1501,6 +1501,14 @@ function updateTopTargetHero(pairs) {
     if (fundingFilterSpotEl) {
         fundingFilterSpotEl.addEventListener('change', (e) => {
             state.fundingFilterSpot = e.target.value;
+            filterAndRenderFundingTable();
+        });
+    }
+
+    const fundingFilterRateEl = document.getElementById('funding-filter-rate');
+    if (fundingFilterRateEl) {
+        fundingFilterRateEl.addEventListener('change', (e) => {
+            state.fundingFilter = e.target.value;
             filterAndRenderFundingTable();
         });
     }
@@ -1554,10 +1562,12 @@ function filterAndRenderFundingTable() {
     // Rate filter
     if (state.fundingFilter === 'positive') {
         filtered = filtered.filter(p => p.funding_rate_pct > 0);
+    } else if (state.fundingFilter === 'negative') {
+        filtered = filtered.filter(p => p.funding_rate_pct < 0);
     } else if (state.fundingFilter === 'high_yield') {
-        filtered = filtered.filter(p => p.funding_rate_pct >= 0.03);
+        filtered = filtered.filter(p => Math.abs(p.funding_rate_pct) >= 0.03);
     } else if (state.fundingFilter === 'hot') {
-        filtered = filtered.filter(p => p.funding_rate_pct >= 0.10);
+        filtered = filtered.filter(p => Math.abs(p.funding_rate_pct) >= 0.10);
     }
 
     // Search query
