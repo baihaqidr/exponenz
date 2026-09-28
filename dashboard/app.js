@@ -3763,6 +3763,86 @@ state.screenerSearch = '';
 state.screenerSortField = 'bandwidth_pct';
 state.screenerSortOrder = 'desc';
 
+async function clientSideBollingerScan(timeframe = '15m') {
+    const symbols = [
+        "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "DOGEUSDT", "SUIUSDT", "NEARUSDT", "AVAXUSDT",
+        "XRPUSDT", "LINKUSDT", "ADAUSDT", "APTUSDT", "ARBUSDT", "OPUSDT", "INJUSDT", "TIAUSDT",
+        "RENDERUSDT", "FETUSDT", "TAOUSDT", "SEIUSDT", "WIFUSDT", "SHIBUSDT", "DOTUSDT", "LTCUSDT",
+        "PEPEUSDT", "SAGAUSDT", "ONEUSDT", "GTCUSDT", "MAGICUSDT", "TRXUSDT", "ICPUSDT", "FILUSDT",
+        "CRVUSDT", "SANDUSDT", "MANAUSDT", "AXSUSDT", "GALAUSDT", "DYDXUSDT", "ENAUSDT", "PENDLEUSDT"
+    ];
+
+    const results = [];
+    const period = 20;
+
+    const promises = symbols.map(async (sym) => {
+        try {
+            const spotSym = sym.startsWith('1000') ? sym.slice(4) : sym;
+            const res = await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${spotSym}&interval=${timeframe}&limit=${period + 10}`);
+            if (!res.ok) return;
+            const candles = await res.json();
+            if (!Array.isArray(candles) || candles.length < period) return;
+
+            const closes = candles.map(c => parseFloat(c[4]));
+            const currPrice = closes[closes.length - 1];
+
+            // SMA 20
+            const slice = closes.slice(-period);
+            const sma = slice.reduce((a, b) => a + b, 0) / period;
+
+            // StdDev
+            const variance = slice.reduce((sum, val) => sum + Math.pow(val - sma, 2), 0) / period;
+            const std = Math.sqrt(variance);
+
+            const upperBand = sma + (2.0 * std);
+            const lowerBand = sma - (2.0 * std);
+            const bandwidthPct = sma > 0 ? ((upperBand - lowerBand) / sma) * 100.0 : 0.0;
+            const bandRange = upperBand - lowerBand;
+            const percentB = bandRange > 0 ? ((currPrice - lowerBand) / bandRange) * 100.0 : 50.0;
+
+            let signal = "NORMAL VOLATILITY";
+            let signalColor = "#64748b";
+            let signalBadge = "NORMAL";
+
+            if (percentB >= 100.0) {
+                signal = "SUPER BREAKOUT (ABOVE UPPER)";
+                signalColor = "#10b981";
+                signalBadge = "🔥 TEMBUS UPPER";
+            } else if (percentB <= 0.0) {
+                signal = "SUPER DUMP (BELOW LOWER)";
+                signalColor = "#f43f5e";
+                signalBadge = "⚠️ TEMBUS LOWER";
+            } else if (bandwidthPct >= 12.0) {
+                signal = "SUPER EXPANSION (HIGH VOLATILITY)";
+                signalColor = "#3b82f6";
+                signalBadge = "⚡ SUPER EXPANSION";
+            } else if (bandwidthPct <= 3.5) {
+                signal = "SUPER SQUEEZE (READY TO EXPLODE)";
+                signalColor = "#f59e0b";
+                signalBadge = "🎯 SUPER SQUEEZE";
+            }
+
+            results.push({
+                symbol: sym,
+                timeframe: timeframe,
+                current_price: currPrice,
+                upper_band: upperBand,
+                mid_band: sma,
+                lower_band: lowerBand,
+                bandwidth_pct: bandwidthPct,
+                percent_b: percentB,
+                signal: signal,
+                signal_color: signalColor,
+                signal_badge: signalBadge
+            });
+        } catch (e) {}
+    });
+
+    await Promise.all(promises);
+    results.sort((a, b) => (b.bandwidth_pct || 0) - (a.bandwidth_pct || 0));
+    return results;
+}
+
 async function loadBollingerScreenerData(forceRefresh = false) {
     const tbody = document.getElementById('screener-tbody');
     const countEl = document.getElementById('screener-pairs-count');
@@ -3780,16 +3860,31 @@ async function loadBollingerScreenerData(forceRefresh = false) {
 
     try {
         const res = await fetch(`/api/screener/bollinger?timeframe=${state.screenerTimeframe}&limit=60`);
-        const data = await res.json();
-        if (data.success && data.pairs) {
-            state.screenerData = data.pairs;
-            updateScreenerKPIs(data.pairs);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.pairs && data.pairs.length > 0) {
+                state.screenerData = data.pairs;
+                updateScreenerKPIs(data.pairs);
+                filterAndRenderScreenerTable();
+                return;
+            }
+        }
+    } catch (e) {
+        // Fallback to client-side scanner
+    }
+
+    // Direct Client-Side Fallback via Binance Vision
+    try {
+        const pairs = await clientSideBollingerScan(state.screenerTimeframe);
+        if (pairs && pairs.length > 0) {
+            state.screenerData = pairs;
+            updateScreenerKPIs(pairs);
             filterAndRenderScreenerTable();
         } else {
             tbody.innerHTML = `<tr><td colspan="9" class="error-cell">Gagal memuat data screening Bollinger Bands.</td></tr>`;
         }
-    } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="9" class="error-cell">Terjadi kesalahan koneksi server saat screening.</td></tr>`;
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="9" class="error-cell">Terjadi kesalahan saat screening data pasar.</td></tr>`;
     }
 }
 
