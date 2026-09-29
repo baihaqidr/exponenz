@@ -176,6 +176,34 @@ STRATEGY_METADATA: Dict[str, Dict[str, Any]] = {
             "slow_ema": 20,
             "bb_period": 20
         }
+    },
+    "bb_reclaim_sniper": {
+        "id": "bb_reclaim_sniper",
+        "name": "Bollinger Bands Reclaim Sniper (Breach & Reclaim)",
+        "file": "bb_reclaim_sniper.py",
+        "style": "BB RECLAIM SNIPER",
+        "style_badge_color": "#10b981",
+        "recommended_timeframe": "15m",
+        "recommended_pairs": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "SUIUSDT", "NEARUSDT"],
+        "description": "Membeli saat harga menembus di bawah Lower Band lalu lilin berikutnya ditutup kembali di atas Lower Band dengan R:R 1:2.0.",
+        "entry_long": ["Candle i-1 tembus di bawah Lower Band", "Candle i tutup kembali di atas Lower Band"],
+        "entry_short": ["Candle i-1 tembus di atas Upper Band", "Candle i tutup kembali di bawah Upper Band"],
+        "exit_rules": ["Dynamic Trailing Stop / TP R:R 1:2.0"],
+        "default_params": {"bb_length": 20, "bb_std": 2.0, "risk_reward": 2.0}
+    },
+    "ema_crossover": {
+        "id": "ema_crossover",
+        "name": "EMA Crossover (9 / 21) Trend Filter 200",
+        "file": "ema_crossover.py",
+        "style": "EMA TREND RIDE",
+        "style_badge_color": "#8b5cf6",
+        "recommended_timeframe": "1h",
+        "recommended_pairs": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "DOGEUSDT"],
+        "description": "Golden cross EMA 9 & EMA 21 saat harga di atas EMA 200 dengan ATR Dynamic Stop Loss.",
+        "entry_long": ["Fast EMA 9 cross up Slow EMA 21 & Close > EMA 200"],
+        "entry_short": ["Fast EMA 9 cross down Slow EMA 21 & Close < EMA 200"],
+        "exit_rules": ["Stop Loss 1.5x ATR, Take Profit 3.0x ATR"],
+        "default_params": {"fast_ema": 9, "slow_ema": 21, "trend_ema": 200, "atr_sl_mult": 1.5, "risk_reward": 2.0}
     }
 }
 
@@ -189,7 +217,9 @@ def get_all_strategies() -> List[Dict[str, Any]]:
         STRATEGY_METADATA["binance_bband_wilder_rsi"],
         STRATEGY_METADATA["freqtrade_bband_rsi"],
         STRATEGY_METADATA["freqtrade_bband_rsi_adjusted"],
-        STRATEGY_METADATA["freqtrade_sample"]
+        STRATEGY_METADATA["freqtrade_sample"],
+        STRATEGY_METADATA["bb_reclaim_sniper"],
+        STRATEGY_METADATA["ema_crossover"]
     ]
 
 def get_strategy_instance(strategy_id: str, **kwargs) -> BaseStrategy:
@@ -205,18 +235,24 @@ def get_strategy_instance(strategy_id: str, **kwargs) -> BaseStrategy:
     from src.strategies.freqtrade_bband_rsi import FreqtradePureBbandRsiStrategy, FreqtradeAdjustedBbandRsiStrategy
     from src.strategies.freqtrade_sample import FreqtradeOriginalSampleStrategy
     from src.strategies.rsi_first_ema7_crossover import RsiFirstEma7CrossoverStrategy
+    from src.strategies.bb_reclaim_sniper import BBReclaimSniperStrategy
+    from src.strategies.ema_crossover import EMACrossoverStrategy
 
     sid = strategy_id.lower().strip() if strategy_id else "trend_rider_supertrend"
     
     if "trend_rider" in sid or "supertrend" in sid:
         return TrendRiderSupertrendStrategy(**kwargs)
-    elif "ema7" in sid or "crossover" in sid or "sniper" in sid or "first" in sid:
+    elif "bb_reclaim" in sid or "reclaim" in sid:
+        return BBReclaimSniperStrategy(**kwargs)
+    elif "ema_cross" in sid or "ema_crossover" in sid:
+        return EMACrossoverStrategy(**kwargs)
+    elif "ema7" in sid or "first" in sid:
         return RsiFirstEma7CrossoverStrategy(**kwargs)
     elif "sample" in sid:
         return FreqtradeOriginalSampleStrategy()
     elif "adjusted" in sid or "adj" in sid:
         return FreqtradeAdjustedBbandRsiStrategy()
-    elif "freqtrade" in sid or "bband_rsi" in sid and "wilder" not in sid and "binance" not in sid:
+    elif "freqtrade" in sid or ("bband_rsi" in sid and "wilder" not in sid and "binance" not in sid):
         return FreqtradePureBbandRsiStrategy()
     else:
         return BinanceBbandWilderRsiStrategy()

@@ -211,6 +211,176 @@ class BollingerScreenerEngine:
         except Exception as e:
             return None
 
+    def _fetch_klines_df(self, symbol: str, timeframe: str = "15m", limit: int = 80) -> Optional[pd.DataFrame]:
+        clean_sym = symbol.upper().strip()
+        spot_sym = clean_sym[4:] if clean_sym.startswith("1000") else clean_sym
+
+        urls = [
+            f"https://data-api.binance.vision/api/v3/klines?symbol={spot_sym}&interval={timeframe}&limit={limit}",
+            f"https://testnet.binancefuture.com/fapi/v1/klines?symbol={clean_sym}&interval={timeframe}&limit={limit}",
+            f"https://api.binance.com/api/v3/klines?symbol={spot_sym}&interval={timeframe}&limit={limit}"
+        ]
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        candles = None
+        for u in urls:
+            try:
+                r = requests.get(u, headers=headers, verify=False, timeout=3.5)
+                if r.status_code == 200:
+                    d = r.json()
+                    if isinstance(d, list) and len(d) >= 20:
+                        candles = d
+                        break
+            except Exception:
+                continue
+
+        if not candles:
+            return None
+
+        try:
+            df = pd.DataFrame(candles, columns=[
+                'timestamp', 'open', 'high', 'low', 'close', 'volume',
+                'close_time', 'quote_volume', 'trades', 'taker_buy_base', 'taker_buy_quote', 'ignored'
+            ])
+            for col in ['open', 'high', 'low', 'close', 'volume']:
+                df[col] = df[col].astype(float)
+            return df
+        except Exception:
+            return None
+
+    def evaluate_symbol_strategy(self, symbol: str, strategy_id: str, timeframe: str = "15m") -> Optional[Dict[str, Any]]:
+        df = self._fetch_klines_df(symbol, timeframe, limit=80)
+        if df is None or len(df) < 20:
+            return None
+
+        try:
+            from src.strategy_registry import get_strategy_instance
+            strat = get_strategy_instance(strategy_id)
+            sig_df = strat.generate_signals(df)
+
+            curr_price = float(df['close'].iloc[-1])
+            curr_volume = float(df['volume'].iloc[-1])
+            price_change_pct = ((curr_price - df['close'].iloc[0]) / df['close'].iloc[0]) * 100.0 if df['close'].iloc[0] > 0 else 0.0
+
+            # Signal evaluation on latest candles
+            last_sig = int(sig_df['signal'].iloc[-1]) if 'signal' in sig_df else 0
+            prev_sig = int(sig_df['signal'].iloc[-2]) if len(sig_df) >= 2 and 'signal' in sig_df else 0
+            
+            enter_long = int(sig_df['enter_long'].iloc[-1]) if 'enter_long' in sig_df else (1 if last_sig == 1 else 0)
+            enter_short = int(sig_df['enter_short'].iloc[-1]) if 'enter_short' in sig_df else (1 if last_sig == -1 else 0)
+
+            # Check status
+            is_open_signal = False
+            signal_side = "STANDBY"
+            signal_badge = "⏳ STANDBY"
+            signal_color = "#64748b"
+            signal_desc = "Menunggu konfirmasi setup strategi"
+
+            if last_sig == 1 or enter_long == 1:
+                is_open_signal = True
+                signal_side = "LONG"
+                signal_badge = "🟢 OPEN LONG ENTRY"
+                signal_color = "#10b981"
+                signal_desc = f"Trigger Buy/Long Aktif ({timeframe})"
+            elif last_sig == -1 or enter_short == 1:
+                is_open_signal = True
+                signal_side = "SHORT"
+                signal_badge = "🔴 OPEN SHORT ENTRY"
+                signal_color = "#f43f5e"
+                signal_desc = f"Trigger Sell/Short Aktif ({timeframe})"
+            elif prev_sig == 1:
+                is_open_signal = True
+                signal_side = "LONG"
+                signal_badge = "⚡ RECENT LONG (1 Bar)"
+                signal_color = "#059669"
+                signal_desc = f"Trigger Long 1 lilin lalu ({timeframe})"
+            elif prev_sig == -1:
+                is_open_signal = True
+                signal_side = "SHORT"
+                signal_badge = "⚡ RECENT SHORT (1 Bar)"
+                signal_color = "#e11d48"
+                signal_desc = f"Trigger Short 1 lilin lalu ({timeframe})"
+
+            # Dynamic SL & TP extraction
+            sl_price = None
+            tp_price = None
+            if 'sl_price' in sig_df and not pd.isna(sig_df['sl_price'].iloc[-1]):
+                sl_price = float(sig_df['sl_price'].iloc[-1])
+            if 'tp_price' in sig_df and not pd.isna(sig_df['tp_price'].iloc[-1]):
+                tp_price = float(sig_df['tp_price'].iloc[-1])
+
+            # Hitung RSI & BB untuk info ringkas
+            rsi = self._calculate_rsi(df['close'].values, period=14)
+            window_closes = df['close'].values[-20:]
+            sma = float(np.mean(window_closes))
+            std = float(np.std(window_closes))
+            upper_band = sma + (2.0 * std)
+            lower_band = sma - (2.0 * std)
+            bbw = ((upper_band - lower_band) / sma) * 100.0 if sma > 0 else 0.0
+
+            # Indicator summary text
+            indicator_summary = f"RSI: {round(rsi, 1)} | BBW: {round(bbw, 1)}%"
+            if 'supertrend' in sig_df and not pd.isna(sig_df['supertrend'].iloc[-1]):
+                st_val = float(sig_df['supertrend'].iloc[-1])
+                st_dir = "Bullish" if sig_df.get('st_dir', pd.Series([1])).iloc[-1] == 1 else "Bearish"
+                indicator_summary = f"Supertrend: {st_dir} (${round(st_val, 4)}) | RSI: {round(rsi, 1)}"
+            elif 'ema_fast' in sig_df and not pd.isna(sig_df['ema_fast'].iloc[-1]):
+                f_val = float(sig_df['ema_fast'].iloc[-1])
+                s_val = float(sig_df['ema_slow'].iloc[-1])
+                indicator_summary = f"EMA9: ${round(f_val, 4)} | EMA21: ${round(s_val, 4)}"
+
+            return {
+                "symbol": symbol.upper().strip(),
+                "timeframe": timeframe,
+                "strategy_id": strategy_id,
+                "strategy_name": getattr(strat, "name", strategy_id),
+                "current_price": curr_price,
+                "is_open_signal": is_open_signal,
+                "signal_side": signal_side,
+                "signal_badge": signal_badge,
+                "signal_color": signal_color,
+                "signal_desc": signal_desc,
+                "sl_price": round(sl_price, 6) if sl_price and sl_price < 1 else (round(sl_price, 4) if sl_price else None),
+                "tp_price": round(tp_price, 6) if tp_price and tp_price < 1 else (round(tp_price, 4) if tp_price else None),
+                "rsi": round(rsi, 1),
+                "bandwidth_pct": round(bbw, 2),
+                "upper_band": round(upper_band, 4),
+                "lower_band": round(lower_band, 4),
+                "indicator_summary": indicator_summary,
+                "price_change_pct": round(price_change_pct, 2),
+                "volume": round(curr_volume, 2)
+            }
+        except Exception as e:
+            return None
+
+    def scan_strategy(self, strategy_id: str = "trend_rider_supertrend", timeframe: str = "15m", limit: int = 50, signal_only: bool = False) -> List[Dict[str, Any]]:
+        now = time.time()
+        cache_key = f"strat_{strategy_id}_{timeframe}_{limit}"
+        if cache_key in self.cache:
+            entry = self.cache[cache_key]
+            if now - entry["ts"] < self.cache_ttl:
+                data = entry["data"]
+                if signal_only:
+                    return [x for x in data if x.get("is_open_signal")]
+                return data
+
+        symbols = self.get_top_symbols(limit=limit)
+        results = []
+
+        with ThreadPoolExecutor(max_workers=16) as executor:
+            futures = [executor.submit(self.evaluate_symbol_strategy, sym, strategy_id, timeframe) for sym in symbols]
+            for f in futures:
+                res = f.result()
+                if res:
+                    results.append(res)
+
+        # Sort: Open signals first, then by RSI / volume
+        results.sort(key=lambda x: (1 if x.get("is_open_signal") else 0, x.get("volume", 0)), reverse=True)
+
+        self.cache[cache_key] = {"data": results, "ts": now}
+        if signal_only:
+            return [x for x in results if x.get("is_open_signal")]
+        return results
+
     def scan_all(self, timeframe: str = "15m", limit: int = 50) -> List[Dict[str, Any]]:
         now = time.time()
         cache_key = f"{timeframe}_{limit}"

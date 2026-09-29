@@ -753,7 +753,7 @@
                 </section>
             </div>
 
-            <!-- ================= TAB 4: BOLLINGER BANDS EXTREME SCREENER & PAPER TRADES VIEW ================= -->
+            <!-- ================= TAB 4: MULTI-STRATEGY OPEN SIGNAL SCREENER & PAPER TRADES VIEW ================= -->
             <div id="view-screener" class="tab-view" style="display: none;">
                 <!-- HERO SCREENER HEADER & RADAR KPI (LIGHT THEME) -->
                 <section class="card hero-banner" style="background: #ffffff; border: 1px solid #e2e8f0; color: #0f172a; margin-bottom: 20px; padding: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border-radius: 12px;">
@@ -761,13 +761,13 @@
                         <div>
                             <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #2563eb; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 10px;">
                                 <span class="pulse-dot" style="background: #3b82f6;"></span>
-                                <span>LIVE BOLLINGER BANDS VOLATILITY RADAR</span>
+                                <span>MULTI-STRATEGY REAL-TIME MARKET SCANNER</span>
                             </div>
                             <h2 style="font-size: 1.45rem; font-weight: 800; margin-bottom: 6px; color: #0f172a;">
-                                📡 Screening Bollinger Bands Super Extreme Multi-Timeframe
+                                📡 Screener Sinyal Open Posisi Multi-Strategi
                             </h2>
                             <p style="color: #64748b; font-size: 0.85rem; max-width: 680px; margin: 0; line-height: 1.5;">
-                                Mendeteksi koin dengan rentang <strong>Bandwidth % (BBW)</strong> terlebar (Super Expansion / Breakout Tren) vs tersempit (Super Squeeze / Akumulasi Ledakan) secara real-time dari 50+ pair aktif Binance Futures.
+                                Pilih strategi trading kuantitatif dari menu Backtest/Demo, lalu sistem akan memindai seluruh pair aktif Binance Futures secara real-time untuk mendeteksi <strong>koin-koin yang sedang memicu sinyal Open Position</strong> saat ini.
                             </p>
                         </div>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -883,51 +883,74 @@
                     </div>
                 </section>
 
-                <!-- SCREENER CONTROLS & TIMEFRAME SELECTOR -->
-                <section class="card filter-bar" style="margin-bottom: 18px;">
-                    <div class="filter-left" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                        <!-- TIMEFRAME BUTTONS -->
-                        <div class="chart-timeframe-group" id="screener-tf-buttons">
-                            <span style="font-size: 0.78rem; font-weight: 700; color: #64748b; margin-right: 4px;">Timeframe Radar:</span>
-                            <button class="tf-btn" data-screener-tf="5m" onclick="changeScreenerTimeframe('5m')">5m</button>
-                            <button class="tf-btn active" data-screener-tf="15m" onclick="changeScreenerTimeframe('15m')">15m</button>
-                            <button class="tf-btn" data-screener-tf="1h" onclick="changeScreenerTimeframe('1h')">1h</button>
-                            <button class="tf-btn" data-screener-tf="4h" onclick="changeScreenerTimeframe('4h')">4h</button>
-                            <button class="tf-btn" data-screener-tf="1d" onclick="changeScreenerTimeframe('1d')">1D</button>
-                        </div>
-
-                        <!-- SEARCH BOX -->
-                        <div class="search-box" style="min-width: 200px;">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                            <input type="text" id="screener-search" placeholder="Cari pair (misal SAGA, PEPE)...">
-                        </div>
-
-                        <!-- PRESET FILTER -->
-                        <div class="filter-group">
-                            <label>Filter Setup Radar:</label>
-                            <select id="screener-filter-status" class="dropdown-custom sm">
-                                <option value="all">⚡ Semua Status (Urutkan BBW Terbesar)</option>
-                                <option value="rsi_bb_oversold" selected>🚀 Reversal Long (RSI &lt; 30 &amp; &lt; Lower Band)</option>
-                                <option value="rsi_oversold">💎 RSI Oversold (RSI &lt; 30)</option>
-                                <option value="dump">📉 Tembus Lower Band (%B &lt; 0%)</option>
-                                <option value="rsi_overbought">⚡ RSI Overbought (RSI &gt; 70)</option>
-                                <option value="breakout">🔥 Tembus Upper Band (%B &gt; 100%)</option>
-                                <option value="expansion">🌊 Super Expansion (BBW &gt; 10%)</option>
-                                <option value="squeeze">🎯 Super Squeeze (BBW &lt; 3.5%)</option>
+                <!-- MULTI-STRATEGY SCREENER CONTROLS & TIMEFRAME SELECTOR -->
+                <section class="card filter-bar" style="margin-bottom: 18px; padding: 18px 20px;">
+                    <div class="filter-left" style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap; width: 100%;">
+                        <!-- STRATEGY SELECTOR -->
+                        <div class="filter-group" style="min-width: 270px; flex: 1;">
+                            <label style="font-size: 0.8rem; font-weight: 700; color: #f97316; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-layer-group"></i> PILIHAN STRATEGI (BACKTEST / LIVE DEMO):
+                            </label>
+                            <select id="screener-strategy-select" class="dropdown-custom" style="width: 100%; font-weight: 700; color: #0f172a;" onchange="onScreenerStrategyChanged()">
+                                <option value="trend_rider_supertrend" selected>🔥 1H Trend Rider (Supertrend + EMA 50 Trailing)</option>
+                                <option value="binance_bband_wilder_rsi">🎯 Binance Pro BbandRsi (Wilder's 100% Match)</option>
+                                <option value="freqtrade_bband_rsi">💎 Freqtrade Pure BbandRsi (Official Original)</option>
+                                <option value="freqtrade_bband_rsi_adjusted">⚡ Freqtrade BbandRsi (Adjusted Futures Hard SL -5%)</option>
+                                <option value="rsi_first_ema7_crossover">🚀 RSI Oversold First EMA 7 Breakout (R:R 1:2)</option>
+                                <option value="freqtrade_sample">📊 Freqtrade Sample (EMA Trend + Multi-Tier ROI)</option>
+                                <option value="bb_reclaim_sniper">🎯 Bollinger Bands Reclaim Sniper (Breach &amp; Reclaim)</option>
+                                <option value="ema_crossover">📈 EMA Crossover (9 / 21) Trend Filter 200</option>
                             </select>
                         </div>
 
-                        <!-- 1-CLICK QUICK BUTTON FOR REVERSAL LONG -->
-                        <button class="btn-log-action" style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #059669; font-weight: 800; padding: 6px 12px; border-radius: 6px;" onclick="applyScreenerQuickFilter('rsi_bb_oversold')">
-                            <i class="fa-solid fa-bolt"></i> Long Setup (RSI&lt;30 &amp; &lt;Lower)
-                        </button>
+                        <!-- TIMEFRAME BUTTONS -->
+                        <div class="filter-group">
+                            <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">TIMEFRAME EKSEKUSI:</label>
+                            <div class="chart-timeframe-group" id="screener-tf-buttons">
+                                <button class="tf-btn" data-screener-tf="1m" onclick="changeScreenerTimeframe('1m')">1m</button>
+                                <button class="tf-btn" data-screener-tf="5m" onclick="changeScreenerTimeframe('5m')">5m</button>
+                                <button class="tf-btn active" data-screener-tf="15m" onclick="changeScreenerTimeframe('15m')">15m</button>
+                                <button class="tf-btn" data-screener-tf="1h" onclick="changeScreenerTimeframe('1h')">1h</button>
+                                <button class="tf-btn" data-screener-tf="4h" onclick="changeScreenerTimeframe('4h')">4h</button>
+                                <button class="tf-btn" data-screener-tf="1d" onclick="changeScreenerTimeframe('1d')">1D</button>
+                            </div>
+                        </div>
 
-                        <button class="btn-log-action" style="background: #f8fafc; border-color: #cbd5e1; color: #0f172a; font-weight: 700; padding: 6px 12px; border-radius: 6px;" onclick="loadBollingerScreenerData(true)">
-                            <i class="fa-solid fa-arrows-rotate"></i> Scan Ulang
-                        </button>
+                        <!-- SIGNAL FILTER TOGGLE -->
+                        <div class="filter-group" style="min-width: 220px;">
+                            <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">FILTER HASIL SCAN:</label>
+                            <select id="screener-filter-signal-mode" class="dropdown-custom" style="font-weight: 700;" onchange="onScreenerSignalFilterChanged()">
+                                <option value="open_signals_only" selected>🔥 Sedang Sinyal Open Posisi Saja</option>
+                                <option value="all">⚡ Tampilkan Semua Koin (Termasuk Standby)</option>
+                            </select>
+                        </div>
+
+                        <!-- SEARCH BOX -->
+                        <div class="filter-group" style="min-width: 170px;">
+                            <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">CARI KOIN:</label>
+                            <div class="search-box" style="width: 100%;">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="screener-search" placeholder="Misal: SOL, BTC...">
+                            </div>
+                        </div>
+
+                        <!-- REFRESH / SCAN BUTTON -->
+                        <div class="filter-group" style="align-self: flex-end; margin-bottom: 2px;">
+                            <button class="btn-primary" style="padding: 9px 18px; font-weight: 800; border-radius: 8px; display: flex; align-items: center; gap: 8px;" onclick="loadStrategyScreenerData(true)">
+                                <i class="fa-solid fa-arrows-rotate"></i> Scan Pasar
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="filter-right" style="text-align: right;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid #f1f5f9; width: 100%;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="tag-badge" id="screener-open-badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; font-weight: 800; border: 1px solid #10b981;">
+                                🟢 0 Sinyal Open Posisi Aktif
+                            </span>
+                            <span style="font-size: 0.78rem; color: #64748b;" id="screener-strategy-desc-badge">
+                                Memindai kondisi lilin real-time Binance Futures
+                            </span>
+                        </div>
                         <span id="screener-pairs-count" style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Menampilkan 0 Pair</span>
                     </div>
                 </section>
@@ -939,21 +962,20 @@
                             <thead>
                                 <tr>
                                     <th class="sortable-th" onclick="sortScreenerBy('symbol')">Pair Contract <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-symbol"></i></th>
-                                    <th class="sortable-th" onclick="sortScreenerBy('rsi')">RSI (14) <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-rsi"></i></th>
-                                    <th class="sortable-th" onclick="sortScreenerBy('percent_b')">%B (Posisi vs Band) <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-percent_b"></i></th>
-                                    <th class="sortable-th" onclick="sortScreenerBy('bandwidth_pct')">Bandwidth (BBW %) <i class="fa-solid fa-sort-down sort-icon active" id="sort-icon-screen-bandwidth_pct"></i></th>
-                                    <th class="sortable-th" onclick="sortScreenerBy('signal')">Status &amp; Sinyal <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-signal"></i></th>
+                                    <th class="sortable-th" onclick="sortScreenerBy('signal_badge')">Status Sinyal / Posisi <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-signal_badge"></i></th>
+                                    <th class="sortable-th" onclick="sortScreenerBy('signal_side')">Arah (Side) <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-signal_side"></i></th>
                                     <th class="sortable-th" onclick="sortScreenerBy('current_price')">Harga Live <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-current_price"></i></th>
-                                    <th class="sortable-th" onclick="sortScreenerBy('upper_band')">Upper Band (2.0σ) <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-upper_band"></i></th>
-                                    <th class="sortable-th" onclick="sortScreenerBy('mid_band')">Mid Band (SMA 20) <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-mid_band"></i></th>
-                                    <th class="sortable-th" onclick="sortScreenerBy('lower_band')">Lower Band (2.0σ) <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-lower_band"></i></th>
+                                    <th>Stop Loss (SL)</th>
+                                    <th>Take Profit (TP)</th>
+                                    <th>Kondisi Indikator</th>
+                                    <th class="sortable-th" onclick="sortScreenerBy('price_change_pct')">24h Chg <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-price_change_pct"></i></th>
                                     <th>Aksi Cepat</th>
                                 </tr>
                             </thead>
                             <tbody id="screener-tbody">
                                 <tr>
-                                    <td colspan="10" class="loading-cell">
-                                        <i class="fa-solid fa-spinner fa-spin"></i> Menghitung Bollinger Bands &amp; RSI (14) real-time di seluruh pair Binance...
+                                    <td colspan="9" class="loading-cell" style="padding: 28px;">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Memindai seluruh pair aktif Binance Futures berdasarkan strategi yang dipilih...
                                     </td>
                                 </tr>
                             </tbody>

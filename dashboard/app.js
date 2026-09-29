@@ -537,7 +537,7 @@ function switchTab(tab) {
     } else if (tab === 'screener') {
         if (tabBtnScreener) tabBtnScreener.classList.add('active');
         if (viewScreener) viewScreener.style.display = 'block';
-        loadBollingerScreenerData();
+        loadStrategyScreenerData();
         loadStrategyPositions();
     }
 }
@@ -550,10 +550,15 @@ async function loadStrategies() {
         const strats = await res.json();
         if (strats && Array.isArray(strats) && strats.length > 0) {
             state.strategies = strats;
-            const currentVal = strategySelect.value || state.selectedStrategy || 'price_ema_7';
+            const currentVal = strategySelect.value || state.selectedStrategy || 'trend_rider_supertrend';
             strategySelect.innerHTML = '';
             const botStratSelect = document.getElementById('bot-strategy-select');
+            const screenerStratSelect = document.getElementById('screener-strategy-select');
+            const modalPosStratSelect = document.getElementById('modal-pos-strategy');
+            
             if (botStratSelect) botStratSelect.innerHTML = '';
+            if (screenerStratSelect) screenerStratSelect.innerHTML = '';
+            if (modalPosStratSelect) modalPosStratSelect.innerHTML = '';
 
             state.strategies.forEach(s => {
                 const opt = document.createElement('option');
@@ -569,8 +574,24 @@ async function loadStrategies() {
                     if (s.id === currentVal || s.id === 'trend_rider_supertrend') optBot.selected = true;
                     botStratSelect.appendChild(optBot);
                 }
+
+                if (screenerStratSelect) {
+                    const optScreen = document.createElement('option');
+                    optScreen.value = s.id;
+                    optScreen.textContent = `[${s.style}] ${s.name}`;
+                    if (s.id === state.screenerStrategy || s.id === 'trend_rider_supertrend') optScreen.selected = true;
+                    screenerStratSelect.appendChild(optScreen);
+                }
+
+                if (modalPosStratSelect) {
+                    const optModal = document.createElement('option');
+                    optModal.value = s.id;
+                    optModal.textContent = `[${s.style}] ${s.name}`;
+                    modalPosStratSelect.appendChild(optModal);
+                }
             });
             state.selectedStrategy = strategySelect.value;
+            if (screenerStratSelect) state.screenerStrategy = screenerStratSelect.value;
             updateGlossaryCard();
         }
     } catch (e) {
@@ -3899,82 +3920,126 @@ async function clientSideBollingerScan(timeframe = '15m') {
     return results;
 }
 
-async function loadBollingerScreenerData(forceRefresh = false) {
+// --- 13. MULTI-STRATEGY OPEN SIGNAL SCREENER ENGINE ---
+state.screenerStrategy = 'trend_rider_supertrend';
+state.screenerTimeframe = '15m';
+state.screenerSignalMode = 'open_signals_only';
+state.screenerSearch = '';
+state.screenerSortField = 'is_open_signal';
+state.screenerSortOrder = 'desc';
+state.screenerData = [];
+state.filteredScreenerData = [];
+
+async function loadStrategyScreenerData(forceRefresh = false) {
     const tbody = document.getElementById('screener-tbody');
     const countEl = document.getElementById('screener-pairs-count');
+    const openBadgeEl = document.getElementById('screener-open-badge');
+    const stratDescEl = document.getElementById('screener-strategy-desc-badge');
+    const stratSelect = document.getElementById('screener-strategy-select');
+
+    if (stratSelect && stratSelect.value) {
+        state.screenerStrategy = stratSelect.value;
+    }
+
     if (!tbody) return;
 
     if (forceRefresh || state.screenerData.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="loading-cell">
-                    <i class="fa-solid fa-spinner fa-spin"></i> Menghitung Bollinger Bands & RSI (14) [${state.screenerTimeframe}] di seluruh pair aktif Binance...
+                <td colspan="9" class="loading-cell" style="padding: 28px; color: #64748b;">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.3rem; color: #f97316; margin-bottom: 6px; display: block;"></i>
+                    Memindai kondisi lilin [${state.screenerTimeframe}] untuk strategi <strong>${state.screenerStrategy}</strong> di seluruh pair Binance Futures...
                 </td>
             </tr>
         `;
     }
 
     try {
-        const res = await fetch(`/api/screener/bollinger?timeframe=${state.screenerTimeframe}&limit=60`);
+        const url = `/api/screener/strategy-scan?strategy=${encodeURIComponent(state.screenerStrategy)}&timeframe=${encodeURIComponent(state.screenerTimeframe)}&limit=60`;
+        const res = await fetch(url);
         if (res.ok) {
             const data = await res.json();
-            if (data.success && data.pairs && data.pairs.length > 0) {
+            if (data.success && data.pairs) {
                 state.screenerData = data.pairs;
-                updateScreenerKPIs(data.pairs);
+                const openCount = data.open_signals_count || data.pairs.filter(p => p.is_open_signal).length;
+                
+                if (openBadgeEl) {
+                    if (openCount > 0) {
+                        openBadgeEl.style.background = 'rgba(16, 185, 129, 0.15)';
+                        openBadgeEl.style.color = '#059669';
+                        openBadgeEl.style.borderColor = '#10b981';
+                        openBadgeEl.innerHTML = `🟢 <strong>${openCount} Pair Sedang Sinyal Open Entry</strong> (${state.screenerTimeframe})`;
+                    } else {
+                        openBadgeEl.style.background = 'rgba(100, 116, 139, 0.1)';
+                        openBadgeEl.style.color = '#64748b';
+                        openBadgeEl.style.borderColor = '#cbd5e1';
+                        openBadgeEl.innerHTML = `⚪ 0 Sinyal Open (Pasar Standby pada TF ${state.screenerTimeframe})`;
+                    }
+                }
+
+                if (stratDescEl) {
+                    stratDescEl.textContent = `Strategi: ${data.pairs[0]?.strategy_name || state.screenerStrategy}`;
+                }
+
                 filterAndRenderScreenerTable();
                 return;
             }
         }
     } catch (e) {
-        // Fallback to client-side scanner
+        console.warn('Gagal memuat scan strategi screener:', e);
     }
 
-    // Direct Client-Side Fallback via Binance Vision
+    // Fallback: try bollinger endpoint if failed
     try {
-        const pairs = await clientSideBollingerScan(state.screenerTimeframe);
-        if (pairs && pairs.length > 0) {
-            state.screenerData = pairs;
-            updateScreenerKPIs(pairs);
-            filterAndRenderScreenerTable();
-        } else {
-            tbody.innerHTML = `<tr><td colspan="10" class="error-cell">Gagal memuat data screening Bollinger Bands.</td></tr>`;
+        const res2 = await fetch(`/api/screener/bollinger?timeframe=${state.screenerTimeframe}&limit=60`);
+        if (res2.ok) {
+            const data2 = await res2.json();
+            if (data2.success && data2.pairs) {
+                state.screenerData = data2.pairs.map(p => ({
+                    symbol: p.symbol,
+                    timeframe: state.screenerTimeframe,
+                    strategy_id: state.screenerStrategy,
+                    strategy_name: 'Bollinger Bands Volatility',
+                    current_price: p.current_price,
+                    is_open_signal: (Number(p.rsi || 50) <= 30.0) || (Number(p.percent_b || 50) <= 0.0),
+                    signal_side: (Number(p.rsi || 50) <= 30.0) ? 'LONG' : ((Number(p.rsi || 50) >= 70.0) ? 'SHORT' : 'STANDBY'),
+                    signal_badge: (Number(p.rsi || 50) <= 30.0) ? '🟢 OPEN LONG ENTRY' : ((Number(p.rsi || 50) >= 70.0) ? '🔴 OPEN SHORT ENTRY' : '⏳ STANDBY'),
+                    signal_color: (Number(p.rsi || 50) <= 30.0) ? '#10b981' : ((Number(p.rsi || 50) >= 70.0) ? '#f43f5e' : '#64748b'),
+                    sl_price: p.lower_band,
+                    tp_price: p.upper_band,
+                    rsi: p.rsi,
+                    bandwidth_pct: p.bandwidth_pct,
+                    indicator_summary: `RSI: ${p.rsi} | BBW: ${p.bandwidth_pct}%`,
+                    price_change_pct: p.price_change_pct,
+                    volume: p.volume
+                }));
+                filterAndRenderScreenerTable();
+                return;
+            }
         }
-    } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="10" class="error-cell">Terjadi kesalahan saat screening data pasar.</td></tr>`;
-    }
+    } catch (err) {}
+
+    tbody.innerHTML = `<tr><td colspan="9" class="error-cell" style="padding: 24px; color: #e11d48;">Gagal memuat data screening pasar. Silakan klik "Scan Pasar" untuk mencoba kembali.</td></tr>`;
 }
 
-function updateScreenerKPIs(pairs) {
-    if (!pairs || pairs.length === 0) return;
-    const topExpEl = document.getElementById('screener-top-expansion');
-    const topSqEl = document.getElementById('screener-top-squeeze');
-    const topRevEl = document.getElementById('screener-top-reversal');
-
-    // Sort by bandwidth to get max and min
-    const sorted = [...pairs].sort((a, b) => (b.bandwidth_pct || 0) - (a.bandwidth_pct || 0));
-    const topExp = sorted[0];
-    const topSq = sorted[sorted.length - 1];
-
-    // Count reversal long candidates (RSI <= 30 & Below Lower Band)
-    const reversalCount = pairs.filter(p => (Number(p.rsi || 50) <= 30.0) && (Number(p.percent_b || 50) <= 0.0 || Number(p.current_price) <= Number(p.lower_band))).length;
-
-    if (topExpEl && topExp) {
-        topExpEl.innerHTML = `${topExp.symbol} <span style="font-size: 0.85rem; color: #60a5fa;">(${Number(topExp.bandwidth_pct).toFixed(1)}%)</span>`;
+function onScreenerStrategyChanged() {
+    const stratSelect = document.getElementById('screener-strategy-select');
+    if (stratSelect) {
+        state.screenerStrategy = stratSelect.value;
     }
-    if (topSqEl && topSq) {
-        topSqEl.innerHTML = `${topSq.symbol} <span style="font-size: 0.85rem; color: #f59e0b;">(${Number(topSq.bandwidth_pct).toFixed(1)}%)</span>`;
+    loadStrategyScreenerData(true);
+}
+
+function onScreenerSignalFilterChanged() {
+    const filterSelect = document.getElementById('screener-filter-signal-mode');
+    if (filterSelect) {
+        state.screenerSignalMode = filterSelect.value;
     }
-    if (topRevEl) {
-        if (reversalCount > 0) {
-            topRevEl.innerHTML = `<span style="color: #10b981; font-weight: 800;">🔥 ${reversalCount} Pair Siap Entry</span>`;
-        } else {
-            topRevEl.innerHTML = `<span style="color: #94a3b8; font-weight: 600;">0 Pair (Market Stabil)</span>`;
-        }
-    }
+    filterAndRenderScreenerTable();
 }
 
 function changeScreenerTimeframe(tf) {
-    const validTfs = ['5m', '15m', '1h', '4h', '1d'];
+    const validTfs = ['1m', '5m', '15m', '1h', '4h', '1d'];
     const chosenTf = validTfs.includes(tf) ? tf : '15m';
     state.screenerTimeframe = chosenTf;
 
@@ -3984,14 +4049,7 @@ function changeScreenerTimeframe(tf) {
         else b.classList.remove('active');
     });
 
-    loadBollingerScreenerData(true);
-}
-
-function applyScreenerQuickFilter(statusKey) {
-    state.screenerStatusFilter = statusKey;
-    const selectEl = document.getElementById('screener-filter-status');
-    if (selectEl) selectEl.value = statusKey;
-    filterAndRenderScreenerTable();
+    loadStrategyScreenerData(true);
 }
 
 function sortScreenerBy(field) {
@@ -3999,10 +4057,9 @@ function sortScreenerBy(field) {
         state.screenerSortOrder = state.screenerSortOrder === 'asc' ? 'desc' : 'asc';
     } else {
         state.screenerSortField = field;
-        state.screenerSortOrder = (field === 'rsi') ? 'asc' : 'desc'; // Default RSI to ASC (mencari yang paling oversold)
+        state.screenerSortOrder = 'desc';
     }
 
-    // Update icons
     const allIcons = document.querySelectorAll('#screener-table .sort-icon');
     allIcons.forEach(ic => {
         ic.className = 'fa-solid fa-sort sort-icon';
@@ -4023,41 +4080,28 @@ function filterAndRenderScreenerTable() {
 
     let filtered = [...state.screenerData];
 
-    // Status filter
-    if (state.screenerStatusFilter === 'rsi_bb_oversold') {
-        filtered = filtered.filter(p => {
-            const rsi = Number(p.rsi || 50);
-            const pb = Number(p.percent_b || 50);
-            const price = Number(p.current_price || 0);
-            const lower = Number(p.lower_band || 0);
-            return (rsi <= 30.0) && (pb <= 0.0 || price <= lower);
-        });
-    } else if (state.screenerStatusFilter === 'rsi_oversold') {
-        filtered = filtered.filter(p => Number(p.rsi || 50) <= 30.0);
-    } else if (state.screenerStatusFilter === 'rsi_overbought') {
-        filtered = filtered.filter(p => Number(p.rsi || 50) >= 70.0);
-    } else if (state.screenerStatusFilter === 'expansion') {
-        filtered = filtered.filter(p => Number(p.bandwidth_pct || 0) >= 10.0);
-    } else if (state.screenerStatusFilter === 'squeeze') {
-        filtered = filtered.filter(p => Number(p.bandwidth_pct || 0) <= 3.5);
-    } else if (state.screenerStatusFilter === 'breakout') {
-        filtered = filtered.filter(p => Number(p.percent_b || 0) >= 100.0);
-    } else if (state.screenerStatusFilter === 'dump') {
-        filtered = filtered.filter(p => Number(p.percent_b || 0) <= 0.0);
+    // Filter by Open Signal Mode
+    if (state.screenerSignalMode === 'open_signals_only') {
+        filtered = filtered.filter(p => p.is_open_signal);
     }
 
-    // Search query
+    // Filter by Search Query
     if (state.screenerSearch) {
         const q = state.screenerSearch.toLowerCase().trim();
         filtered = filtered.filter(p => p.symbol.toLowerCase().includes(q));
     }
 
     // Sorting
-    const field = state.screenerSortField || 'bandwidth_pct';
+    const field = state.screenerSortField || 'is_open_signal';
     const order = state.screenerSortOrder || 'desc';
     filtered.sort((a, b) => {
         let valA = a[field];
         let valB = b[field];
+
+        if (typeof valA === 'boolean') {
+            valA = valA ? 1 : 0;
+            valB = valB ? 1 : 0;
+        }
 
         if (typeof valA === 'string') {
             const comp = valA.localeCompare(valB || '');
@@ -4076,100 +4120,99 @@ function filterAndRenderScreenerTable() {
 
     tbody.innerHTML = '';
     if (filtered.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="10" class="loading-cell" style="padding: 30px 15px;">
-                    <div style="font-size: 1.1rem; font-weight: 700; color: #64748b; margin-bottom: 6px;">
-                        <i class="fa-solid fa-filter-circle-xmark"></i> Tidak Ada Koin yang Memenuhi Kriteria Filter
-                    </div>
-                    <div style="font-size: 0.85rem; color: #94a3b8;">
-                        Coba ubah Timeframe (misal ke 5m atau 15m) atau pilih filter <strong>Semua Status</strong> untuk melihat seluruh pair.
-                    </div>
-                </td>
-            </tr>
-        `;
+        if (state.screenerSignalMode === 'open_signals_only') {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="loading-cell" style="padding: 34px 20px; background: #fafbfc;">
+                        <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">
+                            <i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Saat ini belum ada koin yang memicu sinyal Open Position pada timeframe ${state.screenerTimeframe}
+                        </div>
+                        <div style="font-size: 0.85rem; color: #64748b; max-width: 600px; margin: 0 auto; line-height: 1.5;">
+                            Kondisi pasar sedang fase konsolidasi/standby untuk strategi ini. Anda dapat mengganti pilihan <strong>Timeframe</strong> (misal ke 5m atau 1h) atau mengganti filter ke <strong>"⚡ Tampilkan Semua Koin"</strong> untuk memantau status seluruh pair.
+                        </div>
+                    </td>
+                </tr>
+            `;
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="loading-cell" style="padding: 30px 15px; color: #64748b; background: #fafbfc;">
+                        <i class="fa-solid fa-filter-circle-xmark" style="font-size: 1.4rem; color: #94a3b8; display: block; margin-bottom: 6px;"></i>
+                        Tidak ada koin yang sesuai dengan pencarian <strong>"${state.screenerSearch}"</strong>.
+                    </td>
+                </tr>
+            `;
+        }
         return;
     }
 
     filtered.forEach(pair => {
         const tr = document.createElement('tr');
-        const bw = Number(pair.bandwidth_pct || 0);
-        const pb = Number(pair.percent_b || 0);
-        const rsi = Number(pair.rsi || 50);
+        const isSignal = pair.is_open_signal;
+        const sideColor = pair.signal_side === 'LONG' ? '#059669' : (pair.signal_side === 'SHORT' ? '#e11d48' : '#64748b');
+        const chg = Number(pair.price_change_pct || 0);
 
-        // Highlight bandwidth
-        let bwColor = '#0f172a';
-        let bwBadge = '';
-        if (bw >= 15.0) {
-            bwColor = '#2563eb';
-            bwBadge = `<span style="font-size: 0.7rem; font-weight: 800; background: #eff6ff; color: #1d4ed8; padding: 2px 6px; border-radius: 4px; margin-left: 4px;">⚡ SUPER WIDE</span>`;
-        } else if (bw <= 3.0) {
-            bwColor = '#d97706';
-            bwBadge = `<span style="font-size: 0.7rem; font-weight: 800; background: #fef3c7; color: #b45309; padding: 2px 6px; border-radius: 4px; margin-left: 4px;">🎯 TIGHT SQUEEZE</span>`;
+        if (isSignal) {
+            tr.style.background = pair.signal_side === 'LONG' ? 'rgba(16, 185, 129, 0.05)' : 'rgba(244, 63, 94, 0.05)';
         }
 
-        // %B Color
-        let pbColor = '#64748b';
-        if (pb >= 100.0) pbColor = 'text-profit';
-        else if (pb <= 0.0) pbColor = 'text-loss font-bold';
-
-        // RSI Badge & Color
-        let rsiHtml = `<span class="font-mono" style="font-weight: 700; color: #475569;">${rsi.toFixed(1)}</span>`;
-        if (rsi <= 30.0) {
-            rsiHtml = `
-                <span class="tag-badge" style="background: rgba(16, 185, 129, 0.18); color: #059669; border: 1px solid rgba(16, 185, 129, 0.4); font-weight: 800;">
-                    🔥 ${rsi.toFixed(1)} OVERSOLD
-                </span>
-            `;
-        } else if (rsi >= 70.0) {
-            rsiHtml = `
-                <span class="tag-badge" style="background: rgba(244, 63, 94, 0.18); color: #e11d48; border: 1px solid rgba(244, 63, 94, 0.4); font-weight: 800;">
-                    ⚡ ${rsi.toFixed(1)} OVERBOUGHT
-                </span>
-            `;
-        }
-
-        // Special row styling for perfect Long Reversal setup
-        const isPerfectLongSetup = (rsi <= 30.0) && (pb <= 0.0 || pair.current_price <= pair.lower_band);
-        if (isPerfectLongSetup) {
-            tr.style.background = 'rgba(16, 185, 129, 0.05)';
-        }
+        const slText = pair.sl_price ? `$${formatCleanPrice(pair.sl_price)}` : '<span style="color:#94a3b8;">Dinamis</span>';
+        const tpText = pair.tp_price ? `$${formatCleanPrice(pair.tp_price)}` : '<span style="color:#94a3b8;">Trailing / ROI</span>';
 
         tr.innerHTML = `
             <td>
-                <strong>${pair.symbol}</strong>
-                ${isPerfectLongSetup ? '<span style="display:block; font-size:0.7rem; color:#10b981; font-weight:800;">🚀 REVERSAL LONG COMBO</span>' : ''}
-            </td>
-            <td>${rsiHtml}</td>
-            <td class="font-mono ${pbColor}" style="font-weight: 700;">
-                ${pb.toFixed(1)}%
-            </td>
-            <td class="font-mono" style="font-size: 1.02rem; font-weight: 800; color: ${bwColor};">
-                ${bw.toFixed(2)}% ${bwBadge}
+                <strong style="color: #0f172a; font-size: 0.95rem;">${pair.symbol}</strong>
+                ${isSignal ? '<span style="display:block; font-size:0.7rem; color:' + sideColor + '; font-weight:800;">⚡ READY TO EXECUTE</span>' : ''}
             </td>
             <td>
-                <span class="tag-badge" style="background: ${pair.signal_color || '#10b981'}1a; color: ${pair.signal_color || '#10b981'}; border: 1px solid ${pair.signal_color || '#10b981'}; font-weight: 700;">
-                    ${pair.signal_badge || pair.signal || 'NORMAL'}
+                <span class="tag-badge" style="background: ${pair.signal_color || '#64748b'}18; color: ${pair.signal_color || '#64748b'}; border: 1px solid ${pair.signal_color || '#64748b'}44; font-weight: 800;">
+                    ${pair.signal_badge || 'STANDBY'}
                 </span>
             </td>
-            <td class="font-mono" style="font-weight: 700;">$${formatCleanPrice(pair.current_price)}</td>
-            <td class="font-mono text-profit">$${formatCleanPrice(pair.upper_band)}</td>
-            <td class="font-mono text-muted">$${formatCleanPrice(pair.mid_band)}</td>
-            <td class="font-mono text-loss" style="font-weight: 700;">$${formatCleanPrice(pair.lower_band)}</td>
             <td>
-                <button class="btn-log-action" style="background: rgba(16, 185, 129, 0.18); border-color: #10b981; color: #059669; font-weight: 800; margin-right: 4px;" onclick="openNewStrategyPositionModal('${pair.symbol}', '${pair.signal_badge || 'Bollinger Bands Reclaim Sniper'}', ${pair.current_price})" title="Buka Simulasi Paper Trade">
-                    <i class="fa-solid fa-bolt"></i> Buka Posisi
+                <span class="tag-badge" style="background: ${sideColor}18; color: ${sideColor}; font-weight: 800; border: 1px solid ${sideColor}44;">
+                    ${pair.signal_side || 'STANDBY'}
+                </span>
+            </td>
+            <td class="font-mono" style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">
+                $${formatCleanPrice(pair.current_price)}
+            </td>
+            <td class="font-mono" style="font-size: 0.85rem; color: #e11d48; font-weight: 600;">
+                ${slText}
+            </td>
+            <td class="font-mono" style="font-size: 0.85rem; color: #059669; font-weight: 600;">
+                ${tpText}
+            </td>
+            <td style="font-size: 0.8rem; color: #334155; max-width: 200px;">
+                ${pair.indicator_summary || '-'}
+            </td>
+            <td class="font-mono ${chg >= 0 ? 'text-profit font-bold' : 'text-loss font-bold'}" style="font-size: 0.85rem;">
+                ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%
+            </td>
+            <td>
+                <button class="btn-log-action" style="background: rgba(16, 185, 129, 0.18); border-color: #10b981; color: #059669; font-weight: 800; margin-right: 4px; padding: 5px 10px; border-radius: 6px;" onclick="openPaperTradeFromScreener('${pair.symbol}', '${pair.signal_side || 'LONG'}', ${pair.current_price})" title="Eksekusi Simulasi Paper Trade Sekarang">
+                    <i class="fa-solid fa-bolt"></i> Buka Paper Trade
                 </button>
-                <button class="btn-log-action" style="background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; color: #2563eb; font-weight: 700; margin-right: 4px;" onclick="addPairToBotWatchlist('${pair.symbol}')" title="Masukkan ke Watchlist Bot">
+                <button class="btn-log-action" style="background: rgba(59, 130, 246, 0.12); border-color: #3b82f6; color: #2563eb; font-weight: 700; margin-right: 4px; padding: 5px 8px; border-radius: 6px;" onclick="addPairToBotWatchlist('${pair.symbol}')" title="Masukkan ke Watchlist Bot">
                     <i class="fa-solid fa-plus"></i> Watchlist
                 </button>
-                <button class="btn-log-action" style="background: rgba(100, 116, 139, 0.15); border-color: #94a3b8; color: #475569; font-weight: 700;" onclick="testPairInBacktest('${pair.symbol}')" title="Uji Backtest Strategi">
+                <button class="btn-log-action" style="background: rgba(100, 116, 139, 0.12); border-color: #94a3b8; color: #475569; font-weight: 700; padding: 5px 8px; border-radius: 6px;" onclick="testPairInBacktest('${pair.symbol}')" title="Uji Backtest Strategi">
                     <i class="fa-solid fa-chart-line"></i> Backtest
                 </button>
             </td>
         `;
         tbody.appendChild(tr);
     });
+}
+
+function openPaperTradeFromScreener(symbol, side = 'LONG', price = null) {
+    const stratSelect = document.getElementById('screener-strategy-select');
+    const stratName = stratSelect ? stratSelect.options[stratSelect.selectedIndex]?.text : state.screenerStrategy;
+    const cleanSide = (side === 'SHORT') ? 'SHORT' : 'LONG';
+    
+    openNewStrategyPositionModal(symbol, stratName || state.screenerStrategy, price);
+    const sideInput = document.getElementById('modal-pos-side');
+    if (sideInput) sideInput.value = cleanSide;
 }
 
 // --- 14. PAPER TRADING STRATEGY POSITIONS & NET PNL TRACKER ---
@@ -4537,7 +4580,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.changeScreenerTimeframe = changeScreenerTimeframe;
 window.sortScreenerBy = sortScreenerBy;
-window.loadBollingerScreenerData = loadBollingerScreenerData;
+window.loadStrategyScreenerData = loadStrategyScreenerData;
+window.loadBollingerScreenerData = loadStrategyScreenerData;
+window.onScreenerStrategyChanged = onScreenerStrategyChanged;
+window.onScreenerSignalFilterChanged = onScreenerSignalFilterChanged;
+window.openPaperTradeFromScreener = openPaperTradeFromScreener;
 window.addPairToBotWatchlist = addPairToBotWatchlist;
 window.testPairInBacktest = testPairInBacktest;
 window.switchStrategySubTab = switchStrategySubTab;

@@ -108,6 +108,7 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
+        query_params = urllib.parse.parse_qs(parsed.query)
         if parsed.path == "/api/symbols" or parsed.path == "/api/bot/symbols" or parsed.path == "/api/futures-symbols":
             syms = get_all_futures_symbols()
             self.send_json({"success": True, "total": len(syms), "symbols": syms})
@@ -348,6 +349,25 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                     self.send_json({"success": False, "error": "Gagal mengambil data candle Binance"})
             except Exception as e:
                 self.send_json({"success": False, "error": str(e)})
+        elif parsed.path == "/api/screener/strategy-scan" or parsed.path == "/api/screener/scan":
+            try:
+                from src.screener_engine import bollinger_screener
+                strat_id = query_params.get("strategy", ["trend_rider_supertrend"])[0]
+                tf = query_params.get("timeframe", ["15m"])[0]
+                limit = int(query_params.get("limit", [50])[0])
+                signal_only = query_params.get("signal_only", ["false"])[0].lower() in ["true", "1", "yes"]
+                data = bollinger_screener.scan_strategy(strategy_id=strat_id, timeframe=tf, limit=limit, signal_only=signal_only)
+                open_signals_count = sum(1 for x in data if x.get("is_open_signal"))
+                self.send_json({
+                    "success": True,
+                    "strategy_id": strat_id,
+                    "timeframe": tf,
+                    "count": len(data),
+                    "open_signals_count": open_signals_count,
+                    "pairs": data
+                })
+            except Exception as e:
+                self.send_json({"success": False, "error": str(e), "pairs": []})
         elif parsed.path == "/api/screener/bollinger":
             try:
                 from src.screener_engine import bollinger_screener
