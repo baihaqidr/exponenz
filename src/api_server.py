@@ -279,20 +279,29 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                                 "value": round(float(rsi_val), 2)
                             })
                             
-                    # Generate 100% accurate, stateful trade markers matching the Data Table
-                    engine = BacktestEngine(initial_capital=1000.0, leverage=2.0, risk_per_trade_pct=0.02)
+                    # Generate 100% accurate, stateful trade markers matching the Strategy and Backtest Engine
+                    is_long_only = getattr(strategy, 'is_long_only', False)
+                    engine = BacktestEngine(initial_capital=1000.0, leverage=2.0, risk_per_trade_pct=0.02, is_long_only=is_long_only)
                     res_bt = engine.run(df_sig)
                     df_trades = res_bt.get("trades_df", pd.DataFrame())
                     open_pos = res_bt.get("open_position", None)
                     
-                    min_plot_sec = int(df_plot.iloc[0]['timestamp'].timestamp())
-                    max_plot_sec = int(df_plot.iloc[-1]['timestamp'].timestamp())
+                    candle_times = set(c['time'] for c in candles)
+                    min_plot_sec = candles[0]['time'] if candles else 0
+                    max_plot_sec = candles[-1]['time'] if candles else 0
                     markers_map = {}
+
+                    def _find_closest_candle_time(target_sec):
+                        if target_sec in candle_times:
+                            return target_sec
+                        # Find nearest candle within reasonable tolerance
+                        best_t = min(candle_times, key=lambda t: abs(t - target_sec)) if candle_times else target_sec
+                        return best_t
 
                     if not df_trades.empty:
                         for _, tr in df_trades.iterrows():
-                            e_sec = int(pd.to_datetime(tr['entry_time']).timestamp())
-                            x_sec = int(pd.to_datetime(tr['exit_time']).timestamp())
+                            e_sec = _find_closest_candle_time(int(pd.to_datetime(tr['entry_time']).timestamp()))
+                            x_sec = _find_closest_candle_time(int(pd.to_datetime(tr['exit_time']).timestamp()))
                             is_long = tr['type'] == 'LONG'
 
                             if min_plot_sec <= e_sec <= max_plot_sec:
@@ -314,7 +323,7 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                                 }
 
                     if open_pos is not None:
-                        e_sec = int(pd.to_datetime(open_pos['entry_time']).timestamp())
+                        e_sec = _find_closest_candle_time(int(pd.to_datetime(open_pos['entry_time']).timestamp()))
                         is_long = open_pos['type'] == 'LONG'
                         if min_plot_sec <= e_sec <= max_plot_sec:
                             markers_map[e_sec] = {
@@ -324,6 +333,28 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                                 "shape": "arrowUp" if is_long else "arrowDown",
                                 "text": "BUY" if is_long else "SHORT"
                             }
+
+                    # Fallback to direct strategy signal indicators if no backtest trades were closed
+                    if not markers_map and len(candles) == len(df_plot):
+                        for i in range(len(df_plot)):
+                            r = df_plot.iloc[i]
+                            t = candles[i]['time']
+                            if r.get('enter_long', 0) == 1 or r.get('signal', 0) == 1:
+                                markers_map[t] = {
+                                    "time": t,
+                                    "position": "belowBar",
+                                    "color": "#10b981",
+                                    "shape": "arrowUp",
+                                    "text": "BUY"
+                                }
+                            elif r.get('exit_long', 0) == 1 or (not is_long_only and (r.get('signal', 0) == -1 or r.get('enter_short', 0) == 1)):
+                                markers_map[t] = {
+                                    "time": t,
+                                    "position": "aboveBar",
+                                    "color": "#ef4444",
+                                    "shape": "arrowDown",
+                                    "text": "CLOSE" if is_long_only else "SHORT"
+                                }
 
                     markers = [markers_map[t] for t in sorted(markers_map.keys())]
                             

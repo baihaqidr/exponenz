@@ -10,6 +10,7 @@ import urllib3
 import pandas as pd
 
 BINANCE_FUTURES_FAPI_URL = "https://fapi.binance.com/fapi/v1/klines"
+BINANCE_TESTNET_FAPI_URL = "https://testnet.binancefuture.com/fapi/v1/klines"
 BINANCE_PUBLIC_KLINES_URL = "https://data-api.binance.vision/api/v3/klines"
 BINANCE_FUTURES_MONTHLY_URL = "https://data.binance.vision/data/futures/um/monthly/klines"
 
@@ -40,6 +41,7 @@ _RAM_CACHE_EXPIRY_SEC = 15
 def fetch_fast_api_klines(symbol: str = "BTCUSDT", interval: str = "4h", total_candles: int = 3000) -> pd.DataFrame:
     """
     Fetch 100% exact live klines matching Real Binance Mainnet market data with dynamic RAM cache.
+    Supports fallback endpoints including Official Binance Futures, Testnet FAPI, and Binance Vision.
     """
     symbol = symbol.upper().replace("/", "").replace("-", "").replace(":USDT", "")
     cache_key = f"{symbol}_{interval}_{total_candles}"
@@ -57,25 +59,33 @@ def fetch_fast_api_klines(symbol: str = "BTCUSDT", interval: str = "4h", total_c
     all_rows = []
     end_time = None
 
-    # Priority endpoints: Official Real Binance Futures FAPI (Mainnet)
+    # Priority endpoints: 1. Mainnet Futures FAPI, 2. Testnet Futures FAPI, 3. Binance Public Vision API
     endpoints = [
-        BINANCE_FUTURES_FAPI_URL,
-        BINANCE_PUBLIC_KLINES_URL
+        ("fapi", BINANCE_FUTURES_FAPI_URL),
+        ("testnet", BINANCE_TESTNET_FAPI_URL),
+        ("vision", BINANCE_PUBLIC_KLINES_URL),
     ]
 
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
-
-
-    for ep in endpoints:
+    for ep_name, ep_url in endpoints:
         all_rows = []
         end_time = None
+        req_sym = symbol
+        is_thousand_multiplier = False
+
+        # On Spot Vision API, 1000-multiplied futures tokens (e.g. 1000PEPEUSDT, 1000SHIBUSDT, 1000BONKUSDT) are traded without the '1000' prefix
+        if ep_name == "vision" and req_sym.startswith("1000"):
+            req_sym = req_sym[4:]
+            is_thousand_multiplier = True
+
         try:
             while len(all_rows) < total_candles:
-                params = {"symbol": symbol, "interval": interval, "limit": min(limit, total_candles - len(all_rows))}
+                params = {"symbol": req_sym, "interval": interval, "limit": min(limit, total_candles - len(all_rows))}
                 if end_time:
                     params["endTime"] = end_time - 1
 
-                r = requests.get(ep, params=params, verify=False, timeout=2.5)
+                r = requests.get(ep_url, params=params, headers=headers, verify=False, timeout=3.5)
                 if r.status_code != 200:
                     break
                 data = r.json()
@@ -87,28 +97,28 @@ def fetch_fast_api_klines(symbol: str = "BTCUSDT", interval: str = "4h", total_c
                 if len(data) < params["limit"]:
                     break
                     
-            if all_rows:
-                break
+            if all_rows and len(all_rows) > 0:
+                cols = ['open_time', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_volume', 'count', 'taker_buy_volume', 'taker_buy_quote_volume', 'ignore']
+                df = pd.DataFrame(all_rows, columns=cols[:len(all_rows[0])])
+                df['timestamp'] = pd.to_datetime(df['open_time'], unit='ms')
+                for c in ['open_time', 'open', 'high', 'low', 'close', 'volume', 'quote_volume']:
+                    if c in df.columns:
+                        df[c] = df[c].astype(float)
+                        if is_thousand_multiplier and c in ['open', 'high', 'low', 'close']:
+                            df[c] = df[c] * 1000.0
+                df.drop_duplicates(subset=['timestamp'], inplace=True)
+                df.sort_values('timestamp', inplace=True)
+                result_df = df[['timestamp', 'open_time', 'open', 'high', 'low', 'close', 'volume', 'quote_volume']].tail(total_candles).reset_index(drop=True)
+                
+                # Store in RAM Cache
+                _RAM_KLINES_CACHE[cache_key] = {
+                    "df": result_df,
+                    "timestamp": now_t
+                }
+                return result_df
         except Exception:
             continue
 
-    if all_rows:
-        cols = ['open_time', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_volume', 'count', 'taker_buy_volume', 'taker_buy_quote_volume', 'ignore']
-        df = pd.DataFrame(all_rows, columns=cols[:len(all_rows[0])])
-        df['timestamp'] = pd.to_datetime(df['open_time'], unit='ms')
-        for c in ['open_time', 'open', 'high', 'low', 'close', 'volume', 'quote_volume']:
-            if c in df.columns:
-                df[c] = df[c].astype(float)
-        df.drop_duplicates(subset=['timestamp'], inplace=True)
-        df.sort_values('timestamp', inplace=True)
-        result_df = df[['timestamp', 'open_time', 'open', 'high', 'low', 'close', 'volume', 'quote_volume']].tail(total_candles).reset_index(drop=True)
-        
-        # Store in RAM Cache
-        _RAM_KLINES_CACHE[cache_key] = {
-            "df": result_df,
-            "timestamp": now_t
-        }
-        return result_df
     return None
 
 def fetch_binance_futures_klines(symbol: str = "BTCUSDT", interval: str = "4h", total_candles: int = 3000, use_cache: bool = True) -> pd.DataFrame:
