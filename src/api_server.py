@@ -385,7 +385,8 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
         elif parsed.path == "/api/strategy-positions/active":
             try:
                 from src.db_manager import turso_db
-                active_rows = turso_db.get_active_positions()
+                strat_name = query_params.get("strategy", [None])[0]
+                active_rows = turso_db.get_active_positions(strategy_name=strat_name)
                 from src.screener_engine import bollinger_screener
                 updated_rows = []
                 for pos in active_rows:
@@ -400,23 +401,25 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                             updated_rows.append(pos)
                     except Exception:
                         updated_rows.append(pos)
-                stats = turso_db.get_performance_stats()
+                stats = turso_db.get_performance_stats(strategy_name=strat_name)
                 self.send_json({"success": True, "positions": updated_rows, "stats": stats})
             except Exception as e:
                 self.send_json({"success": False, "error": str(e), "positions": []})
         elif parsed.path == "/api/strategy-positions/history":
             try:
                 from src.db_manager import turso_db
+                strat_name = query_params.get("strategy", [None])[0]
                 limit = int(query_params.get("limit", [50])[0])
-                history = turso_db.get_closed_trades(limit=limit)
-                stats = turso_db.get_performance_stats()
+                history = turso_db.get_closed_trades(limit=limit, strategy_name=strat_name)
+                stats = turso_db.get_performance_stats(strategy_name=strat_name)
                 self.send_json({"success": True, "history": history, "stats": stats})
             except Exception as e:
                 self.send_json({"success": False, "error": str(e), "history": []})
         elif parsed.path == "/api/strategy-positions/stats":
             try:
                 from src.db_manager import turso_db
-                stats = turso_db.get_performance_stats()
+                strat_name = query_params.get("strategy", [None])[0]
+                stats = turso_db.get_performance_stats(strategy_name=strat_name)
                 self.send_json({"success": True, "stats": stats})
             except Exception as e:
                 self.send_json({"success": False, "error": str(e)})

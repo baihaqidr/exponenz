@@ -753,21 +753,21 @@
                 </section>
             </div>
 
-            <!-- ================= TAB 4: MULTI-STRATEGY OPEN SIGNAL SCREENER & PAPER TRADES VIEW ================= -->
+            <!-- ================= TAB 4: INTEGRATED STRATEGY SCREENER & PAPER TRADING VIEW ================= -->
             <div id="view-screener" class="tab-view" style="display: none;">
-                <!-- HERO SCREENER HEADER & RADAR KPI (LIGHT THEME) -->
+                <!-- HERO SCREENER HEADER & KPI STATS (LIGHT THEME) -->
                 <section class="card hero-banner" style="background: #ffffff; border: 1px solid #e2e8f0; color: #0f172a; margin-bottom: 20px; padding: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border-radius: 12px;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
                         <div>
                             <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #2563eb; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 10px;">
                                 <span class="pulse-dot" style="background: #3b82f6;"></span>
-                                <span>MULTI-STRATEGY REAL-TIME MARKET SCANNER</span>
+                                <span>MULTI-STRATEGY REAL-TIME MARKET SCANNER &amp; PAPER TRADING</span>
                             </div>
                             <h2 style="font-size: 1.45rem; font-weight: 800; margin-bottom: 6px; color: #0f172a;">
-                                📡 Screener Sinyal Open Posisi Multi-Strategi
+                                📡 Screener Sinyal Open Posisi &amp; Paper Trading Simulator
                             </h2>
                             <p style="color: #64748b; font-size: 0.85rem; max-width: 680px; margin: 0; line-height: 1.5;">
-                                Pilih strategi trading kuantitatif dari menu Backtest/Demo, lalu sistem akan memindai seluruh pair aktif Binance Futures secara real-time untuk mendeteksi <strong>koin-koin yang sedang memicu sinyal Open Position</strong> saat ini.
+                                Pilih strategi kuantitatif, pantau <strong>posisi terbuka &amp; riwayat performa strategi</strong> tersebut, dan scan seluruh pair pasar secara real-time untuk mendeteksi <strong>sinyal Open Position aktif</strong>.
                             </p>
                         </div>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -784,7 +784,7 @@
                                 <strong id="turso-kpi-winrate" style="font-size: 1.05rem; color: #0284c7;">0% (0/0)</strong>
                             </div>
                             <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 10px 14px; min-width: 130px;">
-                                <span style="font-size: 0.7rem; color: #059669; display: block; font-weight: 600;">🗄️ Database Cloud</span>
+                                <span style="font-size: 0.7rem; color: #059669; display: block; font-weight: 600;">🗄️ Status Cloud</span>
                                 <strong id="turso-kpi-db-status" style="font-size: 0.85rem; color: #059669; display: flex; align-items: center; gap: 4px; margin-top: 4px; font-weight: 700;">
                                     <span class="pulse-dot" style="background: #10b981; width: 6px; height: 6px;"></span> Cloud Synchronized
                                 </strong>
@@ -793,105 +793,16 @@
                     </div>
                 </section>
 
-                <!-- ACTIVE STRATEGY POSITIONS & CLOSED HISTORY (LIGHT THEME) -->
-                <section class="card" style="margin-bottom: 22px; border: 1px solid #e2e8f0; background: #ffffff; color: #0f172a; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border-radius: 12px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div style="background: rgba(249, 115, 22, 0.12); border: 1px solid #f97316; color: #ea580c; padding: 5px 10px; border-radius: 8px; font-size: 0.82rem; font-weight: 800;">
-                                <i class="fa-solid fa-flask"></i> PAPER TRADING SIMULATOR
-                            </div>
-                            <h3 style="font-size: 1.15rem; font-weight: 800; margin: 0; color: #0f172a;">
-                                Posisi Terbuka Strategi &amp; Riwayat Net PnL (Paper Trade)
-                            </h3>
-                        </div>
-
-                        <div style="display: flex; gap: 8px; align-items: center;">
-                            <!-- SUB TAB BUTTONS -->
-                            <div class="chart-timeframe-group">
-                                <button class="tf-btn active" id="btn-subtab-active-pos" onclick="switchStrategySubTab('active')">
-                                    <span class="pulse-dot" style="background: #10b981; width: 6px; height: 6px;"></span>
-                                    Posisi Terbuka (<span id="active-pos-badge">0</span>)
-                                </button>
-                                <button class="tf-btn" id="btn-subtab-history-pos" onclick="switchStrategySubTab('history')">
-                                    <i class="fa-solid fa-clock-rotate-left"></i> Riwayat Selesai
-                                </button>
-                            </div>
-
-                            <button class="btn-primary" style="padding: 6px 14px; font-size: 0.82rem; font-weight: 700; border-radius: 6px;" onclick="openNewStrategyPositionModal()">
-                                <i class="fa-solid fa-plus"></i> Buka Posisi Strategi
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- SUB-VIEW 1: ACTIVE POSITIONS TABLE -->
-                    <div id="subview-strategy-active" class="table-responsive">
-                        <table class="data-table" id="strategy-active-table">
-                            <thead>
-                                <tr>
-                                    <th>Pos ID</th>
-                                    <th>Pair Contract</th>
-                                    <th>Strategi Backtest/Demo</th>
-                                    <th>TF</th>
-                                    <th>Side</th>
-                                    <th>Harga Entry</th>
-                                    <th>Harga Live</th>
-                                    <th>Modal ($)</th>
-                                    <th>Gross PnL</th>
-                                    <th>Fee Est.</th>
-                                    <th>Net PnL Bersih ($ &amp; %)</th>
-                                    <th>Durasi</th>
-                                    <th>Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody id="strategy-active-tbody">
-                                <tr>
-                                    <td colspan="13" class="loading-cell" style="padding: 24px;">
-                                        <i class="fa-solid fa-spinner fa-spin"></i> Memuat posisi aktif strategi...
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- SUB-VIEW 2: CLOSED TRADES HISTORY TABLE -->
-                    <div id="subview-strategy-history" class="table-responsive" style="display: none;">
-                        <table class="data-table" id="strategy-history-table">
-                            <thead>
-                                <tr>
-                                    <th>Trade ID</th>
-                                    <th>Pair</th>
-                                    <th>Strategi</th>
-                                    <th>Side</th>
-                                    <th>Entry &rarr; Exit</th>
-                                    <th>Durasi</th>
-                                    <th>Alasan Exit</th>
-                                    <th>Gross PnL</th>
-                                    <th>Total Fee</th>
-                                    <th>Net PnL Bersih ($ &amp; %)</th>
-                                    <th>Status</th>
-                                    <th>Waktu Selesai</th>
-                                </tr>
-                            </thead>
-                            <tbody id="strategy-history-tbody">
-                                <tr>
-                                    <td colspan="12" class="loading-cell" style="padding: 24px;">
-                                        <i class="fa-solid fa-spinner fa-spin"></i> Memuat riwayat trade selesai...
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-
-                <!-- MULTI-STRATEGY SCREENER CONTROLS & TIMEFRAME SELECTOR -->
-                <section class="card filter-bar" style="margin-bottom: 18px; padding: 18px 20px;">
-                    <div class="filter-left" style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap; width: 100%;">
+                <!-- UNIFIED INTEGRATED CARD: STRATEGY SELECTOR + PAPER TRADING TRACKER + LIVE SCREENER -->
+                <section class="card" style="margin-bottom: 22px; border: 1px solid #e2e8f0; background: #ffffff; color: #0f172a; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border-radius: 12px;">
+                    <!-- 1. TOP STRATEGY SELECTOR & SCAN CONTROLS (SYNC WITH BACKTEST & DEMO) -->
+                    <div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9;">
                         <!-- STRATEGY SELECTOR -->
-                        <div class="filter-group" style="min-width: 270px; flex: 1;">
-                            <label style="font-size: 0.8rem; font-weight: 700; color: #f97316; display: flex; align-items: center; gap: 6px;">
-                                <i class="fa-solid fa-layer-group"></i> PILIHAN STRATEGI (BACKTEST / LIVE DEMO):
+                        <div class="filter-group" style="min-width: 280px; flex: 1.2;">
+                            <label style="font-size: 0.8rem; font-weight: 800; color: #ea580c; display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                                <i class="fa-solid fa-layer-group"></i> PILIHAN STRATEGI (SYNC BACKTEST &amp; LIVE DEMO):
                             </label>
-                            <select id="screener-strategy-select" class="dropdown-custom" style="width: 100%; font-weight: 700; color: #0f172a;" onchange="onScreenerStrategyChanged()">
+                            <select id="screener-strategy-select" class="dropdown-custom" style="width: 100%; font-weight: 700; color: #0f172a; font-size: 0.92rem; background: #f8fafc; border-color: #cbd5e1;" onchange="onScreenerStrategyChanged()">
                                 <option value="trend_rider_supertrend" selected>🔥 1H Trend Rider (Supertrend + EMA 50 Trailing)</option>
                                 <option value="binance_bband_wilder_rsi">🎯 Binance Pro BbandRsi (Wilder's 100% Match)</option>
                                 <option value="freqtrade_bband_rsi">💎 Freqtrade Pure BbandRsi (Official Original)</option>
@@ -905,7 +816,7 @@
 
                         <!-- TIMEFRAME BUTTONS -->
                         <div class="filter-group">
-                            <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">TIMEFRAME EKSEKUSI:</label>
+                            <label style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 6px; display: block;">TIMEFRAME EKSEKUSI:</label>
                             <div class="chart-timeframe-group" id="screener-tf-buttons">
                                 <button class="tf-btn" data-screener-tf="1m" onclick="changeScreenerTimeframe('1m')">1m</button>
                                 <button class="tf-btn" data-screener-tf="5m" onclick="changeScreenerTimeframe('5m')">5m</button>
@@ -917,46 +828,132 @@
                         </div>
 
                         <!-- SIGNAL FILTER TOGGLE -->
-                        <div class="filter-group" style="min-width: 220px;">
-                            <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">FILTER HASIL SCAN:</label>
-                            <select id="screener-filter-signal-mode" class="dropdown-custom" style="font-weight: 700;" onchange="onScreenerSignalFilterChanged()">
+                        <div class="filter-group" style="min-width: 210px;">
+                            <label style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 6px; display: block;">FILTER HASIL SCAN:</label>
+                            <select id="screener-filter-signal-mode" class="dropdown-custom" style="font-weight: 700; background: #f8fafc; border-color: #cbd5e1;" onchange="onScreenerSignalFilterChanged()">
                                 <option value="open_signals_only" selected>🔥 Sedang Sinyal Open Posisi Saja</option>
-                                <option value="all">⚡ Tampilkan Semua Koin (Termasuk Standby)</option>
+                                <option value="all">⚡ Tampilkan Semua Koin</option>
                             </select>
                         </div>
 
                         <!-- SEARCH BOX -->
-                        <div class="filter-group" style="min-width: 170px;">
-                            <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">CARI KOIN:</label>
+                        <div class="filter-group" style="min-width: 160px;">
+                            <label style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 6px; display: block;">CARI KOIN:</label>
                             <div class="search-box" style="width: 100%;">
                                 <i class="fa-solid fa-magnifying-glass"></i>
                                 <input type="text" id="screener-search" placeholder="Misal: SOL, BTC...">
                             </div>
                         </div>
 
-                        <!-- REFRESH / SCAN BUTTON -->
-                        <div class="filter-group" style="align-self: flex-end; margin-bottom: 2px;">
-                            <button class="btn-primary" style="padding: 9px 18px; font-weight: 800; border-radius: 8px; display: flex; align-items: center; gap: 8px;" onclick="loadStrategyScreenerData(true)">
+                        <!-- ACTION BUTTONS -->
+                        <div class="filter-group" style="align-self: flex-end; margin-bottom: 2px; display: flex; gap: 8px;">
+                            <button class="btn-primary" style="padding: 8px 16px; font-weight: 800; border-radius: 8px; display: flex; align-items: center; gap: 6px;" onclick="loadStrategyScreenerData(true)">
                                 <i class="fa-solid fa-arrows-rotate"></i> Scan Pasar
+                            </button>
+                            <button class="btn-primary" style="background: #ea580c; border-color: #ea580c; padding: 8px 16px; font-weight: 800; border-radius: 8px; display: flex; align-items: center; gap: 6px;" onclick="openNewStrategyPositionModal()">
+                                <i class="fa-solid fa-plus"></i> Buka Paper Trade
                             </button>
                         </div>
                     </div>
 
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid #f1f5f9; width: 100%;">
+                    <!-- 2. INTEGRATED PAPER TRADING TRACKER (FILTERED BY SELECTED STRATEGY) -->
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span class="tag-badge" style="background: rgba(249, 115, 22, 0.15); color: #ea580c; font-weight: 800; border: 1px solid #f97316;">
+                                    <i class="fa-solid fa-flask"></i> PAPER TRADE TRACKER
+                                </span>
+                                <strong style="font-size: 0.95rem; color: #0f172a;" id="active-strat-tracker-title">
+                                    Posisi Terbuka Strategi Terpilih
+                                </strong>
+                            </div>
+
+                            <!-- SUB TAB BUTTONS -->
+                            <div class="chart-timeframe-group">
+                                <button class="tf-btn active" id="btn-subtab-active-pos" onclick="switchStrategySubTab('active')">
+                                    <span class="pulse-dot" style="background: #10b981; width: 6px; height: 6px;"></span>
+                                    Posisi Terbuka (<span id="active-pos-badge">0</span>)
+                                </button>
+                                <button class="tf-btn" id="btn-subtab-history-pos" onclick="switchStrategySubTab('history')">
+                                    <i class="fa-solid fa-clock-rotate-left"></i> Riwayat Selesai
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- SUB-VIEW 1: ACTIVE POSITIONS TABLE -->
+                        <div id="subview-strategy-active" class="table-responsive">
+                            <table class="data-table" id="strategy-active-table">
+                                <thead>
+                                    <tr>
+                                        <th>Pos ID</th>
+                                        <th>Pair Contract</th>
+                                        <th>Strategi</th>
+                                        <th>TF</th>
+                                        <th>Side</th>
+                                        <th>Harga Entry</th>
+                                        <th>Harga Live</th>
+                                        <th>Modal ($)</th>
+                                        <th>Gross PnL</th>
+                                        <th>Fee Est.</th>
+                                        <th>Net PnL Bersih ($ &amp; %)</th>
+                                        <th>Durasi</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="strategy-active-tbody">
+                                    <tr>
+                                        <td colspan="13" class="loading-cell" style="padding: 20px;">
+                                            <i class="fa-solid fa-spinner fa-spin"></i> Memuat posisi aktif strategi...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- SUB-VIEW 2: CLOSED TRADES HISTORY TABLE -->
+                        <div id="subview-strategy-history" class="table-responsive" style="display: none;">
+                            <table class="data-table" id="strategy-history-table">
+                                <thead>
+                                    <tr>
+                                        <th>Trade ID</th>
+                                        <th>Pair</th>
+                                        <th>Strategi</th>
+                                        <th>Side</th>
+                                        <th>Entry &rarr; Exit</th>
+                                        <th>Durasi</th>
+                                        <th>Alasan Exit</th>
+                                        <th>Gross PnL</th>
+                                        <th>Total Fee</th>
+                                        <th>Net PnL Bersih ($ &amp; %)</th>
+                                        <th>Status</th>
+                                        <th>Waktu Selesai</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="strategy-history-tbody">
+                                    <tr>
+                                        <td colspan="12" class="loading-cell" style="padding: 20px;">
+                                            <i class="fa-solid fa-spinner fa-spin"></i> Memuat riwayat trade selesai...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 3. HEADER SCREENER RADAR -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-top: 4px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span class="tag-badge" id="screener-open-badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; font-weight: 800; border: 1px solid #10b981;">
                                 🟢 0 Sinyal Open Posisi Aktif
                             </span>
-                            <span style="font-size: 0.78rem; color: #64748b;" id="screener-strategy-desc-badge">
+                            <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;" id="screener-strategy-desc-badge">
                                 Memindai kondisi lilin real-time Binance Futures
                             </span>
                         </div>
                         <span id="screener-pairs-count" style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Menampilkan 0 Pair</span>
                     </div>
-                </section>
 
-                <!-- SCREENER RADAR DATA TABLE -->
-                <section class="card">
+                    <!-- 4. SCREENER RADAR DATA TABLE WITH HARGA ENTRY, HARGA LIVE & LIVE PNL -->
                     <div class="table-responsive">
                         <table class="data-table" id="screener-table">
                             <thead>
@@ -964,7 +961,9 @@
                                     <th class="sortable-th" onclick="sortScreenerBy('symbol')">Pair Contract <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-symbol"></i></th>
                                     <th class="sortable-th" onclick="sortScreenerBy('signal_badge')">Status Sinyal / Posisi <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-signal_badge"></i></th>
                                     <th class="sortable-th" onclick="sortScreenerBy('signal_side')">Arah (Side) <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-signal_side"></i></th>
+                                    <th class="sortable-th" onclick="sortScreenerBy('entry_price')">Harga Entry (Sinyal) <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-entry_price"></i></th>
                                     <th class="sortable-th" onclick="sortScreenerBy('current_price')">Harga Live <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-current_price"></i></th>
+                                    <th class="sortable-th" onclick="sortScreenerBy('live_pnl_pct')">Live PnL Est. ($ &amp; %) <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-live_pnl_pct"></i></th>
                                     <th>Stop Loss (SL)</th>
                                     <th>Take Profit (TP)</th>
                                     <th>Kondisi Indikator</th>
@@ -974,7 +973,7 @@
                             </thead>
                             <tbody id="screener-tbody">
                                 <tr>
-                                    <td colspan="9" class="loading-cell" style="padding: 28px;">
+                                    <td colspan="11" class="loading-cell" style="padding: 28px;">
                                         <i class="fa-solid fa-spinner fa-spin"></i> Memindai seluruh pair aktif Binance Futures berdasarkan strategi yang dipilih...
                                     </td>
                                 </tr>

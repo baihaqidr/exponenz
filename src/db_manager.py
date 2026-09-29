@@ -256,9 +256,14 @@ class TursoDatabaseManager:
             "created_at": now
         }
 
-    def get_active_positions(self) -> List[Dict[str, Any]]:
-        sql = "SELECT * FROM active_positions WHERE status = 'OPEN' ORDER BY created_at DESC;"
-        res = self.execute_turso_query(sql)
+    def get_active_positions(self, strategy_name: Optional[str] = None) -> List[Dict[str, Any]]:
+        if strategy_name and strategy_name != "all":
+            # Match partial or exact strategy name/id
+            sql = "SELECT * FROM active_positions WHERE status = 'OPEN' AND (strategy_name LIKE ? OR strategy_name = ?) ORDER BY created_at DESC;"
+            res = self.execute_turso_query(sql, [f"%{strategy_name}%", strategy_name])
+        else:
+            sql = "SELECT * FROM active_positions WHERE status = 'OPEN' ORDER BY created_at DESC;"
+            res = self.execute_turso_query(sql)
         return res.get("rows", [])
 
     def update_position_price(self, pos_id: str, current_price: float) -> Optional[Dict[str, Any]]:
@@ -355,25 +360,44 @@ class TursoDatabaseManager:
             "duration_seconds": duration_sec
         }
 
-    def get_closed_trades(self, limit: int = 50) -> List[Dict[str, Any]]:
-        sql = f"SELECT * FROM closed_trades ORDER BY closed_at DESC LIMIT {limit};"
-        res = self.execute_turso_query(sql)
+    def get_closed_trades(self, limit: int = 50, strategy_name: Optional[str] = None) -> List[Dict[str, Any]]:
+        if strategy_name and strategy_name != "all":
+            sql = f"SELECT * FROM closed_trades WHERE (strategy_name LIKE ? OR strategy_name = ?) ORDER BY closed_at DESC LIMIT {limit};"
+            res = self.execute_turso_query(sql, [f"%{strategy_name}%", strategy_name])
+        else:
+            sql = f"SELECT * FROM closed_trades ORDER BY closed_at DESC LIMIT {limit};"
+            res = self.execute_turso_query(sql)
         return res.get("rows", [])
 
-    def get_performance_stats(self) -> Dict[str, Any]:
+    def get_performance_stats(self, strategy_name: Optional[str] = None) -> Dict[str, Any]:
         """Menghitung agregasi statistik performa (Win Rate, Total PnL)"""
-        sql = """
-        SELECT 
-            COUNT(*) as total_trades,
-            SUM(CASE WHEN status = 'WIN' THEN 1 ELSE 0 END) as win_count,
-            SUM(CASE WHEN status = 'LOSS' THEN 1 ELSE 0 END) as loss_count,
-            SUM(net_pnl) as total_net_pnl,
-            AVG(net_pnl_pct) as avg_pnl_pct,
-            MAX(net_pnl) as max_profit,
-            MIN(net_pnl) as max_loss
-        FROM closed_trades;
-        """
-        res = self.execute_turso_query(sql)
+        if strategy_name and strategy_name != "all":
+            sql = """
+            SELECT 
+                COUNT(*) as total_trades,
+                SUM(CASE WHEN status = 'WIN' THEN 1 ELSE 0 END) as win_count,
+                SUM(CASE WHEN status = 'LOSS' THEN 1 ELSE 0 END) as loss_count,
+                SUM(net_pnl) as total_net_pnl,
+                AVG(net_pnl_pct) as avg_pnl_pct,
+                MAX(net_pnl) as max_profit,
+                MIN(net_pnl) as max_loss
+            FROM closed_trades
+            WHERE (strategy_name LIKE ? OR strategy_name = ?);
+            """
+            res = self.execute_turso_query(sql, [f"%{strategy_name}%", strategy_name])
+        else:
+            sql = """
+            SELECT 
+                COUNT(*) as total_trades,
+                SUM(CASE WHEN status = 'WIN' THEN 1 ELSE 0 END) as win_count,
+                SUM(CASE WHEN status = 'LOSS' THEN 1 ELSE 0 END) as loss_count,
+                SUM(net_pnl) as total_net_pnl,
+                AVG(net_pnl_pct) as avg_pnl_pct,
+                MAX(net_pnl) as max_profit,
+                MIN(net_pnl) as max_loss
+            FROM closed_trades;
+            """
+            res = self.execute_turso_query(sql)
         rows = res.get("rows", [])
         if rows and rows[0].get("total_trades", 0) > 0:
             r = rows[0]

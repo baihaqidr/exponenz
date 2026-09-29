@@ -328,12 +328,36 @@ class BollingerScreenerEngine:
                 s_val = float(sig_df['ema_slow'].iloc[-1])
                 indicator_summary = f"EMA9: ${round(f_val, 4)} | EMA21: ${round(s_val, 4)}"
 
+            # Entry Trigger Price & Live Floating PnL
+            if prev_sig == 1 or prev_sig == -1:
+                entry_price = float(df['close'].iloc[-2])
+            else:
+                entry_price = float(df['open'].iloc[-1]) if len(df) >= 1 else curr_price
+
+            live_pnl_pct = 0.0
+            live_pnl_usd = 0.0
+            default_notional = 50.0
+
+            if signal_side == "LONG" and entry_price > 0:
+                gross_pct = ((curr_price - entry_price) / entry_price) * 100.0
+                fee_pct = 0.08
+                live_pnl_pct = gross_pct - fee_pct
+                live_pnl_usd = (live_pnl_pct / 100.0) * default_notional
+            elif signal_side == "SHORT" and entry_price > 0:
+                gross_pct = ((entry_price - curr_price) / entry_price) * 100.0
+                fee_pct = 0.08
+                live_pnl_pct = gross_pct - fee_pct
+                live_pnl_usd = (live_pnl_pct / 100.0) * default_notional
+
             return {
                 "symbol": symbol.upper().strip(),
                 "timeframe": timeframe,
                 "strategy_id": strategy_id,
                 "strategy_name": getattr(strat, "name", strategy_id),
+                "entry_price": entry_price,
                 "current_price": curr_price,
+                "live_pnl_pct": round(live_pnl_pct, 2),
+                "live_pnl_usd": round(live_pnl_usd, 3),
                 "is_open_signal": is_open_signal,
                 "signal_side": signal_side,
                 "signal_badge": signal_badge,

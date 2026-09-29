@@ -358,11 +358,16 @@ function setupEventListeners() {
         botStratSelectEl.addEventListener('change', (e) => {
             const stratVal = e.target.value;
             state.selectedStrategy = stratVal;
-            // Sinkronisasi otomatis ke dropdown Tab Backtest Matriks
+            // Sinkronisasi otomatis ke dropdown Tab Backtest Matriks & Screener
             if (strategySelect && strategySelect.value !== stratVal) {
                 strategySelect.value = stratVal;
                 updateGlossaryCard();
                 runMasterMatrix();
+            }
+            const screenerStratSelect = document.getElementById('screener-strategy-select');
+            if (screenerStratSelect && screenerStratSelect.value !== stratVal) {
+                screenerStratSelect.value = stratVal;
+                state.screenerStrategy = stratVal;
             }
             const overlay = document.getElementById('chart-loading-overlay');
             if (overlay) overlay.style.display = 'flex';
@@ -380,10 +385,15 @@ function setupEventListeners() {
     strategySelect.addEventListener('change', (e) => {
         const stratVal = e.target.value;
         state.selectedStrategy = stratVal;
-        // Sinkronisasi otomatis ke dropdown Tab Live Bot
+        // Sinkronisasi otomatis ke dropdown Tab Live Bot & Screener
         if (botStratSelectEl && botStratSelectEl.value !== stratVal) {
             botStratSelectEl.value = stratVal;
             updateLiveBotChart();
+        }
+        const screenerStratSelect = document.getElementById('screener-strategy-select');
+        if (screenerStratSelect && screenerStratSelect.value !== stratVal) {
+            screenerStratSelect.value = stratVal;
+            state.screenerStrategy = stratVal;
         }
         updateGlossaryCard();
         runMasterMatrix();
@@ -4026,8 +4036,36 @@ function onScreenerStrategyChanged() {
     const stratSelect = document.getElementById('screener-strategy-select');
     if (stratSelect) {
         state.screenerStrategy = stratSelect.value;
+        state.selectedStrategy = stratSelect.value;
+
+        // Sync to Backtest & Live Demo dropdowns
+        const backtestSelect = document.getElementById('strategy-select');
+        const botStratSelect = document.getElementById('bot-strategy-select');
+        const modalPosStratSelect = document.getElementById('modal-pos-strategy');
+
+        if (backtestSelect && backtestSelect.value !== stratSelect.value) {
+            backtestSelect.value = stratSelect.value;
+            updateGlossaryCard();
+        }
+        if (botStratSelect && botStratSelect.value !== stratSelect.value) {
+            botStratSelect.value = stratSelect.value;
+        }
+        if (modalPosStratSelect) {
+            modalPosStratSelect.value = stratSelect.value;
+        }
+
+        // Update Paper Trading Tracker title
+        const trackerTitle = document.getElementById('active-strat-tracker-title');
+        if (trackerTitle) {
+            const stratLabel = stratSelect.options[stratSelect.selectedIndex]?.text || stratSelect.value;
+            trackerTitle.textContent = `Posisi Terbuka Strategi: ${stratLabel}`;
+        }
     }
     loadStrategyScreenerData(true);
+    loadStrategyPositions();
+    if (state.strategySubTab === 'history') {
+        loadStrategyClosedTrades();
+    }
 }
 
 function onScreenerSignalFilterChanged() {
@@ -4123,7 +4161,7 @@ function filterAndRenderScreenerTable() {
         if (state.screenerSignalMode === 'open_signals_only') {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="9" class="loading-cell" style="padding: 34px 20px; background: #fafbfc;">
+                    <td colspan="11" class="loading-cell" style="padding: 34px 20px; background: #fafbfc;">
                         <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">
                             <i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Saat ini belum ada koin yang memicu sinyal Open Position pada timeframe ${state.screenerTimeframe}
                         </div>
@@ -4136,7 +4174,7 @@ function filterAndRenderScreenerTable() {
         } else {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="9" class="loading-cell" style="padding: 30px 15px; color: #64748b; background: #fafbfc;">
+                    <td colspan="11" class="loading-cell" style="padding: 30px 15px; color: #64748b; background: #fafbfc;">
                         <i class="fa-solid fa-filter-circle-xmark" style="font-size: 1.4rem; color: #94a3b8; display: block; margin-bottom: 6px;"></i>
                         Tidak ada koin yang sesuai dengan pencarian <strong>"${state.screenerSearch}"</strong>.
                     </td>
@@ -4159,6 +4197,16 @@ function filterAndRenderScreenerTable() {
         const slText = pair.sl_price ? `$${formatCleanPrice(pair.sl_price)}` : '<span style="color:#94a3b8;">Dinamis</span>';
         const tpText = pair.tp_price ? `$${formatCleanPrice(pair.tp_price)}` : '<span style="color:#94a3b8;">Trailing / ROI</span>';
 
+        const pnlPct = Number(pair.live_pnl_pct || 0);
+        const pnlUsd = Number(pair.live_pnl_usd || 0);
+        let livePnlHtml = '<span style="color:#94a3b8;">-</span>';
+        let pnlLiveColorClass = '';
+        if (isSignal || pnlPct !== 0) {
+            const pnlSign = pnlPct >= 0 ? '+' : '';
+            pnlLiveColorClass = pnlPct >= 0 ? 'text-profit font-bold' : 'text-loss font-bold';
+            livePnlHtml = `${pnlSign}$${Math.abs(pnlUsd).toFixed(3)} (${pnlSign}${pnlPct.toFixed(2)}%)`;
+        }
+
         tr.innerHTML = `
             <td>
                 <strong style="color: #0f172a; font-size: 0.95rem;">${pair.symbol}</strong>
@@ -4174,8 +4222,14 @@ function filterAndRenderScreenerTable() {
                     ${pair.signal_side || 'STANDBY'}
                 </span>
             </td>
+            <td class="font-mono" style="font-size: 0.9rem; color: #475569; font-weight: 700;">
+                $${formatCleanPrice(pair.entry_price || pair.current_price)}
+            </td>
             <td class="font-mono" style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">
                 $${formatCleanPrice(pair.current_price)}
+            </td>
+            <td class="font-mono ${pnlLiveColorClass}" style="font-size: 0.88rem; font-weight: 700;">
+                ${livePnlHtml}
             </td>
             <td class="font-mono" style="font-size: 0.85rem; color: #e11d48; font-weight: 600;">
                 ${slText}
@@ -4207,10 +4261,10 @@ function filterAndRenderScreenerTable() {
 
 function openPaperTradeFromScreener(symbol, side = 'LONG', price = null) {
     const stratSelect = document.getElementById('screener-strategy-select');
-    const stratName = stratSelect ? stratSelect.options[stratSelect.selectedIndex]?.text : state.screenerStrategy;
+    const stratVal = stratSelect ? stratSelect.value : state.screenerStrategy;
     const cleanSide = (side === 'SHORT') ? 'SHORT' : 'LONG';
     
-    openNewStrategyPositionModal(symbol, stratName || state.screenerStrategy, price);
+    openNewStrategyPositionModal(symbol, stratVal, price);
     const sideInput = document.getElementById('modal-pos-side');
     if (sideInput) sideInput.value = cleanSide;
 }
@@ -4224,7 +4278,9 @@ let strategyPollInterval = null;
 
 async function loadStrategyPositions() {
     try {
-        const res = await fetch('/api/strategy-positions/active');
+        const strat = state.screenerStrategy || '';
+        const url = strat ? `/api/strategy-positions/active?strategy=${encodeURIComponent(strat)}` : '/api/strategy-positions/active';
+        const res = await fetch(url);
         if (res.ok) {
             const data = await res.json();
             if (data.success) {
@@ -4241,7 +4297,9 @@ async function loadStrategyPositions() {
 
 async function loadStrategyClosedTrades() {
     try {
-        const res = await fetch('/api/strategy-positions/history?limit=50');
+        const strat = state.screenerStrategy || '';
+        const url = strat ? `/api/strategy-positions/history?strategy=${encodeURIComponent(strat)}&limit=50` : '/api/strategy-positions/history?limit=50';
+        const res = await fetch(url);
         if (res.ok) {
             const data = await res.json();
             if (data.success) {
@@ -4308,7 +4366,7 @@ function renderStrategyActivePositions(positions) {
             <tr>
                 <td colspan="13" class="loading-cell" style="padding: 28px; color: #64748b; background: #fafbfc;">
                     <i class="fa-solid fa-folder-open" style="font-size: 1.5rem; display: block; margin-bottom: 8px; color: #94a3b8;"></i>
-                    Belum ada posisi strategi yang terbuka. Klik <strong>"+ Buka Posisi Strategi"</strong> di atas atau pilih koin dari tabel Radar di bawah.
+                    Belum ada posisi strategi yang terbuka. Klik <strong>"+ Buka Paper Trade"</strong> di atas atau pilih koin dari tabel Radar di bawah.
                 </td>
             </tr>
         `;
@@ -4441,14 +4499,15 @@ function switchStrategySubTab(tab) {
     }
 }
 
-function openNewStrategyPositionModal(symbol = 'BTCUSDT', strategy = 'Bollinger Bands Reclaim Sniper', price = null) {
+function openNewStrategyPositionModal(symbol = 'BTCUSDT', strategy = null, price = null) {
     const modal = document.getElementById('open-position-modal');
     const symInput = document.getElementById('modal-pos-symbol');
     const stratSelect = document.getElementById('modal-pos-strategy');
     const tfSelect = document.getElementById('modal-pos-timeframe');
 
+    const chosenStrat = strategy || state.screenerStrategy || 'trend_rider_supertrend';
     if (symInput && symbol) symInput.value = symbol.toUpperCase().trim();
-    if (stratSelect && strategy) stratSelect.value = strategy;
+    if (stratSelect) stratSelect.value = chosenStrat;
     if (tfSelect && state.screenerTimeframe) tfSelect.value = state.screenerTimeframe;
 
     if (modal) modal.style.display = 'flex';
