@@ -753,55 +753,55 @@
                 </section>
             </div>
 
-            <!-- ================= TAB 4: BOLLINGER BANDS EXTREME SCREENER VIEW ================= -->
+            <!-- ================= TAB 4: BOLLINGER BANDS EXTREME SCREENER & PAPER TRADES VIEW ================= -->
             <div id="view-screener" class="tab-view" style="display: none;">
-                <!-- HERO SCREENER HEADER & RADAR KPI -->
-                <section class="card hero-banner" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%); border: 1px solid #334155; color: #fff; margin-bottom: 20px; padding: 22px;">
+                <!-- HERO SCREENER HEADER & RADAR KPI (LIGHT THEME) -->
+                <section class="card hero-banner" style="background: #ffffff; border: 1px solid #e2e8f0; color: #0f172a; margin-bottom: 20px; padding: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border-radius: 12px;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
                         <div>
-                            <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 10px;">
+                            <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #2563eb; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 10px;">
                                 <span class="pulse-dot" style="background: #3b82f6;"></span>
                                 <span>LIVE BOLLINGER BANDS VOLATILITY RADAR</span>
                             </div>
-                            <h2 style="font-size: 1.45rem; font-weight: 800; margin-bottom: 6px; color: #f8fafc;">
+                            <h2 style="font-size: 1.45rem; font-weight: 800; margin-bottom: 6px; color: #0f172a;">
                                 📡 Screening Bollinger Bands Super Extreme Multi-Timeframe
                             </h2>
-                            <p style="color: #94a3b8; font-size: 0.85rem; max-width: 680px; margin: 0; line-height: 1.5;">
+                            <p style="color: #64748b; font-size: 0.85rem; max-width: 680px; margin: 0; line-height: 1.5;">
                                 Mendeteksi koin dengan rentang <strong>Bandwidth % (BBW)</strong> terlebar (Super Expansion / Breakout Tren) vs tersempit (Super Squeeze / Akumulasi Ledakan) secara real-time dari 50+ pair aktif Binance Futures.
                             </p>
                         </div>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 10px; padding: 10px 14px; min-width: 130px;">
-                                <span style="font-size: 0.7rem; color: #94a3b8; display: block;">📊 Floating Net PnL</span>
-                                <strong id="turso-kpi-floating-pnl" style="font-size: 1.05rem; color: #94a3b8;">$0.00</strong>
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; min-width: 130px;">
+                                <span style="font-size: 0.7rem; color: #64748b; display: block; font-weight: 600;">📊 Floating Net PnL</span>
+                                <strong id="turso-kpi-floating-pnl" style="font-size: 1.05rem; color: #64748b;">$0.00</strong>
                             </div>
-                            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 10px; padding: 10px 14px; min-width: 130px;">
-                                <span style="font-size: 0.7rem; color: #94a3b8; display: block;">🏆 Realized Net PnL</span>
-                                <strong id="turso-kpi-realized-pnl" style="font-size: 1.05rem; color: #10b981;">+$0.00</strong>
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; min-width: 130px;">
+                                <span style="font-size: 0.7rem; color: #64748b; display: block; font-weight: 600;">🏆 Realized Net PnL</span>
+                                <strong id="turso-kpi-realized-pnl" style="font-size: 1.05rem; color: #059669;">+$0.00</strong>
                             </div>
-                            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 10px; padding: 10px 14px; min-width: 130px;">
-                                <span style="font-size: 0.7rem; color: #94a3b8; display: block;">🎯 Win Rate %</span>
-                                <strong id="turso-kpi-winrate" style="font-size: 1.05rem; color: #38bdf8;">0% (0/0)</strong>
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; min-width: 130px;">
+                                <span style="font-size: 0.7rem; color: #64748b; display: block; font-weight: 600;">🎯 Win Rate %</span>
+                                <strong id="turso-kpi-winrate" style="font-size: 1.05rem; color: #0284c7;">0% (0/0)</strong>
                             </div>
                             <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 10px 14px; min-width: 130px;">
-                                <span style="font-size: 0.7rem; color: #6ee7b7; display: block;">🗄️ Database Cloud</span>
-                                <strong id="turso-kpi-db-status" style="font-size: 0.85rem; color: #10b981; display: flex; align-items: center; gap: 4px; margin-top: 4px;">
-                                    <span class="pulse-dot" style="background: #10b981; width: 6px; height: 6px;"></span> Turso Tokyo (Live)
+                                <span style="font-size: 0.7rem; color: #059669; display: block; font-weight: 600;">🗄️ Database Cloud</span>
+                                <strong id="turso-kpi-db-status" style="font-size: 0.85rem; color: #059669; display: flex; align-items: center; gap: 4px; margin-top: 4px; font-weight: 700;">
+                                    <span class="pulse-dot" style="background: #10b981; width: 6px; height: 6px;"></span> Cloud Synchronized
                                 </strong>
                             </div>
                         </div>
                     </div>
                 </section>
 
-                <!-- ACTIVE STRATEGY POSITIONS & CLOSED HISTORY (TURSO CLOUD) -->
-                <section class="card" style="margin-bottom: 22px; border: 1px solid #334155; background: #0f172a; color: #f8fafc; padding: 18px 20px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid #1e293b; padding-bottom: 12px;">
+                <!-- ACTIVE STRATEGY POSITIONS & CLOSED HISTORY (LIGHT THEME) -->
+                <section class="card" style="margin-bottom: 22px; border: 1px solid #e2e8f0; background: #ffffff; color: #0f172a; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border-radius: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;">
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <div style="background: rgba(59, 130, 246, 0.2); border: 1px solid #3b82f6; color: #60a5fa; padding: 5px 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 800;">
-                                <i class="fa-solid fa-layer-group"></i> STRATEGY TRADES TRACKER
+                            <div style="background: rgba(249, 115, 22, 0.12); border: 1px solid #f97316; color: #ea580c; padding: 5px 10px; border-radius: 8px; font-size: 0.82rem; font-weight: 800;">
+                                <i class="fa-solid fa-flask"></i> PAPER TRADING SIMULATOR
                             </div>
-                            <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0; color: #f1f5f9;">
-                                Posisi Terbuka Strategi &amp; Riwayat Net PnL (Turso Cloud)
+                            <h3 style="font-size: 1.15rem; font-weight: 800; margin: 0; color: #0f172a;">
+                                Posisi Terbuka Strategi &amp; Riwayat Net PnL (Paper Trade)
                             </h3>
                         </div>
 
@@ -818,7 +818,7 @@
                             </div>
 
                             <button class="btn-primary" style="padding: 6px 14px; font-size: 0.82rem; font-weight: 700; border-radius: 6px;" onclick="openNewStrategyPositionModal()">
-                                <i class="fa-solid fa-plus"></i> Buka Posisi Baru
+                                <i class="fa-solid fa-plus"></i> Buka Posisi Strategi
                             </button>
                         </div>
                     </div>
@@ -830,7 +830,7 @@
                                 <tr>
                                     <th>Pos ID</th>
                                     <th>Pair Contract</th>
-                                    <th>Strategi Entry</th>
+                                    <th>Strategi Backtest/Demo</th>
                                     <th>TF</th>
                                     <th>Side</th>
                                     <th>Harga Entry</th>
@@ -846,7 +846,7 @@
                             <tbody id="strategy-active-tbody">
                                 <tr>
                                     <td colspan="13" class="loading-cell" style="padding: 24px;">
-                                        <i class="fa-solid fa-spinner fa-spin"></i> Memuat posisi aktif dari Turso Cloud...
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Memuat posisi aktif strategi...
                                     </td>
                                 </tr>
                             </tbody>
@@ -875,7 +875,7 @@
                             <tbody id="strategy-history-tbody">
                                 <tr>
                                     <td colspan="12" class="loading-cell" style="padding: 24px;">
-                                        <i class="fa-solid fa-spinner fa-spin"></i> Memuat riwayat trade dari Turso Cloud...
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Memuat riwayat trade selesai...
                                     </td>
                                 </tr>
                             </tbody>
@@ -964,36 +964,43 @@
         </main>
     </div>
 
-    <!-- MODAL OPEN STRATEGY POSITION (TURSO CLOUD) -->
+    <!-- MODAL OPEN STRATEGY POSITION (LIGHT THEME) -->
     <div class="modal-backdrop" id="open-position-modal" style="display: none;" onclick="if(event.target===this) window.closeNewStrategyPositionModal()">
-        <div class="modal-content" style="max-width: 540px; background: #0f172a; border: 1px solid #334155; color: #fff;">
-            <div class="modal-header" style="border-bottom: 1px solid #1e293b; padding-bottom: 14px;">
-                <div class="modal-title" style="color: #f8fafc; font-size: 1.15rem; font-weight: 800;">
-                    <i class="fa-solid fa-bolt" style="color: #10b981;"></i> Buka Posisi Strategi (Turso Cloud)
+        <div class="modal-content" style="max-width: 540px; background: #ffffff; border: 1px solid #e2e8f0; color: #0f172a; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); border-radius: 14px;">
+            <div class="modal-header" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 14px;">
+                <div class="modal-title" style="color: #0f172a; font-size: 1.15rem; font-weight: 800;">
+                    <i class="fa-solid fa-flask" style="color: #f97316;"></i> Buka Posisi Strategi (Paper Trade)
                 </div>
                 <button class="btn-close-modal" onclick="window.closeNewStrategyPositionModal()">&times;</button>
             </div>
             <div class="modal-body" style="padding: 18px 0;">
                 <div class="filter-group" style="margin-bottom: 14px;">
-                    <label style="color: #94a3b8; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; display: block;">Pair Symbol:</label>
-                    <input type="text" id="modal-pos-symbol" value="BTCUSDT" style="width: 100%; background: #1e293b; border: 1px solid #334155; color: #fff; padding: 8px 12px; border-radius: 6px; font-family: monospace; font-size: 1rem; font-weight: 700;">
+                    <label style="color: #475569; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; display: block;">Pair Symbol:</label>
+                    <input type="text" id="modal-pos-symbol" value="BTCUSDT" style="width: 100%; background: #f8fafc; border: 1px solid #cbd5e1; color: #0f172a; padding: 8px 12px; border-radius: 6px; font-family: monospace; font-size: 1rem; font-weight: 700;">
                 </div>
 
                 <div class="filter-group" style="margin-bottom: 14px;">
-                    <label style="color: #94a3b8; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; display: block;">Strategi Entry:</label>
-                    <select id="modal-pos-strategy" class="dropdown-custom" style="width: 100%; background: #1e293b; border: 1px solid #334155; color: #fff;">
-                        <option value="Reversal Long (RSI<30 & <Lower)" selected>🚀 Reversal Long (RSI &lt; 30 &amp; &lt; Lower Band)</option>
-                        <option value="Bollinger Bandwidth Expansion">⚡ Bollinger Bandwidth Expansion Breakout</option>
-                        <option value="Bollinger Squeeze Rebound">🎯 Super Squeeze Volatility Breakout</option>
-                        <option value="RSI Overbought Short">⚠️ RSI Overbought Short Reversal</option>
-                        <option value="Custom Manual Strategy">🛠️ Custom Strategy</option>
+                    <label style="color: #475569; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; display: block;">Pilih Strategi Backtest / Live Demo:</label>
+                    <select id="modal-pos-strategy" class="dropdown-custom" style="width: 100%; background: #f8fafc; border: 1px solid #cbd5e1; color: #0f172a; font-weight: 600;">
+                        <option value="Bollinger Bands Reclaim Sniper" selected>🎯 Bollinger Bands Reclaim Sniper (Reversal)</option>
+                        <option value="RSI Oversold Pullback (14)">🚀 RSI (14) Oversold Pullback (&lt;30)</option>
+                        <option value="Dynamic EMA 7 Momentum Scalp">⚡ Dynamic EMA 7 Momentum Scalp</option>
+                        <option value="EMA Crossover (9 / 21) Golden Cross">📈 EMA Crossover (9 / 21) Golden Cross</option>
+                        <option value="MACD Zero-Lag Reversal">🌊 MACD Zero-Lag Histogram Reversal</option>
+                        <option value="SuperTrend (10, 3.0) Trend Ride">🔥 SuperTrend (10, 3.0) Trend Ride</option>
+                        <option value="VWAP Mean-Reversion Scalp">💎 VWAP Mean-Reversion Scalp</option>
+                        <option value="StochRSI Extreme Sniping">⚡ StochRSI Extreme Sniping</option>
+                        <option value="Donchian Channel (20) Breakout">📊 Donchian Channel (20) Breakout</option>
+                        <option value="Keltner Channel Volatility Squeeze">🎯 Keltner Channel Volatility Squeeze</option>
+                        <option value="Funding Rate Arbitrage (Delta-Neutral)">💰 Funding Rate Arbitrage (Delta-Neutral)</option>
+                        <option value="Bollinger Bandwidth Expansion Breakout">🌊 Bollinger Bandwidth Extreme Expansion</option>
                     </select>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
                     <div class="filter-group">
-                        <label style="color: #94a3b8; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; display: block;">Timeframe:</label>
-                        <select id="modal-pos-timeframe" class="dropdown-custom" style="width: 100%; background: #1e293b; border: 1px solid #334155; color: #fff;">
+                        <label style="color: #475569; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; display: block;">Timeframe:</label>
+                        <select id="modal-pos-timeframe" class="dropdown-custom" style="width: 100%; background: #f8fafc; border: 1px solid #cbd5e1; color: #0f172a; font-weight: 600;">
                             <option value="5m">5 Menit (5m)</option>
                             <option value="15m" selected>15 Menit (15m)</option>
                             <option value="1h">1 Jam (1h)</option>
@@ -1003,8 +1010,8 @@
                     </div>
 
                     <div class="filter-group">
-                        <label style="color: #94a3b8; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; display: block;">Arah (Side):</label>
-                        <select id="modal-pos-side" class="dropdown-custom" style="width: 100%; background: #1e293b; border: 1px solid #334155; color: #fff;">
+                        <label style="color: #475569; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; display: block;">Arah (Side):</label>
+                        <select id="modal-pos-side" class="dropdown-custom" style="width: 100%; background: #f8fafc; border: 1px solid #cbd5e1; color: #0f172a; font-weight: 700;">
                             <option value="LONG" selected>🟢 LONG (Beli)</option>
                             <option value="SHORT">🔴 SHORT (Jual)</option>
                         </select>
@@ -1012,18 +1019,18 @@
                 </div>
 
                 <div class="filter-group" style="margin-bottom: 14px;">
-                    <label style="color: #94a3b8; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; display: block;">Modal Notional (USDT):</label>
-                    <input type="number" id="modal-pos-notional" value="50" step="5" min="5" style="width: 100%; background: #1e293b; border: 1px solid #334155; color: #fff; padding: 8px 12px; border-radius: 6px; font-weight: 700;">
+                    <label style="color: #475569; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; display: block;">Modal Notional (USDT):</label>
+                    <input type="number" id="modal-pos-notional" value="50" step="5" min="5" style="width: 100%; background: #f8fafc; border: 1px solid #cbd5e1; color: #0f172a; padding: 8px 12px; border-radius: 6px; font-weight: 700;">
                 </div>
 
-                <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 10px 14px; font-size: 0.8rem; color: #93c5fd; margin-bottom: 10px;">
-                    <i class="fa-solid fa-circle-info"></i> Posisi akan otomatis mencatat harga live Binance, melacak Net PnL secara real-time, dan tersimpan permanen di <strong>Turso Cloud Database</strong>.
+                <div style="background: rgba(249, 115, 22, 0.08); border: 1px solid rgba(249, 115, 22, 0.3); border-radius: 8px; padding: 10px 14px; font-size: 0.8rem; color: #c2410c; margin-bottom: 10px;">
+                    <i class="fa-solid fa-circle-info"></i> Simulasi Paper Trading ini melacak harga live pasar Binance secara real-time dan menghitung Net PnL bersih (dikurangi estimasi trading fee) tanpa risiko dana riil.
                 </div>
             </div>
-            <div class="modal-footer" style="border-top: 1px solid #1e293b; padding-top: 14px; display: flex; justify-content: flex-end; gap: 10px;">
-                <button class="btn-log-action" style="background: #334155; color: #f8fafc; border: none; padding: 8px 16px; border-radius: 6px;" onclick="window.closeNewStrategyPositionModal()">Batal</button>
+            <div class="modal-footer" style="border-top: 1px solid #f1f5f9; padding-top: 14px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn-log-action" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 6px; font-weight: 700;" onclick="window.closeNewStrategyPositionModal()">Batal</button>
                 <button class="btn-primary" style="padding: 8px 20px; font-weight: 800; border-radius: 6px;" onclick="submitNewStrategyPosition()">
-                    <i class="fa-solid fa-check"></i> Eksekusi &amp; Simpan ke Turso
+                    <i class="fa-solid fa-check"></i> Eksekusi Paper Trade
                 </button>
             </div>
         </div>

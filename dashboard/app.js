@@ -538,7 +538,7 @@ function switchTab(tab) {
         if (tabBtnScreener) tabBtnScreener.classList.add('active');
         if (viewScreener) viewScreener.style.display = 'block';
         loadBollingerScreenerData();
-        loadTursoStrategyPositions();
+        loadStrategyPositions();
     }
 }
 window.switchTab = switchTab;
@@ -4157,7 +4157,7 @@ function filterAndRenderScreenerTable() {
             <td class="font-mono text-muted">$${formatCleanPrice(pair.mid_band)}</td>
             <td class="font-mono text-loss" style="font-weight: 700;">$${formatCleanPrice(pair.lower_band)}</td>
             <td>
-                <button class="btn-log-action" style="background: rgba(16, 185, 129, 0.18); border-color: #10b981; color: #059669; font-weight: 800; margin-right: 4px;" onclick="openNewStrategyPositionModal('${pair.symbol}', '${pair.signal_badge || 'Reversal Long'}', ${pair.current_price})" title="Buka Posisi Strategi & Simpan ke Turso Cloud">
+                <button class="btn-log-action" style="background: rgba(16, 185, 129, 0.18); border-color: #10b981; color: #059669; font-weight: 800; margin-right: 4px;" onclick="openNewStrategyPositionModal('${pair.symbol}', '${pair.signal_badge || 'Bollinger Bands Reclaim Sniper'}', ${pair.current_price})" title="Buka Simulasi Paper Trade">
                     <i class="fa-solid fa-bolt"></i> Buka Posisi
                 </button>
                 <button class="btn-log-action" style="background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; color: #2563eb; font-weight: 700; margin-right: 4px;" onclick="addPairToBotWatchlist('${pair.symbol}')" title="Masukkan ke Watchlist Bot">
@@ -4172,14 +4172,14 @@ function filterAndRenderScreenerTable() {
     });
 }
 
-// --- 14. TURSO CLOUD STRATEGY POSITIONS & NET PNL TRACKER ---
+// --- 14. PAPER TRADING STRATEGY POSITIONS & NET PNL TRACKER ---
 state.strategySubTab = 'active';
 state.activeStrategyPositions = [];
 state.closedStrategyTrades = [];
 state.strategyStats = {};
 let strategyPollInterval = null;
 
-async function loadTursoStrategyPositions() {
+async function loadStrategyPositions() {
     try {
         const res = await fetch('/api/strategy-positions/active');
         if (res.ok) {
@@ -4187,16 +4187,16 @@ async function loadTursoStrategyPositions() {
             if (data.success) {
                 state.activeStrategyPositions = data.positions || [];
                 state.strategyStats = data.stats || {};
-                renderTursoActivePositions(state.activeStrategyPositions);
-                updateTursoKPIs(state.strategyStats, state.activeStrategyPositions);
+                renderStrategyActivePositions(state.activeStrategyPositions);
+                updateStrategyKPIs(state.strategyStats, state.activeStrategyPositions);
             }
         }
     } catch (e) {
-        console.warn('Gagal memuat posisi aktif Turso:', e);
+        console.warn('Gagal memuat posisi aktif paper trade:', e);
     }
 }
 
-async function loadTursoClosedTrades() {
+async function loadStrategyClosedTrades() {
     try {
         const res = await fetch('/api/strategy-positions/history?limit=50');
         if (res.ok) {
@@ -4204,16 +4204,16 @@ async function loadTursoClosedTrades() {
             if (data.success) {
                 state.closedStrategyTrades = data.history || [];
                 state.strategyStats = data.stats || {};
-                renderTursoClosedTrades(state.closedStrategyTrades);
-                updateTursoKPIs(state.strategyStats, state.activeStrategyPositions);
+                renderStrategyClosedTrades(state.closedStrategyTrades);
+                updateStrategyKPIs(state.strategyStats, state.activeStrategyPositions);
             }
         }
     } catch (e) {
-        console.warn('Gagal memuat riwayat closed trades Turso:', e);
+        console.warn('Gagal memuat riwayat trade selesai:', e);
     }
 }
 
-function updateTursoKPIs(stats, activePositions) {
+function updateStrategyKPIs(stats, activePositions) {
     const floatPnlEl = document.getElementById('turso-kpi-floating-pnl');
     const realPnlEl = document.getElementById('turso-kpi-realized-pnl');
     const winrateEl = document.getElementById('turso-kpi-winrate');
@@ -4230,7 +4230,7 @@ function updateTursoKPIs(stats, activePositions) {
 
     if (floatPnlEl) {
         const floatSign = totalFloatPnl >= 0 ? '+' : '';
-        const floatColor = totalFloatPnl > 0 ? '#10b981' : (totalFloatPnl < 0 ? '#f43f5e' : '#94a3b8');
+        const floatColor = totalFloatPnl > 0 ? '#059669' : (totalFloatPnl < 0 ? '#e11d48' : '#64748b');
         floatPnlEl.innerHTML = `<span style="color: ${floatColor}; font-weight: 800;">${floatSign}$${totalFloatPnl.toFixed(2)}</span>`;
     }
 
@@ -4238,7 +4238,7 @@ function updateTursoKPIs(stats, activePositions) {
     if (realPnlEl && stats) {
         const realPnl = Number(stats.total_net_pnl || 0);
         const realSign = realPnl >= 0 ? '+' : '';
-        const realColor = realPnl > 0 ? '#10b981' : (realPnl < 0 ? '#f43f5e' : '#94a3b8');
+        const realColor = realPnl > 0 ? '#059669' : (realPnl < 0 ? '#e11d48' : '#64748b');
         realPnlEl.innerHTML = `<span style="color: ${realColor}; font-weight: 800;">${realSign}$${realPnl.toFixed(2)}</span>`;
     }
 
@@ -4256,16 +4256,16 @@ function updateTursoKPIs(stats, activePositions) {
     }
 }
 
-function renderTursoActivePositions(positions) {
+function renderStrategyActivePositions(positions) {
     const tbody = document.getElementById('strategy-active-tbody');
     if (!tbody) return;
 
     if (!positions || positions.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="13" class="loading-cell" style="padding: 24px; color: #64748b;">
-                    <i class="fa-solid fa-folder-open" style="font-size: 1.3rem; display: block; margin-bottom: 6px;"></i>
-                    Belum ada posisi strategi yang terbuka. Klik <strong>"+ Buka Posisi Baru"</strong> atau pilih koin di tabel Radar bawah.
+                <td colspan="13" class="loading-cell" style="padding: 28px; color: #64748b; background: #fafbfc;">
+                    <i class="fa-solid fa-folder-open" style="font-size: 1.5rem; display: block; margin-bottom: 8px; color: #94a3b8;"></i>
+                    Belum ada posisi strategi yang terbuka. Klik <strong>"+ Buka Posisi Strategi"</strong> di atas atau pilih koin dari tabel Radar di bawah.
                 </td>
             </tr>
         `;
@@ -4291,25 +4291,25 @@ function renderTursoActivePositions(positions) {
 
         const pnlSign = netPnl >= 0 ? '+' : '';
         const pnlColorClass = netPnl >= 0 ? 'text-profit font-bold' : 'text-loss font-bold';
-        const sideColor = pos.side === 'LONG' ? '#10b981' : '#f43f5e';
+        const sideColor = pos.side === 'LONG' ? '#059669' : '#e11d48';
 
         tr.innerHTML = `
-            <td class="font-mono" style="font-weight: 700; color: #94a3b8;">${pos.id}</td>
-            <td><strong>${pos.symbol}</strong></td>
-            <td style="font-size: 0.8rem; color: #cbd5e1;">${pos.strategy_name}</td>
-            <td><span class="tag-badge" style="background: rgba(59,130,246,0.15); color: #60a5fa; font-weight: 700;">${pos.timeframe}</span></td>
-            <td><span class="tag-badge" style="background: ${sideColor}22; color: ${sideColor}; font-weight: 800;">${pos.side}</span></td>
-            <td class="font-mono">$${formatCleanPrice(pos.entry_price)}</td>
-            <td class="font-mono" style="font-weight: 700;">$${formatCleanPrice(pos.current_price)}</td>
-            <td class="font-mono" style="font-weight: 700;">$${notional.toFixed(2)}</td>
+            <td class="font-mono" style="font-weight: 700; color: #64748b; font-size: 0.8rem;">${pos.id}</td>
+            <td><strong style="color: #0f172a; font-size: 0.95rem;">${pos.symbol}</strong></td>
+            <td style="font-size: 0.82rem; color: #334155; font-weight: 600;">${pos.strategy_name}</td>
+            <td><span class="tag-badge" style="background: rgba(59,130,246,0.12); color: #1d4ed8; font-weight: 700;">${pos.timeframe}</span></td>
+            <td><span class="tag-badge" style="background: ${sideColor}18; color: ${sideColor}; font-weight: 800; border: 1px solid ${sideColor}44;">${pos.side}</span></td>
+            <td class="font-mono" style="color: #334155;">$${formatCleanPrice(pos.entry_price)}</td>
+            <td class="font-mono" style="font-weight: 800; color: #0f172a;">$${formatCleanPrice(pos.current_price)}</td>
+            <td class="font-mono" style="font-weight: 700; color: #0f172a;">$${notional.toFixed(2)}</td>
             <td class="font-mono ${grossPnl >= 0 ? 'text-profit' : 'text-loss'}">${grossPnl >= 0 ? '+' : ''}$${grossPnl.toFixed(3)}</td>
-            <td class="font-mono text-muted" style="font-size: 0.78rem;">-$${fee.toFixed(3)}</td>
+            <td class="font-mono text-muted" style="font-size: 0.78rem; color: #64748b;">-$${fee.toFixed(3)}</td>
             <td class="font-mono ${pnlColorClass}" style="font-size: 0.95rem;">
                 ${pnlSign}$${netPnl.toFixed(3)} (${pnlSign}${netPct.toFixed(2)}%)
             </td>
-            <td class="font-mono text-muted" style="font-size: 0.8rem;">${durStr}</td>
+            <td class="font-mono text-muted" style="font-size: 0.8rem; color: #64748b;">${durStr}</td>
             <td>
-                <button class="btn-log-action" style="background: rgba(244, 63, 94, 0.15); border-color: #f43f5e; color: #e11d48; font-weight: 800;" onclick="closeTursoPosition('${pos.id}')" title="Tutup Posisi & Amankan Net PnL">
+                <button class="btn-log-action" style="background: rgba(244, 63, 94, 0.12); border-color: #f43f5e; color: #e11d48; font-weight: 800; padding: 4px 10px; border-radius: 6px;" onclick="closeStrategyPosition('${pos.id}')" title="Tutup Posisi & Amankan Net PnL">
                     <i class="fa-solid fa-power-off"></i> Tutup
                 </button>
             </td>
@@ -4318,15 +4318,15 @@ function renderTursoActivePositions(positions) {
     });
 }
 
-function renderTursoClosedTrades(trades) {
+function renderStrategyClosedTrades(trades) {
     const tbody = document.getElementById('strategy-history-tbody');
     if (!tbody) return;
 
     if (!trades || trades.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="12" class="loading-cell" style="padding: 24px; color: #64748b;">
-                    <i class="fa-solid fa-clock-rotate-left" style="font-size: 1.3rem; display: block; margin-bottom: 6px;"></i>
+                <td colspan="12" class="loading-cell" style="padding: 28px; color: #64748b; background: #fafbfc;">
+                    <i class="fa-solid fa-clock-rotate-left" style="font-size: 1.5rem; display: block; margin-bottom: 8px; color: #94a3b8;"></i>
                     Belum ada riwayat trade yang selesai.
                 </td>
             </tr>
@@ -4353,24 +4353,24 @@ function renderTursoClosedTrades(trades) {
         const isWin = trd.status === 'WIN';
 
         tr.innerHTML = `
-            <td class="font-mono" style="font-weight: 700; color: #94a3b8;">${trd.id}</td>
-            <td><strong>${trd.symbol}</strong></td>
-            <td style="font-size: 0.8rem; color: #cbd5e1;">${trd.strategy_name}</td>
-            <td><span class="tag-badge" style="background: ${trd.side === 'LONG' ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.15)'}; color: ${trd.side === 'LONG' ? '#10b981' : '#f43f5e'}; font-weight: 800;">${trd.side}</span></td>
-            <td class="font-mono" style="font-size: 0.82rem;">$${formatCleanPrice(trd.entry_price)} &rarr; $${formatCleanPrice(trd.exit_price)}</td>
-            <td class="font-mono text-muted" style="font-size: 0.8rem;">${durStr}</td>
-            <td><span style="font-size: 0.75rem; color: #94a3b8;">${trd.exit_reason}</span></td>
+            <td class="font-mono" style="font-weight: 700; color: #64748b; font-size: 0.8rem;">${trd.id}</td>
+            <td><strong style="color: #0f172a; font-size: 0.95rem;">${trd.symbol}</strong></td>
+            <td style="font-size: 0.82rem; color: #334155; font-weight: 600;">${trd.strategy_name}</td>
+            <td><span class="tag-badge" style="background: ${trd.side === 'LONG' ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.15)'}; color: ${trd.side === 'LONG' ? '#059669' : '#e11d48'}; font-weight: 800;">${trd.side}</span></td>
+            <td class="font-mono" style="font-size: 0.82rem; color: #334155;">$${formatCleanPrice(trd.entry_price)} &rarr; $${formatCleanPrice(trd.exit_price)}</td>
+            <td class="font-mono text-muted" style="font-size: 0.8rem; color: #64748b;">${durStr}</td>
+            <td><span style="font-size: 0.78rem; color: #475569; font-weight: 600;">${trd.exit_reason}</span></td>
             <td class="font-mono ${grossPnl >= 0 ? 'text-profit' : 'text-loss'}">${grossPnl >= 0 ? '+' : ''}$${grossPnl.toFixed(3)}</td>
-            <td class="font-mono text-muted" style="font-size: 0.78rem;">-$${fee.toFixed(3)}</td>
+            <td class="font-mono text-muted" style="font-size: 0.78rem; color: #64748b;">-$${fee.toFixed(3)}</td>
             <td class="font-mono ${isWin ? 'text-profit font-bold' : 'text-loss font-bold'}" style="font-size: 0.95rem;">
                 ${pnlSign}$${netPnl.toFixed(3)} (${pnlSign}${netPct.toFixed(2)}%)
             </td>
             <td>
-                <span class="tag-badge" style="background: ${isWin ? 'rgba(16,185,129,0.2)' : 'rgba(244,63,94,0.2)'}; color: ${isWin ? '#10b981' : '#f43f5e'}; border: 1px solid ${isWin ? '#10b981' : '#f43f5e'}; font-weight: 800;">
+                <span class="tag-badge" style="background: ${isWin ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.15)'}; color: ${isWin ? '#059669' : '#e11d48'}; border: 1px solid ${isWin ? '#10b981' : '#f43f5e'}; font-weight: 800;">
                     ${isWin ? '🏆 WIN' : '🛑 LOSS'}
                 </span>
             </td>
-            <td class="font-mono text-muted" style="font-size: 0.78rem;">${dateStr}</td>
+            <td class="font-mono text-muted" style="font-size: 0.78rem; color: #64748b;">${dateStr}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -4388,17 +4388,17 @@ function switchStrategySubTab(tab) {
         if (btnHistory) btnHistory.classList.remove('active');
         if (viewActive) viewActive.style.display = 'block';
         if (viewHistory) viewHistory.style.display = 'none';
-        loadTursoStrategyPositions();
+        loadStrategyPositions();
     } else {
         if (btnActive) btnActive.classList.remove('active');
         if (btnHistory) btnHistory.classList.add('active');
         if (viewActive) viewActive.style.display = 'none';
         if (viewHistory) viewHistory.style.display = 'block';
-        loadTursoClosedTrades();
+        loadStrategyClosedTrades();
     }
 }
 
-function openNewStrategyPositionModal(symbol = 'BTCUSDT', strategy = 'Reversal Long (RSI<30 & <Lower)', price = null) {
+function openNewStrategyPositionModal(symbol = 'BTCUSDT', strategy = 'Bollinger Bands Reclaim Sniper', price = null) {
     const modal = document.getElementById('open-position-modal');
     const symInput = document.getElementById('modal-pos-symbol');
     const stratSelect = document.getElementById('modal-pos-strategy');
@@ -4424,7 +4424,7 @@ async function submitNewStrategyPosition() {
     const notionalInput = document.getElementById('modal-pos-notional');
 
     const symbol = symInput ? symInput.value.toUpperCase().trim() : 'BTCUSDT';
-    const strategy = stratSelect ? stratSelect.value : 'Reversal Long (RSI<30 & <Lower)';
+    const strategy = stratSelect ? stratSelect.value : 'Bollinger Bands Reclaim Sniper';
     const timeframe = tfSelect ? tfSelect.value : '15m';
     const side = sideSelect ? sideSelect.value : 'LONG';
     const notional = notionalInput ? parseFloat(notionalInput.value) : 50.0;
@@ -4445,9 +4445,9 @@ async function submitNewStrategyPosition() {
         const data = await res.json();
         if (data.success) {
             closeNewStrategyPositionModal();
-            alert(`✅ Posisi ${side} [${symbol}] berhasil dibuka dan disimpan ke Turso Cloud!\n\nID: ${data.position_id}`);
+            alert(`✅ Posisi Paper Trade ${side} [${symbol}] berhasil dieksekusi!\n\nID: ${data.position_id}\nStrategi: ${strategy}`);
             switchStrategySubTab('active');
-            loadTursoStrategyPositions();
+            loadStrategyPositions();
         } else {
             alert(`❌ Gagal membuka posisi: ${data.error || 'Terjadi kesalahan'}`);
         }
@@ -4456,8 +4456,8 @@ async function submitNewStrategyPosition() {
     }
 }
 
-async function closeTursoPosition(posId) {
-    if (!confirm(`Konfirmasi penutupan posisi [${posId}]?\n\nSistem akan merealisasikan Net PnL dan memindahkan trade ke riwayat selesai Turso.`)) {
+async function closeStrategyPosition(posId) {
+    if (!confirm(`Konfirmasi penutupan posisi paper trade [${posId}]?\n\nSistem akan merealisasikan Net PnL dan memindahkan trade ke riwayat selesai.`)) {
         return;
     }
 
@@ -4474,8 +4474,8 @@ async function closeTursoPosition(posId) {
         const data = await res.json();
         if (data.success) {
             alert(`🏁 Posisi [${data.symbol}] berhasil ditutup!\n\nNet PnL Bersih: ${data.net_pnl >= 0 ? '+' : ''}$${data.net_pnl} (${data.net_pnl_pct}%)\nStatus: ${data.status}`);
-            loadTursoStrategyPositions();
-            loadTursoClosedTrades();
+            loadStrategyPositions();
+            loadStrategyClosedTrades();
         } else {
             alert(`❌ Gagal menutup posisi: ${data.error || 'Terjadi kesalahan'}`);
         }
@@ -4488,7 +4488,7 @@ async function closeTursoPosition(posId) {
 setInterval(() => {
     const viewScreener = document.getElementById('view-screener');
     if (viewScreener && viewScreener.style.display !== 'none' && state.strategySubTab === 'active') {
-        loadTursoStrategyPositions();
+        loadStrategyPositions();
     }
 }, 4000);
 
@@ -4544,9 +4544,13 @@ window.switchStrategySubTab = switchStrategySubTab;
 window.openNewStrategyPositionModal = openNewStrategyPositionModal;
 window.closeNewStrategyPositionModal = closeNewStrategyPositionModal;
 window.submitNewStrategyPosition = submitNewStrategyPosition;
-window.closeTursoPosition = closeTursoPosition;
-window.loadTursoStrategyPositions = loadTursoStrategyPositions;
-window.loadTursoClosedTrades = loadTursoClosedTrades;
+window.closeStrategyPosition = closeStrategyPosition;
+window.loadStrategyPositions = loadStrategyPositions;
+window.loadStrategyClosedTrades = loadStrategyClosedTrades;
+// Backwards compatibility alias
+window.closeTursoPosition = closeStrategyPosition;
+window.loadTursoStrategyPositions = loadStrategyPositions;
+window.loadTursoClosedTrades = loadStrategyClosedTrades;
 
 
 

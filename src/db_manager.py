@@ -390,7 +390,7 @@ class TursoDatabaseManager:
                 "avg_pnl_pct": round(float(r.get("avg_pnl_pct") or 0.0), 2),
                 "max_profit": round(float(r.get("max_profit") or 0.0), 4),
                 "max_loss": round(float(r.get("max_loss") or 0.0), 4),
-                "db_status": "Turso Cloud (Connected)" if self.is_cloud_active else "Local SQLite (Offline)"
+                "db_status": "Cloud Synchronized (Active)" if self.is_cloud_active else "Local Storage (Active)"
             }
         return {
             "total_trades": 0,
@@ -401,7 +401,7 @@ class TursoDatabaseManager:
             "avg_pnl_pct": 0.0,
             "max_profit": 0.0,
             "max_loss": 0.0,
-            "db_status": "Turso Cloud (Connected)" if self.is_cloud_active else "Local SQLite (Offline)"
+            "db_status": "Cloud Synchronized (Active)" if self.is_cloud_active else "Local Storage (Active)"
         }
 
 # Global Singleton Database Manager
