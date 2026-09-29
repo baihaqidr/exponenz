@@ -362,6 +362,44 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                 })
             except Exception as e:
                 self.send_json({"success": False, "error": str(e), "pairs": []})
+        elif parsed.path == "/api/strategy-positions/active":
+            try:
+                from src.db_manager import turso_db
+                active_rows = turso_db.get_active_positions()
+                from src.screener_engine import bollinger_screener
+                updated_rows = []
+                for pos in active_rows:
+                    try:
+                        sym = pos["symbol"]
+                        tf = pos.get("timeframe", "15m")
+                        bb_info = bollinger_screener._fetch_klines_and_calc_bb(sym, tf)
+                        if bb_info and "current_price" in bb_info:
+                            upd = turso_db.update_position_price(pos["id"], bb_info["current_price"])
+                            updated_rows.append(upd if upd else pos)
+                        else:
+                            updated_rows.append(pos)
+                    except Exception:
+                        updated_rows.append(pos)
+                stats = turso_db.get_performance_stats()
+                self.send_json({"success": True, "positions": updated_rows, "stats": stats})
+            except Exception as e:
+                self.send_json({"success": False, "error": str(e), "positions": []})
+        elif parsed.path == "/api/strategy-positions/history":
+            try:
+                from src.db_manager import turso_db
+                limit = int(query_params.get("limit", [50])[0])
+                history = turso_db.get_closed_trades(limit=limit)
+                stats = turso_db.get_performance_stats()
+                self.send_json({"success": True, "history": history, "stats": stats})
+            except Exception as e:
+                self.send_json({"success": False, "error": str(e), "history": []})
+        elif parsed.path == "/api/strategy-positions/stats":
+            try:
+                from src.db_manager import turso_db
+                stats = turso_db.get_performance_stats()
+                self.send_json({"success": True, "stats": stats})
+            except Exception as e:
+                self.send_json({"success": False, "error": str(e)})
         elif parsed.path == "/api/bot/status":
             status = trading_bot.get_status()
             self.send_json(status)
@@ -465,10 +503,48 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
             from src.arbitrage_engine import arbitrage_engine
             res = arbitrage_engine.check_and_harvest_funding()
             self.send_json({"status": "success", "harvested": res})
-        elif parsed.path == "/api/backtest":
-            self.handle_backtest(body)
-        elif parsed.path == "/api/funding/simulate":
-            self.handle_funding_simulate(body)
+        elif parsed.path == "/api/strategy-positions/open":
+            try:
+                from src.db_manager import turso_db
+                sym = body.get("symbol", "BTCUSDT")
+                strat = body.get("strategy_name", "Reversal Long (RSI<30 & <Lower)")
+                tf = body.get("timeframe", "15m")
+                side = body.get("side", "LONG")
+                price = float(body.get("entry_price", 0.0))
+                size = float(body.get("position_size", 0.0))
+                notional = float(body.get("notional_usd", 50.0))
+                if price <= 0:
+                    from src.screener_engine import bollinger_screener
+                    bb = bollinger_screener._fetch_klines_and_calc_bb(sym, tf)
+                    if bb:
+                        price = float(bb["current_price"])
+                if size <= 0 and price > 0:
+                    size = notional / price
+                tp = float(body.get("tp_price", 0.0))
+                sl = float(body.get("sl_price", 0.0))
+                res = turso_db.open_position(sym, strat, tf, side, price, size, notional, tp, sl)
+                self.send_json(res)
+            except Exception as e:
+                self.send_json({"success": False, "error": str(e)})
+        elif parsed.path == "/api/strategy-positions/close":
+            try:
+                from src.db_manager import turso_db
+                pos_id = body.get("position_id", "")
+                exit_price = float(body.get("exit_price", 0.0))
+                exit_reason = body.get("exit_reason", "MANUAL_CLOSE")
+                if exit_price <= 0:
+                    sql_get = "SELECT symbol, timeframe FROM active_positions WHERE id = ?;"
+                    r = turso_db.execute_turso_query(sql_get, [pos_id])
+                    rows = r.get("rows", [])
+                    if rows:
+                        from src.screener_engine import bollinger_screener
+                        bb = bollinger_screener._fetch_klines_and_calc_bb(rows[0]["symbol"], rows[0].get("timeframe", "15m"))
+                        if bb:
+                            exit_price = float(bb["current_price"])
+                res = turso_db.close_position(pos_id, exit_price, exit_reason)
+                self.send_json(res)
+            except Exception as e:
+                self.send_json({"success": False, "error": str(e)})
         else:
             self.send_error(404, "Endpoint not found")
 

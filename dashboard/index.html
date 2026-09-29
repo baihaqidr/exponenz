@@ -770,20 +770,116 @@
                                 Mendeteksi koin dengan rentang <strong>Bandwidth % (BBW)</strong> terlebar (Super Expansion / Breakout Tren) vs tersempit (Super Squeeze / Akumulasi Ledakan) secara real-time dari 50+ pair aktif Binance Futures.
                             </p>
                         </div>
-                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 10px; padding: 10px 16px; min-width: 140px;">
-                                <span style="font-size: 0.72rem; color: #94a3b8; display: block;">🔥 Top Expansion (BBW)</span>
-                                <strong id="screener-top-expansion" style="font-size: 1.05rem; color: #38bdf8;">--</strong>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 10px; padding: 10px 14px; min-width: 130px;">
+                                <span style="font-size: 0.7rem; color: #94a3b8; display: block;">📊 Floating Net PnL</span>
+                                <strong id="turso-kpi-floating-pnl" style="font-size: 1.05rem; color: #94a3b8;">$0.00</strong>
                             </div>
-                            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 10px; padding: 10px 16px; min-width: 140px;">
-                                <span style="font-size: 0.72rem; color: #94a3b8; display: block;">🎯 Top Squeeze (BBW)</span>
-                                <strong id="screener-top-squeeze" style="font-size: 1.05rem; color: #fbbf24;">--</strong>
+                            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 10px; padding: 10px 14px; min-width: 130px;">
+                                <span style="font-size: 0.7rem; color: #94a3b8; display: block;">🏆 Realized Net PnL</span>
+                                <strong id="turso-kpi-realized-pnl" style="font-size: 1.05rem; color: #10b981;">+$0.00</strong>
                             </div>
-                            <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 10px; padding: 10px 16px; min-width: 150px;">
-                                <span style="font-size: 0.72rem; color: #6ee7b7; display: block;">🚀 Reversal Long (RSI&lt;30 &amp; &lt;Lower)</span>
-                                <strong id="screener-top-reversal" style="font-size: 1.05rem; color: #10b981;">0 Pair Terdeteksi</strong>
+                            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 10px; padding: 10px 14px; min-width: 130px;">
+                                <span style="font-size: 0.7rem; color: #94a3b8; display: block;">🎯 Win Rate %</span>
+                                <strong id="turso-kpi-winrate" style="font-size: 1.05rem; color: #38bdf8;">0% (0/0)</strong>
+                            </div>
+                            <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 10px 14px; min-width: 130px;">
+                                <span style="font-size: 0.7rem; color: #6ee7b7; display: block;">🗄️ Database Cloud</span>
+                                <strong id="turso-kpi-db-status" style="font-size: 0.85rem; color: #10b981; display: flex; align-items: center; gap: 4px; margin-top: 4px;">
+                                    <span class="pulse-dot" style="background: #10b981; width: 6px; height: 6px;"></span> Turso Tokyo (Live)
+                                </strong>
                             </div>
                         </div>
+                    </div>
+                </section>
+
+                <!-- ACTIVE STRATEGY POSITIONS & CLOSED HISTORY (TURSO CLOUD) -->
+                <section class="card" style="margin-bottom: 22px; border: 1px solid #334155; background: #0f172a; color: #f8fafc; padding: 18px 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid #1e293b; padding-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="background: rgba(59, 130, 246, 0.2); border: 1px solid #3b82f6; color: #60a5fa; padding: 5px 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 800;">
+                                <i class="fa-solid fa-layer-group"></i> STRATEGY TRADES TRACKER
+                            </div>
+                            <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0; color: #f1f5f9;">
+                                Posisi Terbuka Strategi &amp; Riwayat Net PnL (Turso Cloud)
+                            </h3>
+                        </div>
+
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <!-- SUB TAB BUTTONS -->
+                            <div class="chart-timeframe-group">
+                                <button class="tf-btn active" id="btn-subtab-active-pos" onclick="switchStrategySubTab('active')">
+                                    <span class="pulse-dot" style="background: #10b981; width: 6px; height: 6px;"></span>
+                                    Posisi Terbuka (<span id="active-pos-badge">0</span>)
+                                </button>
+                                <button class="tf-btn" id="btn-subtab-history-pos" onclick="switchStrategySubTab('history')">
+                                    <i class="fa-solid fa-clock-rotate-left"></i> Riwayat Selesai
+                                </button>
+                            </div>
+
+                            <button class="btn-primary" style="padding: 6px 14px; font-size: 0.82rem; font-weight: 700; border-radius: 6px;" onclick="openNewStrategyPositionModal()">
+                                <i class="fa-solid fa-plus"></i> Buka Posisi Baru
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- SUB-VIEW 1: ACTIVE POSITIONS TABLE -->
+                    <div id="subview-strategy-active" class="table-responsive">
+                        <table class="data-table" id="strategy-active-table">
+                            <thead>
+                                <tr>
+                                    <th>Pos ID</th>
+                                    <th>Pair Contract</th>
+                                    <th>Strategi Entry</th>
+                                    <th>TF</th>
+                                    <th>Side</th>
+                                    <th>Harga Entry</th>
+                                    <th>Harga Live</th>
+                                    <th>Modal ($)</th>
+                                    <th>Gross PnL</th>
+                                    <th>Fee Est.</th>
+                                    <th>Net PnL Bersih ($ &amp; %)</th>
+                                    <th>Durasi</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="strategy-active-tbody">
+                                <tr>
+                                    <td colspan="13" class="loading-cell" style="padding: 24px;">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Memuat posisi aktif dari Turso Cloud...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- SUB-VIEW 2: CLOSED TRADES HISTORY TABLE -->
+                    <div id="subview-strategy-history" class="table-responsive" style="display: none;">
+                        <table class="data-table" id="strategy-history-table">
+                            <thead>
+                                <tr>
+                                    <th>Trade ID</th>
+                                    <th>Pair</th>
+                                    <th>Strategi</th>
+                                    <th>Side</th>
+                                    <th>Entry &rarr; Exit</th>
+                                    <th>Durasi</th>
+                                    <th>Alasan Exit</th>
+                                    <th>Gross PnL</th>
+                                    <th>Total Fee</th>
+                                    <th>Net PnL Bersih ($ &amp; %)</th>
+                                    <th>Status</th>
+                                    <th>Waktu Selesai</th>
+                                </tr>
+                            </thead>
+                            <tbody id="strategy-history-tbody">
+                                <tr>
+                                    <td colspan="12" class="loading-cell" style="padding: 24px;">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Memuat riwayat trade dari Turso Cloud...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </section>
 
@@ -792,7 +888,7 @@
                     <div class="filter-left" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                         <!-- TIMEFRAME BUTTONS -->
                         <div class="chart-timeframe-group" id="screener-tf-buttons">
-                            <span style="font-size: 0.78rem; font-weight: 700; color: #64748b; margin-right: 4px;">Timeframe:</span>
+                            <span style="font-size: 0.78rem; font-weight: 700; color: #64748b; margin-right: 4px;">Timeframe Radar:</span>
                             <button class="tf-btn" data-screener-tf="5m" onclick="changeScreenerTimeframe('5m')">5m</button>
                             <button class="tf-btn active" data-screener-tf="15m" onclick="changeScreenerTimeframe('15m')">15m</button>
                             <button class="tf-btn" data-screener-tf="1h" onclick="changeScreenerTimeframe('1h')">1h</button>
@@ -808,7 +904,7 @@
 
                         <!-- PRESET FILTER -->
                         <div class="filter-group">
-                            <label>Filter Setup:</label>
+                            <label>Filter Setup Radar:</label>
                             <select id="screener-filter-status" class="dropdown-custom sm">
                                 <option value="all">⚡ Semua Status (Urutkan BBW Terbesar)</option>
                                 <option value="rsi_bb_oversold" selected>🚀 Reversal Long (RSI &lt; 30 &amp; &lt; Lower Band)</option>
@@ -836,7 +932,7 @@
                     </div>
                 </section>
 
-                <!-- SCREENER DATA TABLE -->
+                <!-- SCREENER RADAR DATA TABLE -->
                 <section class="card">
                     <div class="table-responsive">
                         <table class="data-table" id="screener-table">
@@ -865,6 +961,73 @@
                     </div>
                 </section>
             </div>
+        </main>
+    </div>
+
+    <!-- MODAL OPEN STRATEGY POSITION (TURSO CLOUD) -->
+    <div class="modal-backdrop" id="open-position-modal" style="display: none;" onclick="if(event.target===this) window.closeNewStrategyPositionModal()">
+        <div class="modal-content" style="max-width: 540px; background: #0f172a; border: 1px solid #334155; color: #fff;">
+            <div class="modal-header" style="border-bottom: 1px solid #1e293b; padding-bottom: 14px;">
+                <div class="modal-title" style="color: #f8fafc; font-size: 1.15rem; font-weight: 800;">
+                    <i class="fa-solid fa-bolt" style="color: #10b981;"></i> Buka Posisi Strategi (Turso Cloud)
+                </div>
+                <button class="btn-close-modal" onclick="window.closeNewStrategyPositionModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 18px 0;">
+                <div class="filter-group" style="margin-bottom: 14px;">
+                    <label style="color: #94a3b8; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; display: block;">Pair Symbol:</label>
+                    <input type="text" id="modal-pos-symbol" value="BTCUSDT" style="width: 100%; background: #1e293b; border: 1px solid #334155; color: #fff; padding: 8px 12px; border-radius: 6px; font-family: monospace; font-size: 1rem; font-weight: 700;">
+                </div>
+
+                <div class="filter-group" style="margin-bottom: 14px;">
+                    <label style="color: #94a3b8; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; display: block;">Strategi Entry:</label>
+                    <select id="modal-pos-strategy" class="dropdown-custom" style="width: 100%; background: #1e293b; border: 1px solid #334155; color: #fff;">
+                        <option value="Reversal Long (RSI<30 & <Lower)" selected>🚀 Reversal Long (RSI &lt; 30 &amp; &lt; Lower Band)</option>
+                        <option value="Bollinger Bandwidth Expansion">⚡ Bollinger Bandwidth Expansion Breakout</option>
+                        <option value="Bollinger Squeeze Rebound">🎯 Super Squeeze Volatility Breakout</option>
+                        <option value="RSI Overbought Short">⚠️ RSI Overbought Short Reversal</option>
+                        <option value="Custom Manual Strategy">🛠️ Custom Strategy</option>
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                    <div class="filter-group">
+                        <label style="color: #94a3b8; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; display: block;">Timeframe:</label>
+                        <select id="modal-pos-timeframe" class="dropdown-custom" style="width: 100%; background: #1e293b; border: 1px solid #334155; color: #fff;">
+                            <option value="5m">5 Menit (5m)</option>
+                            <option value="15m" selected>15 Menit (15m)</option>
+                            <option value="1h">1 Jam (1h)</option>
+                            <option value="4h">4 Jam (4h)</option>
+                            <option value="1d">1 Hari (1D)</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label style="color: #94a3b8; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; display: block;">Arah (Side):</label>
+                        <select id="modal-pos-side" class="dropdown-custom" style="width: 100%; background: #1e293b; border: 1px solid #334155; color: #fff;">
+                            <option value="LONG" selected>🟢 LONG (Beli)</option>
+                            <option value="SHORT">🔴 SHORT (Jual)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="filter-group" style="margin-bottom: 14px;">
+                    <label style="color: #94a3b8; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; display: block;">Modal Notional (USDT):</label>
+                    <input type="number" id="modal-pos-notional" value="50" step="5" min="5" style="width: 100%; background: #1e293b; border: 1px solid #334155; color: #fff; padding: 8px 12px; border-radius: 6px; font-weight: 700;">
+                </div>
+
+                <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 10px 14px; font-size: 0.8rem; color: #93c5fd; margin-bottom: 10px;">
+                    <i class="fa-solid fa-circle-info"></i> Posisi akan otomatis mencatat harga live Binance, melacak Net PnL secara real-time, dan tersimpan permanen di <strong>Turso Cloud Database</strong>.
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #1e293b; padding-top: 14px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn-log-action" style="background: #334155; color: #f8fafc; border: none; padding: 8px 16px; border-radius: 6px;" onclick="window.closeNewStrategyPositionModal()">Batal</button>
+                <button class="btn-primary" style="padding: 8px 20px; font-weight: 800; border-radius: 6px;" onclick="submitNewStrategyPosition()">
+                    <i class="fa-solid fa-check"></i> Eksekusi &amp; Simpan ke Turso
+                </button>
+            </div>
+        </div>
+    </div>
         </main>
     </div>
 
