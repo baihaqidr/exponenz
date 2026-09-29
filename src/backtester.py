@@ -19,7 +19,8 @@ class BacktestEngine:
         fixed_pos_size_pct: float = 0.50, # Alternatif: alokasi 50% margin modal
         fee_rate: float = 0.0005,         # 0.05% Taker fee
         slippage_pct: float = 0.0002,     # 0.02% Slippage
-        enable_partial_tp: bool = False   # False = Full Position TP/Exit (Standard), True = 50% Partial TP1
+        enable_partial_tp: bool = False,  # False = Full Position TP/Exit (Standard), True = 50% Partial TP1
+        is_long_only: bool = False
     ):
         self.initial_capital = initial_capital
         self.leverage = leverage
@@ -28,6 +29,7 @@ class BacktestEngine:
         self.fee_rate = fee_rate
         self.slippage_pct = slippage_pct
         self.enable_partial_tp = enable_partial_tp
+        self.is_long_only = is_long_only
 
     def run(self, df: pd.DataFrame) -> Dict[str, Any]:
         capital = self.initial_capital
@@ -221,7 +223,14 @@ class BacktestEngine:
             # 2. Buka Posisi Baru Jika Tidak Ada Posisi Aktif
             if position is None and capital > 10:
                 is_long = (row.get('enter_long', 0) == 1) or ('enter_long' not in row and signal == 1)
-                is_short = (row.get('enter_short', 0) == 1) or ('enter_short' not in row and 'enter_long' not in row and signal == -1)
+                
+                # Proteksi Long-Only (Freqtrade, Supertrend Trend Rider, dll tidak boleh buka SHORT)
+                if self.is_long_only:
+                    is_short = False
+                elif 'enter_short' in row:
+                    is_short = (row.get('enter_short', 0) == 1)
+                else:
+                    is_short = (signal == -1) and ('enter_long' not in row)
 
                 if is_long:
                     position = 'LONG'

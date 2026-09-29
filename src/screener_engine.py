@@ -292,14 +292,21 @@ class BollingerScreenerEngine:
                 indicator_summary = f"EMA9: ${round(f_val, 4)} | EMA21: ${round(s_val, 4)}"
 
             # Run realistic backtest engine on candle sequence to find active open position
-            engine = BacktestEngine(initial_capital=1000.0, leverage=3.0, risk_per_trade_pct="fixed_250")
+            is_long_only = getattr(strat, "is_long_only", False)
+            engine = BacktestEngine(initial_capital=1000.0, leverage=3.0, risk_per_trade_pct="fixed_250", is_long_only=is_long_only)
             bt_res = engine.run(sig_df)
             open_pos = bt_res.get("open_position")
 
             # Also check raw triggers on latest candle
             last_sig = int(sig_df['signal'].iloc[-1]) if ('signal' in sig_df and pd.notna(sig_df['signal'].iloc[-1])) else 0
             enter_long = 1 if ('enter_long' in sig_df and pd.notna(sig_df['enter_long'].iloc[-1]) and float(sig_df['enter_long'].iloc[-1]) == 1) else (1 if last_sig == 1 else 0)
-            enter_short = 1 if ('enter_short' in sig_df and pd.notna(sig_df['enter_short'].iloc[-1]) and float(sig_df['enter_short'].iloc[-1]) == 1) else (1 if last_sig == -1 else 0)
+            
+            if is_long_only:
+                enter_short = 0
+            elif 'enter_short' in sig_df:
+                enter_short = 1 if (pd.notna(sig_df['enter_short'].iloc[-1]) and float(sig_df['enter_short'].iloc[-1]) == 1) else 0
+            else:
+                enter_short = 1 if ('enter_long' not in sig_df and last_sig == -1) else 0
 
             is_open_signal = False
             signal_side = "STANDBY"
@@ -344,7 +351,7 @@ class BollingerScreenerEngine:
                     signal_badge = "🔴 POSISI SHORT AKTIF"
                     signal_color = "#f43f5e"
                     signal_desc = f"Posisi Short Terbuka ({holding_str})"
-            elif enter_long == 1 or last_sig == 1:
+            elif enter_long == 1:
                 is_open_signal = True
                 signal_side = "LONG"
                 entry_price = curr_price
@@ -353,7 +360,7 @@ class BollingerScreenerEngine:
                 signal_desc = f"Trigger Buy/Long Aktif ({timeframe})"
                 live_pnl_pct = -0.08
                 live_pnl_usd = (live_pnl_pct / 100.0) * default_notional
-            elif enter_short == 1 or last_sig == -1:
+            elif enter_short == 1 and not is_long_only:
                 is_open_signal = True
                 signal_side = "SHORT"
                 entry_price = curr_price
