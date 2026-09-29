@@ -211,7 +211,7 @@ class BollingerScreenerEngine:
         except Exception as e:
             return None
 
-    def _fetch_klines_df(self, symbol: str, timeframe: str = "15m", limit: int = 80) -> Optional[pd.DataFrame]:
+    def _fetch_klines_df(self, symbol: str, timeframe: str = "15m", limit: int = 120) -> Optional[pd.DataFrame]:
         clean_sym = symbol.upper().strip()
         spot_sym = clean_sym[4:] if clean_sym.startswith("1000") else clean_sym
 
@@ -243,62 +243,25 @@ class BollingerScreenerEngine:
             ])
             for col in ['open', 'high', 'low', 'close', 'volume']:
                 df[col] = df[col].astype(float)
+            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
             return df
         except Exception:
             return None
 
     def evaluate_symbol_strategy(self, symbol: str, strategy_id: str, timeframe: str = "15m") -> Optional[Dict[str, Any]]:
-        df = self._fetch_klines_df(symbol, timeframe, limit=80)
+        df = self._fetch_klines_df(symbol, timeframe, limit=120)
         if df is None or len(df) < 20:
             return None
 
         try:
             from src.strategy_registry import get_strategy_instance
+            from src.backtester import BacktestEngine
             strat = get_strategy_instance(strategy_id)
             sig_df = strat.generate_signals(df)
 
             curr_price = float(df['close'].iloc[-1])
             curr_volume = float(df['volume'].iloc[-1])
             price_change_pct = ((curr_price - df['close'].iloc[0]) / df['close'].iloc[0]) * 100.0 if df['close'].iloc[0] > 0 else 0.0
-
-            # Signal evaluation on latest candles
-            last_sig = int(sig_df['signal'].iloc[-1]) if 'signal' in sig_df else 0
-            prev_sig = int(sig_df['signal'].iloc[-2]) if len(sig_df) >= 2 and 'signal' in sig_df else 0
-            
-            enter_long = int(sig_df['enter_long'].iloc[-1]) if 'enter_long' in sig_df else (1 if last_sig == 1 else 0)
-            enter_short = int(sig_df['enter_short'].iloc[-1]) if 'enter_short' in sig_df else (1 if last_sig == -1 else 0)
-
-            # Check status
-            is_open_signal = False
-            signal_side = "STANDBY"
-            signal_badge = "⏳ STANDBY"
-            signal_color = "#64748b"
-            signal_desc = "Menunggu konfirmasi setup strategi"
-
-            if last_sig == 1 or enter_long == 1:
-                is_open_signal = True
-                signal_side = "LONG"
-                signal_badge = "🟢 OPEN LONG ENTRY"
-                signal_color = "#10b981"
-                signal_desc = f"Trigger Buy/Long Aktif ({timeframe})"
-            elif last_sig == -1 or enter_short == 1:
-                is_open_signal = True
-                signal_side = "SHORT"
-                signal_badge = "🔴 OPEN SHORT ENTRY"
-                signal_color = "#f43f5e"
-                signal_desc = f"Trigger Sell/Short Aktif ({timeframe})"
-            elif prev_sig == 1:
-                is_open_signal = True
-                signal_side = "LONG"
-                signal_badge = "⚡ RECENT LONG (1 Bar)"
-                signal_color = "#059669"
-                signal_desc = f"Trigger Long 1 lilin lalu ({timeframe})"
-            elif prev_sig == -1:
-                is_open_signal = True
-                signal_side = "SHORT"
-                signal_badge = "⚡ RECENT SHORT (1 Bar)"
-                signal_color = "#e11d48"
-                signal_desc = f"Trigger Short 1 lilin lalu ({timeframe})"
 
             # Dynamic SL & TP extraction
             sl_price = None
@@ -328,25 +291,76 @@ class BollingerScreenerEngine:
                 s_val = float(sig_df['ema_slow'].iloc[-1])
                 indicator_summary = f"EMA9: ${round(f_val, 4)} | EMA21: ${round(s_val, 4)}"
 
-            # Entry Trigger Price & Live Floating PnL
-            if prev_sig == 1 or prev_sig == -1:
-                entry_price = float(df['close'].iloc[-2])
-            else:
-                entry_price = float(df['open'].iloc[-1]) if len(df) >= 1 else curr_price
+            # Run realistic backtest engine on candle sequence to find active open position
+            engine = BacktestEngine(initial_capital=1000.0, leverage=3.0, risk_per_trade_pct="fixed_250")
+            bt_res = engine.run(sig_df)
+            open_pos = bt_res.get("open_position")
 
+            # Also check raw triggers on latest candle
+            last_sig = int(sig_df['signal'].iloc[-1]) if ('signal' in sig_df and pd.notna(sig_df['signal'].iloc[-1])) else 0
+            enter_long = 1 if ('enter_long' in sig_df and pd.notna(sig_df['enter_long'].iloc[-1]) and float(sig_df['enter_long'].iloc[-1]) == 1) else (1 if last_sig == 1 else 0)
+            enter_short = 1 if ('enter_short' in sig_df and pd.notna(sig_df['enter_short'].iloc[-1]) and float(sig_df['enter_short'].iloc[-1]) == 1) else (1 if last_sig == -1 else 0)
+
+            is_open_signal = False
+            signal_side = "STANDBY"
+            signal_badge = "⏳ STANDBY"
+            signal_color = "#64748b"
+            signal_desc = "Menunggu konfirmasi setup strategi"
+            entry_price = curr_price
+            holding_str = "-"
             live_pnl_pct = 0.0
             live_pnl_usd = 0.0
             default_notional = 50.0
 
-            if signal_side == "LONG" and entry_price > 0:
-                gross_pct = ((curr_price - entry_price) / entry_price) * 100.0
-                fee_pct = 0.08
-                live_pnl_pct = gross_pct - fee_pct
+            if open_pos is not None:
+                is_open_signal = True
+                signal_side = open_pos.get("type", "LONG")
+                entry_price = float(open_pos.get("entry_price", curr_price))
+                entry_time = open_pos.get("entry_time")
+
+                if entry_time:
+                    try:
+                        latest_time = df['timestamp'].iloc[-1]
+                        dur = latest_time - entry_time
+                        dur_h = int(dur.total_seconds() // 3600)
+                        dur_m = int((dur.total_seconds() % 3600) // 60)
+                        holding_str = f"{dur_h}j {dur_m}m" if dur_h > 0 else f"{dur_m}m"
+                    except Exception:
+                        holding_str = "Aktif"
+
+                if signal_side == "LONG" and entry_price > 0:
+                    gross_pct = ((curr_price - entry_price) / entry_price) * 100.0
+                    fee_pct = 0.08
+                    live_pnl_pct = gross_pct - fee_pct
+                    live_pnl_usd = (live_pnl_pct / 100.0) * default_notional
+                    signal_badge = "🟢 POSISI LONG AKTIF"
+                    signal_color = "#10b981"
+                    signal_desc = f"Posisi Long Terbuka ({holding_str})"
+                elif signal_side == "SHORT" and entry_price > 0:
+                    gross_pct = ((entry_price - curr_price) / entry_price) * 100.0
+                    fee_pct = 0.08
+                    live_pnl_pct = gross_pct - fee_pct
+                    live_pnl_usd = (live_pnl_pct / 100.0) * default_notional
+                    signal_badge = "🔴 POSISI SHORT AKTIF"
+                    signal_color = "#f43f5e"
+                    signal_desc = f"Posisi Short Terbuka ({holding_str})"
+            elif enter_long == 1 or last_sig == 1:
+                is_open_signal = True
+                signal_side = "LONG"
+                entry_price = curr_price
+                signal_badge = "🟢 BARU TRIGGER LONG"
+                signal_color = "#10b981"
+                signal_desc = f"Trigger Buy/Long Aktif ({timeframe})"
+                live_pnl_pct = -0.08
                 live_pnl_usd = (live_pnl_pct / 100.0) * default_notional
-            elif signal_side == "SHORT" and entry_price > 0:
-                gross_pct = ((entry_price - curr_price) / entry_price) * 100.0
-                fee_pct = 0.08
-                live_pnl_pct = gross_pct - fee_pct
+            elif enter_short == 1 or last_sig == -1:
+                is_open_signal = True
+                signal_side = "SHORT"
+                entry_price = curr_price
+                signal_badge = "🔴 BARU TRIGGER SHORT"
+                signal_color = "#f43f5e"
+                signal_desc = f"Trigger Sell/Short Aktif ({timeframe})"
+                live_pnl_pct = -0.08
                 live_pnl_usd = (live_pnl_pct / 100.0) * default_notional
 
             return {

@@ -108,9 +108,18 @@ class BacktestEngine:
                     pnl_pct = (net_pnl / (notional_value / self.leverage)) * 100
 
                     # Hitung durasi hold
-                    duration = timestamp - entry_time
-                    days = duration.days
-                    hours = int(duration.seconds // 3600)
+                    if hasattr(timestamp, 'days') or hasattr(timestamp, 'total_seconds'):
+                        duration = timestamp - entry_time
+                        days = getattr(duration, 'days', 0)
+                        hours = int(getattr(duration, 'seconds', 0) // 3600)
+                    else:
+                        try:
+                            t_diff_sec = float(timestamp - entry_time) / 1000.0 if float(timestamp) > 1e11 else float(timestamp - entry_time)
+                            hours = int(t_diff_sec // 3600)
+                            days = hours // 24
+                            hours = hours % 24
+                        except Exception:
+                            days, hours = 0, 0
                     duration_str = f"{days}h {hours}j" if days > 0 else f"{hours} jam"
 
                     trades.append({
@@ -180,9 +189,18 @@ class BacktestEngine:
                     pnl_pct = (net_pnl / (notional_value / self.leverage)) * 100
 
                     # Hitung durasi hold
-                    duration = timestamp - entry_time
-                    days = duration.days
-                    hours = int(duration.seconds // 3600)
+                    if hasattr(timestamp, 'days') or hasattr(timestamp, 'total_seconds'):
+                        duration = timestamp - entry_time
+                        days = getattr(duration, 'days', 0)
+                        hours = int(getattr(duration, 'seconds', 0) // 3600)
+                    else:
+                        try:
+                            t_diff_sec = float(timestamp - entry_time) / 1000.0 if float(timestamp) > 1e11 else float(timestamp - entry_time)
+                            hours = int(t_diff_sec // 3600)
+                            days = hours // 24
+                            hours = hours % 24
+                        except Exception:
+                            days, hours = 0, 0
                     duration_str = f"{days}h {hours}j" if days > 0 else f"{hours} jam"
 
                     trades.append({
