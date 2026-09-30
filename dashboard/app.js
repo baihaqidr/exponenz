@@ -3947,196 +3947,706 @@ let screenerCandleSeriesInstance = null;
 let screenerEmaLineSeriesInstance = null;
 let screenerUpperBandSeriesInstance = null;
 let screenerLowerBandSeriesInstance = null;
+// --- 13. LIVE TRADINGVIEW CANDLESTICK CHART FOR SCREENER (100% EXACT COPY OF LIVE BOT CHART) ---
+let screenerChartInstance = null;
 let screenerRsiChartInstance = null;
+let screenerCandleSeriesInstance = null;
+let screenerEmaLineSeriesInstance = null;
+let screenerUpperBandSeriesInstance = null;
+let screenerLowerBandSeriesInstance = null;
 let screenerRsiSeriesInstance = null;
 let activeScreenerChartRequestId = 0;
+let screenerChartWsConnection = null;
+let screenerCandleCountdownInterval = null;
+let lastScreenerChartSymbol = '';
+let lastScreenerChartTf = '';
+let lastFetchedScreenerCandles = [];
+let lastFetchedScreenerEma = [];
+let lastFetchedScreenerUpper = [];
+let lastFetchedScreenerLower = [];
+let lastFetchedScreenerRsi = [];
+let currentLiveScreenerCandle = null;
+let currentLiveScreenerEma = null;
+let currentLiveScreenerRsi = null;
+let currentLiveScreenerUpper = null;
+let currentLiveScreenerLower = null;
+let currentScreenerStrategyTitle = 'Indikator';
+let currentScreenerStreamingSymbol = '';
+let currentScreenerStreamingTimeframe = '';
+
+function updateScreenerChartLegend(candle, emaVal, rsiVal, upperVal, lowerVal) {
+    if (!candle) return;
+    const timeEl = document.getElementById('screener-legend-time');
+    const openEl = document.getElementById('screener-legend-open');
+    const highEl = document.getElementById('screener-legend-high');
+    const lowEl = document.getElementById('screener-legend-low');
+    const closeEl = document.getElementById('screener-legend-close');
+    const changeEl = document.getElementById('screener-legend-change');
+    const rangeEl = document.getElementById('screener-legend-range');
+    const emaEl = document.getElementById('screener-legend-ema');
+    const emaLabelEl = document.getElementById('screener-legend-ema-label');
+    const rsiEl = document.getElementById('screener-legend-rsi');
+    const rsiBadgeEl = document.getElementById('screener-legend-rsi-badge');
+    const rsiHeaderBadge = document.getElementById('screener-chart-rsi-header-badge');
+
+    const upperEl = document.getElementById('screener-legend-upper');
+    const upperWrap = document.getElementById('screener-legend-upper-wrap');
+    const lowerEl = document.getElementById('screener-legend-lower');
+    const lowerWrap = document.getElementById('screener-legend-lower-wrap');
+    const rsiTitleEl = document.getElementById('screener-legend-rsi-title');
+
+    const isBull = (candle.close >= candle.open);
+    const barColor = isBull ? '#0ecb81' : '#f6465d';
+
+    if (timeEl && candle.time) {
+        timeEl.textContent = typeof candle.time === 'number' ? formatLegendDate(candle.time) : (candle.time.year ? `${candle.time.year}/${String(candle.time.month).padStart(2,'0')}/${String(candle.time.day).padStart(2,'0')}` : candle.time);
+    }
+
+    if (openEl && candle.open !== undefined) {
+        openEl.textContent = formatCleanPrice(candle.open);
+        openEl.style.color = barColor;
+    }
+    if (highEl && candle.high !== undefined) {
+        highEl.textContent = formatCleanPrice(candle.high);
+        highEl.style.color = barColor;
+    }
+    if (lowEl && candle.low !== undefined) {
+        lowEl.textContent = formatCleanPrice(candle.low);
+        lowEl.style.color = barColor;
+    }
+    if (closeEl && candle.close !== undefined) {
+        closeEl.textContent = formatCleanPrice(candle.close);
+        closeEl.style.color = barColor;
+    }
+
+    if (changeEl && candle.open > 0) {
+        const changePct = ((candle.close - candle.open) / candle.open) * 100;
+        const sign = changePct >= 0 ? '+' : '';
+        changeEl.textContent = `${sign}${changePct.toFixed(2)}%`;
+        changeEl.style.color = changePct >= 0 ? '#0ecb81' : '#f6465d';
+    }
+
+    if (rangeEl && candle.low > 0) {
+        const rangePct = ((candle.high - candle.low) / candle.low) * 100;
+        rangeEl.textContent = `${rangePct.toFixed(2)}%`;
+        rangeEl.style.color = '#64748b';
+    }
+
+    if (emaLabelEl) {
+        emaLabelEl.textContent = currentScreenerStrategyTitle ? (currentScreenerStrategyTitle.length > 20 ? currentScreenerStrategyTitle.substring(0, 20) + '...' : currentScreenerStrategyTitle) : 'Main Ind';
+    }
+
+    if (emaEl && emaVal !== undefined && emaVal !== null) {
+        const v = typeof emaVal === 'object' ? emaVal.value : emaVal;
+        emaEl.textContent = formatCleanPrice(v);
+    }
+
+    const effectiveUpper = (upperVal !== undefined && upperVal !== null) ? (typeof upperVal === 'object' ? upperVal.value : upperVal) : currentLiveScreenerUpper;
+    if (effectiveUpper !== undefined && effectiveUpper !== null && !isNaN(effectiveUpper)) {
+        if (upperEl) upperEl.textContent = formatCleanPrice(effectiveUpper);
+        if (upperWrap) upperWrap.style.display = 'inline';
+    } else if (upperWrap) {
+        upperWrap.style.display = 'none';
+    }
+
+    const effectiveLower = (lowerVal !== undefined && lowerVal !== null) ? (typeof lowerVal === 'object' ? lowerVal.value : lowerVal) : currentLiveScreenerLower;
+    if (effectiveLower !== undefined && effectiveLower !== null && !isNaN(effectiveLower)) {
+        if (lowerEl) lowerEl.textContent = formatCleanPrice(effectiveLower);
+        if (lowerWrap) lowerWrap.style.display = 'inline';
+    } else if (lowerWrap) {
+        lowerWrap.style.display = 'none';
+    }
+
+    const isWilder = (state.screenerStrategy && state.screenerStrategy.includes('wilder')) || (currentScreenerStrategyTitle && currentScreenerStrategyTitle.toLowerCase().includes('wilder'));
+    const rsiLabelText = isWilder ? 'RSI (Wilder 14)' : 'RSI (Freqtrade 14)';
+    if (rsiTitleEl) rsiTitleEl.textContent = rsiLabelText;
+
+    const effectiveRsi = (rsiVal !== undefined && rsiVal !== null) ? (typeof rsiVal === 'object' ? rsiVal.value : rsiVal) : currentLiveScreenerRsi;
+    if (effectiveRsi !== undefined && effectiveRsi !== null && !isNaN(effectiveRsi)) {
+        const rVal = Number(effectiveRsi);
+        if (rsiEl) rsiEl.textContent = rVal.toFixed(2);
+        
+        let rsiText = `${rVal.toFixed(1)}`;
+        let badgeBg = 'rgba(139, 92, 246, 0.1)';
+        let badgeColor = '#8b5cf6';
+        let statusTag = '';
+
+        if (rVal >= 70) {
+            statusTag = 'OVERBOUGHT (Exit Zone)';
+            badgeBg = 'rgba(239, 68, 68, 0.15)';
+            badgeColor = '#ef4444';
+        } else if (rVal <= 30) {
+            statusTag = 'OVERSOLD (Dip Buy Zone)';
+            badgeBg = 'rgba(16, 185, 129, 0.15)';
+            badgeColor = '#10b981';
+        }
+
+        if (rsiBadgeEl) {
+            if (statusTag) {
+                rsiBadgeEl.textContent = statusTag;
+                rsiBadgeEl.style.background = badgeBg;
+                rsiBadgeEl.style.color = badgeColor;
+                rsiBadgeEl.style.display = 'inline-block';
+            } else {
+                rsiBadgeEl.style.display = 'none';
+            }
+        }
+
+        if (rsiHeaderBadge) {
+            rsiHeaderBadge.textContent = `${rsiLabelText}: ${rsiText} ${statusTag ? `[${statusTag.split(' ')[0]}]` : ''}`;
+            rsiHeaderBadge.style.background = badgeBg;
+            rsiHeaderBadge.style.color = badgeColor;
+        }
+    }
+}
 
 function initScreenerChart() {
-    const chartContainer = document.getElementById('screener-live-chart-container');
-    const rsiContainer = document.getElementById('screener-live-rsi-chart-container');
-    if (!chartContainer || !rsiContainer) return;
+    const container = document.getElementById('screener-live-chart-container');
+    const rsiContainer = document.getElementById('screener-live-rsi-container');
+    if (!container || typeof LightweightCharts === 'undefined') return;
 
-    if (!screenerChartInstance) {
-        screenerChartInstance = LightweightCharts.createChart(chartContainer, {
-            width: chartContainer.clientWidth || 800,
+    if (screenerChartInstance) {
+        screenerChartInstance.applyOptions({ width: container.clientWidth || 800 });
+        if (screenerRsiChartInstance && rsiContainer) {
+            screenerRsiChartInstance.applyOptions({ width: rsiContainer.clientWidth || 800 });
+        }
+        updateScreenerChart();
+        return;
+    }
+
+    try {
+        const commonTimeFormatter = (time) => {
+            const d = new Date(time * 1000);
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yyyy = d.getFullYear();
+            const hh = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            return `${dd}/${mm}/${yyyy} ${hh}:${min} WIB`;
+        };
+
+        // 1. MAIN CANDLESTICK CHART
+        screenerChartInstance = LightweightCharts.createChart(container, {
+            width: container.clientWidth || 800,
             height: 350,
+            localization: {
+                locale: 'id-ID',
+                dateFormat: 'yyyy/MM/dd',
+                timeFormatter: commonTimeFormatter
+            },
             layout: {
                 background: { color: '#ffffff' },
-                textColor: '#475569',
-                fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+                textColor: '#334155',
+                fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                fontSize: 12
             },
             grid: {
-                vertLines: { color: 'rgba(226, 232, 240, 0.6)' },
-                horzLines: { color: 'rgba(226, 232, 240, 0.6)' }
+                vertLines: { color: '#f8fafc' },
+                horzLines: { color: '#f1f5f9' }
             },
             crosshair: {
                 mode: LightweightCharts.CrosshairMode.Normal,
-                vertLine: { color: '#94a3b8', width: 1, style: 2 },
-                horzLine: { color: '#94a3b8', width: 1, style: 2 }
+                vertLine: { color: '#94a3b8', width: 1, style: 3 },
+                horzLine: { color: '#94a3b8', width: 1, style: 3 }
             },
             rightPriceScale: {
-                borderColor: '#cbd5e1',
+                borderColor: '#e2e8f0',
                 autoScale: true,
-                scaleMargins: { top: 0.1, bottom: 0.2 }
+                alignLabels: true,
+                scaleMargins: {
+                    top: 0.1,
+                    bottom: 0.1
+                }
             },
             timeScale: {
-                borderColor: '#cbd5e1',
+                borderColor: '#e2e8f0',
                 timeVisible: true,
-                secondsVisible: false
+                secondsVisible: false,
+                rightOffset: 8,
+                barSpacing: 10,
+                minBarSpacing: 4,
+                tickMarkFormatter: (time) => {
+                    const d = new Date(time * 1000);
+                    const hh = String(d.getHours()).padStart(2, '0');
+                    const mm = String(d.getMinutes()).padStart(2, '0');
+                    return `${hh}:${mm}`;
+                }
             }
         });
 
+        // Candlestick Series (Binance Official Crisp Colors with Live Price Badge)
         screenerCandleSeriesInstance = screenerChartInstance.addCandlestickSeries({
             upColor: '#0ecb81',
             downColor: '#f6465d',
+            borderVisible: true,
             borderUpColor: '#0ecb81',
             borderDownColor: '#f6465d',
             wickUpColor: '#0ecb81',
-            wickDownColor: '#f6465d'
+            wickDownColor: '#f6465d',
+            lastValueVisible: true,
+            priceLineVisible: true,
+            priceLineWidth: 1,
+            priceLineColor: '#0ecb81',
+            priceLineStyle: LightweightCharts.LineStyle.Dashed,
         });
 
+        // Upper Band Series
         screenerUpperBandSeriesInstance = screenerChartInstance.addLineSeries({
-            color: '#06b6d4',
+            color: 'rgba(6, 182, 212, 0.75)',
             lineWidth: 1,
-            lineStyle: 2,
-            priceLineVisible: false
+            lineStyle: LightweightCharts.LineStyle.Dashed,
+            lastValueVisible: false,
+            priceLineVisible: false,
+            crosshairMarkerVisible: false
         });
 
+        // Lower Band Series
+        screenerLowerBandSeriesInstance = screenerChartInstance.addLineSeries({
+            color: 'rgba(236, 72, 153, 0.75)',
+            lineWidth: 1,
+            lineStyle: LightweightCharts.LineStyle.Dashed,
+            lastValueVisible: false,
+            priceLineVisible: false,
+            crosshairMarkerVisible: false
+        });
+
+        // Main Indicator Line Overlay
         screenerEmaLineSeriesInstance = screenerChartInstance.addLineSeries({
             color: '#f59e0b',
             lineWidth: 2,
-            priceLineVisible: false
+            lastValueVisible: false,
+            priceLineVisible: false,
+            crosshairMarkerVisible: false
         });
 
-        screenerLowerBandSeriesInstance = screenerChartInstance.addLineSeries({
-            color: '#ec4899',
-            lineWidth: 1,
-            lineStyle: 2,
-            priceLineVisible: false
-        });
+        // 2. RSI (14) OSCILLATOR SUB-PANE CHART
+        if (rsiContainer) {
+            screenerRsiChartInstance = LightweightCharts.createChart(rsiContainer, {
+                width: rsiContainer.clientWidth || 800,
+                height: 110,
+                localization: {
+                    locale: 'id-ID',
+                    dateFormat: 'yyyy/MM/dd',
+                    timeFormatter: commonTimeFormatter
+                },
+                layout: {
+                    background: { color: '#ffffff' },
+                    textColor: '#64748b',
+                    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                    fontSize: 11
+                },
+                grid: {
+                    vertLines: { color: '#f8fafc' },
+                    horzLines: { color: '#f1f5f9' }
+                },
+                crosshair: {
+                    mode: LightweightCharts.CrosshairMode.Normal,
+                    vertLine: { color: '#94a3b8', width: 1, style: 3 },
+                    horzLine: { color: '#94a3b8', width: 1, style: 3 }
+                },
+                rightPriceScale: {
+                    borderColor: '#e2e8f0',
+                    autoScale: true,
+                    scaleMargins: {
+                        top: 0.1,
+                        bottom: 0.1
+                    }
+                },
+                timeScale: {
+                    borderColor: '#e2e8f0',
+                    timeVisible: true,
+                    secondsVisible: false,
+                    visible: false,
+                    rightOffset: 8,
+                    barSpacing: 10,
+                    minBarSpacing: 4
+                }
+            });
 
-        screenerChartInstance.subscribeCrosshairMove(param => {
-            updateScreenerChartLegendHover(param);
-        });
+            // RSI 14 Series (Violet) with explicit 0 - 100 range
+            screenerRsiSeriesInstance = screenerRsiChartInstance.addLineSeries({
+                color: '#8b5cf6',
+                lineWidth: 2,
+                title: 'RSI 14',
+                priceFormat: {
+                    type: 'price',
+                    precision: 2,
+                    minMove: 0.01
+                },
+                autoscaleInfoProvider: () => ({
+                    priceRange: {
+                        minValue: 0,
+                        maxValue: 100,
+                    },
+                })
+            });
 
-        window.addEventListener('resize', () => {
-            if (screenerChartInstance && chartContainer) {
-                screenerChartInstance.resize(chartContainer.clientWidth, 350);
+            // Overbought Level 70 Horizontal Guide Line (Red)
+            screenerRsiSeriesInstance.createPriceLine({
+                price: 70.0,
+                color: '#ef4444',
+                lineWidth: 1,
+                lineStyle: LightweightCharts.LineStyle.Dashed,
+                axisLabelVisible: true,
+                title: '70'
+            });
+
+            // Oversold Level 30 Horizontal Guide Line (Green)
+            screenerRsiSeriesInstance.createPriceLine({
+                price: 30.0,
+                color: '#10b981',
+                lineWidth: 1,
+                lineStyle: LightweightCharts.LineStyle.Dashed,
+                axisLabelVisible: true,
+                title: '30'
+            });
+
+            // Neutral 50 Center Line (Gray Dotted)
+            screenerRsiSeriesInstance.createPriceLine({
+                price: 50.0,
+                color: '#cbd5e1',
+                lineWidth: 1,
+                lineStyle: LightweightCharts.LineStyle.Dotted,
+                axisLabelVisible: false,
+                title: '50'
+            });
+
+            // Synchronize Visible Range between Main Chart & RSI Sub-pane
+            screenerChartInstance.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+                if (screenerRsiChartInstance && range) {
+                    screenerRsiChartInstance.timeScale().setVisibleLogicalRange(range);
+                }
+            });
+            screenerRsiChartInstance.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+                if (screenerChartInstance && range) {
+                    screenerChartInstance.timeScale().setVisibleLogicalRange(range);
+                }
+            });
+        }
+
+        let isSyncingCrosshair = false;
+        let isUserHoveringHistoricalBar = false;
+
+        // Crosshair Hover Event - Realtime OHLC, EMA & RSI Inspector
+        screenerChartInstance.subscribeCrosshairMove((param) => {
+            if (isSyncingCrosshair) return;
+            if (!param || !param.time || !param.seriesData) {
+                isUserHoveringHistoricalBar = false;
+                const activeC = currentLiveScreenerCandle || (lastFetchedScreenerCandles && lastFetchedScreenerCandles.length > 0 ? lastFetchedScreenerCandles[lastFetchedScreenerCandles.length - 1] : null);
+                const activeE = currentLiveScreenerEma || (lastFetchedScreenerEma && lastFetchedScreenerEma.length > 0 ? lastFetchedScreenerEma[lastFetchedScreenerEma.length - 1].value : null);
+                const activeR = currentLiveScreenerRsi || (lastFetchedScreenerRsi && lastFetchedScreenerRsi.length > 0 ? lastFetchedScreenerRsi[lastFetchedScreenerRsi.length - 1].value : null);
+                updateScreenerChartLegend(activeC, activeE, activeR);
+                if (screenerRsiChartInstance) {
+                    try { screenerRsiChartInstance.clearCrosshairPosition(); } catch (e) {}
+                }
+                return;
+            }
+
+            const cData = param.seriesData.get(screenerCandleSeriesInstance);
+            const eData = param.seriesData.get(screenerEmaLineSeriesInstance);
+            const emaVal = eData ? eData.value : null;
+
+            if (currentLiveScreenerCandle && param.time !== currentLiveScreenerCandle.time) {
+                isUserHoveringHistoricalBar = true;
+            } else {
+                isUserHoveringHistoricalBar = false;
+            }
+
+            let rsiVal = null;
+            if (lastFetchedScreenerRsi && lastFetchedScreenerRsi.length > 0) {
+                const rMatch = lastFetchedScreenerRsi.find(item => item.time === param.time);
+                if (rMatch) rsiVal = rMatch.value;
+            }
+
+            let uMatch = null;
+            if (lastFetchedScreenerUpper && lastFetchedScreenerUpper.length > 0) {
+                const uObj = lastFetchedScreenerUpper.find(item => item.time === param.time);
+                if (uObj) uMatch = uObj.value;
+            }
+            let lMatch = null;
+            if (lastFetchedScreenerLower && lastFetchedScreenerLower.length > 0) {
+                const lObj = lastFetchedScreenerLower.find(item => item.time === param.time);
+                if (lObj) lMatch = lObj.value;
+            }
+
+            if (cData) {
+                updateScreenerChartLegend(cData, emaVal, rsiVal, uMatch, lMatch);
+            }
+
+            if (screenerRsiChartInstance && screenerRsiSeriesInstance && param.time) {
+                try {
+                    isSyncingCrosshair = true;
+                    screenerRsiChartInstance.setCrosshairPosition(rsiVal !== null ? rsiVal : 50, param.time, screenerRsiSeriesInstance);
+                    isSyncingCrosshair = false;
+                } catch (e) {
+                    isSyncingCrosshair = false;
+                }
             }
         });
-    }
 
-    if (!screenerRsiChartInstance) {
-        screenerRsiChartInstance = LightweightCharts.createChart(rsiContainer, {
-            width: rsiContainer.clientWidth || 800,
-            height: 90,
-            layout: {
-                background: { color: '#ffffff' },
-                textColor: '#64748b',
-                fontFamily: "'Inter', sans-serif"
-            },
-            grid: {
-                vertLines: { color: 'rgba(226, 232, 240, 0.4)' },
-                horzLines: { color: 'rgba(226, 232, 240, 0.4)' }
-            },
-            rightPriceScale: {
-                borderColor: '#cbd5e1',
-                scaleMargins: { top: 0.1, bottom: 0.1 }
-            },
-            timeScale: {
-                borderColor: '#cbd5e1',
-                visible: false
+        if (screenerRsiChartInstance) {
+            screenerRsiChartInstance.subscribeCrosshairMove((param) => {
+                if (isSyncingCrosshair) return;
+                if (!param || !param.time || !param.seriesData) {
+                    if (screenerChartInstance) {
+                        try { screenerChartInstance.clearCrosshairPosition(); } catch (e) {}
+                    }
+                    return;
+                }
+
+                const rData = param.seriesData.get(screenerRsiSeriesInstance);
+                const rsiVal = rData ? rData.value : null;
+
+                let cMatch = null;
+                let emaVal = null;
+                if (lastFetchedScreenerCandles && lastFetchedScreenerCandles.length > 0) {
+                    cMatch = lastFetchedScreenerCandles.find(item => item.time === param.time);
+                }
+                if (lastFetchedScreenerEma && lastFetchedScreenerEma.length > 0) {
+                    const eMatch = lastFetchedScreenerEma.find(item => item.time === param.time);
+                    if (eMatch) emaVal = eMatch.value;
+                }
+
+                if (cMatch) {
+                    updateScreenerChartLegend(cMatch, emaVal, rsiVal);
+                }
+
+                if (screenerChartInstance && screenerCandleSeriesInstance && param.time) {
+                    try {
+                        isSyncingCrosshair = true;
+                        screenerChartInstance.setCrosshairPosition(cMatch ? cMatch.close : 0, param.time, screenerCandleSeriesInstance);
+                        isSyncingCrosshair = false;
+                    } catch (e) {
+                        isSyncingCrosshair = false;
+                    }
+                }
+            });
+        }
+
+        const resetToLiveCandle = () => {
+            isUserHoveringHistoricalBar = false;
+            if (screenerChartInstance) {
+                try { screenerChartInstance.clearCrosshairPosition(); } catch (e) {}
             }
-        });
+            if (screenerRsiChartInstance) {
+                try { screenerRsiChartInstance.clearCrosshairPosition(); } catch (e) {}
+            }
+            const activeC = currentLiveScreenerCandle || (lastFetchedScreenerCandles && lastFetchedScreenerCandles.length > 0 ? lastFetchedScreenerCandles[lastFetchedScreenerCandles.length - 1] : null);
+            const activeE = currentLiveScreenerEma || (lastFetchedScreenerEma && lastFetchedScreenerEma.length > 0 ? lastFetchedScreenerEma[lastFetchedScreenerEma.length - 1].value : null);
+            const activeR = currentLiveScreenerRsi || (lastFetchedScreenerRsi && lastFetchedScreenerRsi.length > 0 ? lastFetchedScreenerRsi[lastFetchedScreenerRsi.length - 1].value : null);
+            updateScreenerChartLegend(activeC, activeE, activeR);
+        };
 
-        screenerRsiSeriesInstance = screenerRsiChartInstance.addLineSeries({
-            color: '#8b5cf6',
-            lineWidth: 1.5,
-            priceLineVisible: false
-        });
-
-        screenerRsiSeriesInstance.createPriceLine({ price: 70, color: '#ef4444', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: '70' });
-        screenerRsiSeriesInstance.createPriceLine({ price: 30, color: '#10b981', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: '30' });
-
-        screenerChartInstance.timeScale().subscribeVisibleLogicalRangeChange(range => {
-            screenerRsiChartInstance.timeScale().setVisibleLogicalRange(range);
-        });
-        screenerRsiChartInstance.timeScale().subscribeVisibleLogicalRangeChange(range => {
-            screenerChartInstance.timeScale().setVisibleLogicalRange(range);
-        });
+        if (container) container.addEventListener('mouseleave', resetToLiveCandle);
+        if (rsiContainer) rsiContainer.addEventListener('mouseleave', resetToLiveCandle);
 
         window.addEventListener('resize', () => {
+            if (screenerChartInstance && container) {
+                screenerChartInstance.applyOptions({ width: container.clientWidth });
+            }
             if (screenerRsiChartInstance && rsiContainer) {
-                screenerRsiChartInstance.resize(rsiContainer.clientWidth, 90);
+                screenerRsiChartInstance.applyOptions({ width: rsiContainer.clientWidth });
             }
         });
-    }
 
-    const curSym = state.screenerActiveSymbol || '1000PEPEUSDT';
-    const curTf = state.screenerTimeframe || '15m';
-    const curStrat = state.screenerStrategy || 'trend_rider_supertrend';
-    updateScreenerChart(curSym, curTf, curStrat);
+        updateScreenerChart();
+
+    } catch (e) {
+        console.error('Failed to initialize Screener TradingView Lightweight Chart:', e);
+    }
 }
 
-function updateScreenerChartLegendHover(param) {
-    const legendTime = document.getElementById('screener-legend-time');
-    const legendOpen = document.getElementById('screener-legend-open');
-    const legendHigh = document.getElementById('screener-legend-high');
-    const legendLow = document.getElementById('screener-legend-low');
-    const legendClose = document.getElementById('screener-legend-close');
-    const legendChange = document.getElementById('screener-legend-change');
-    const legendRange = document.getElementById('screener-legend-range');
-    const legendEma = document.getElementById('screener-legend-ema');
-    const legendUpper = document.getElementById('screener-legend-upper');
-    const legendUpperWrap = document.getElementById('screener-legend-upper-wrap');
-    const legendLower = document.getElementById('screener-legend-lower');
-    const legendLowerWrap = document.getElementById('screener-legend-lower-wrap');
-    const legendRsi = document.getElementById('screener-legend-rsi');
+function connectScreenerChartWebSocket(symbol, timeframe) {
+    const s = symbol.toLowerCase();
+    const interval = timeframe || '15m';
+    
+    currentScreenerStreamingSymbol = symbol.toUpperCase();
+    currentScreenerStreamingTimeframe = interval;
 
-    if (!param || !param.time || !param.seriesData) return;
-
-    const candle = param.seriesData.get(screenerCandleSeriesInstance);
-    if (candle) {
-        const d = new Date(param.time * 1000);
-        const timeStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} WIB`;
-        if (legendTime) legendTime.textContent = timeStr;
-        if (legendOpen) legendOpen.textContent = formatCleanPrice(candle.open);
-        if (legendHigh) legendHigh.textContent = formatCleanPrice(candle.high);
-        if (legendLow) legendLow.textContent = formatCleanPrice(candle.low);
-        if (legendClose) legendClose.textContent = formatCleanPrice(candle.close);
-
-        const chg = ((candle.close - candle.open) / candle.open) * 100;
-        const color = chg >= 0 ? '#0ecb81' : '#f6465d';
-        if (legendChange) {
-            legendChange.textContent = `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%`;
-            legendChange.style.color = color;
-        }
-        if (legendRange) {
-            const rng = ((candle.high - candle.low) / candle.low) * 100;
-            legendRange.textContent = `${rng.toFixed(2)}%`;
-        }
+    if (screenerChartWsConnection) {
+        try { 
+            screenerChartWsConnection.onmessage = null;
+            screenerChartWsConnection.onclose = null;
+            screenerChartWsConnection.onerror = null;
+            screenerChartWsConnection.close(); 
+        } catch (e) {}
+        screenerChartWsConnection = null;
     }
 
-    const ema = param.seriesData.get(screenerEmaLineSeriesInstance);
-    if (ema && legendEma) {
-        legendEma.textContent = formatCleanPrice(ema.value);
+    let binanceServerTimeOffset = 0;
+
+    const wsUrls = [
+        `wss://stream.binancefuture.com/stream?streams=${s}@kline_${interval}/${s}@bookTicker/${s}@aggTrade`,
+        `wss://fstream.binance.com/stream?streams=${s}@kline_${interval}/${s}@bookTicker/${s}@aggTrade`,
+        `wss://stream.binancefuture.com/ws/${s}@kline_${interval}`
+    ];
+    let currentUrlIdx = 0;
+
+    function createWs() {
+        if (currentScreenerStreamingSymbol !== symbol.toUpperCase()) return;
+        const url = wsUrls[currentUrlIdx % wsUrls.length];
+        try {
+            screenerChartWsConnection = new WebSocket(url);
+
+            screenerChartWsConnection.onopen = () => {
+                if (currentScreenerStreamingSymbol !== symbol.toUpperCase()) {
+                    try { screenerChartWsConnection.close(); } catch(e) {}
+                    return;
+                }
+            };
+
+            screenerChartWsConnection.onmessage = (event) => {
+                try {
+                    const ov = document.getElementById('screener-chart-loading-overlay');
+                    if (ov && ov.style.display !== 'none') ov.style.display = 'none';
+
+                    const raw = JSON.parse(event.data);
+                    const msg = raw.data || raw;
+
+                    if (msg.E) {
+                        binanceServerTimeOffset = msg.E - Date.now();
+                    }
+                    
+                    const eventSym = (msg.s || (msg.k ? msg.k.s : '')).toUpperCase();
+                    if (eventSym && eventSym !== currentScreenerStreamingSymbol) return;
+                    
+                    const k = msg.k || (msg.e === 'kline' ? msg.k : null);
+                    if (k && screenerCandleSeriesInstance) {
+                        if (k.i && k.i !== currentScreenerStreamingTimeframe) return;
+
+                        const candleTime = Math.floor(k.t / 1000);
+                        const openPrice = parseFloat(k.o);
+                        const highPrice = parseFloat(k.h);
+                        const lowPrice = parseFloat(k.l);
+                        const closePrice = parseFloat(k.c);
+
+                        const liveBar = {
+                            time: candleTime,
+                            open: openPrice,
+                            high: highPrice,
+                            low: lowPrice,
+                            close: closePrice
+                        };
+
+                        currentLiveScreenerCandle = liveBar;
+                        screenerCandleSeriesInstance.update(liveBar);
+
+                        if (screenerEmaLineSeriesInstance && lastFetchedScreenerEma && lastFetchedScreenerEma.length > 0) {
+                            let prevEma = lastFetchedScreenerEma[lastFetchedScreenerEma.length - 1].value;
+                            if (lastFetchedScreenerEma.length >= 2 && lastFetchedScreenerEma[lastFetchedScreenerEma.length - 1].time === candleTime) {
+                                prevEma = lastFetchedScreenerEma[lastFetchedScreenerEma.length - 2].value;
+                            }
+                            const multiplier = 2.0 / (7.0 + 1.0);
+                            const liveEmaVal = (closePrice - prevEma) * multiplier + prevEma;
+                            currentLiveScreenerEma = liveEmaVal;
+
+                            screenerEmaLineSeriesInstance.update({
+                                time: candleTime,
+                                value: liveEmaVal
+                            });
+
+                            const emaLegendEl = document.getElementById('screener-chart-ema-legend');
+                            if (emaLegendEl) emaLegendEl.textContent = `${currentScreenerStrategyTitle || 'Indikator'}: $${formatCleanPrice(liveEmaVal)}`;
+                        }
+
+                        if (screenerRsiSeriesInstance && currentLiveScreenerRsi !== null) {
+                            screenerRsiSeriesInstance.update({
+                                time: candleTime,
+                                value: currentLiveScreenerRsi
+                            });
+                        }
+
+                        const priceEl = document.getElementById('screener-chart-live-price');
+                        if (priceEl) priceEl.textContent = `$${formatCleanPrice(closePrice)}`;
+
+                        updateScreenerChartLegend(liveBar, currentLiveScreenerEma, currentLiveScreenerRsi, currentLiveScreenerUpper, currentLiveScreenerLower);
+                    }
+
+                    if (msg.e === 'aggTrade' || (msg.p !== undefined && msg.q !== undefined)) {
+                        const tradePrice = parseFloat(msg.p);
+                        const priceEl = document.getElementById('screener-chart-live-price');
+                        if (priceEl) priceEl.textContent = `$${formatCleanPrice(tradePrice)}`;
+
+                        let tfSec = 900;
+                        if (currentScreenerStreamingTimeframe === '1m') tfSec = 60;
+                        else if (currentScreenerStreamingTimeframe === '5m') tfSec = 300;
+                        else if (currentScreenerStreamingTimeframe === '15m') tfSec = 900;
+                        else if (currentScreenerStreamingTimeframe === '1h') tfSec = 3600;
+                        else if (currentScreenerStreamingTimeframe === '4h') tfSec = 14400;
+                        else if (currentScreenerStreamingTimeframe === '1d') tfSec = 86400;
+
+                        const tradeTimeMs = msg.T || msg.E || Date.now();
+                        const expectedCandleTime = Math.floor(tradeTimeMs / 1000 / tfSec) * tfSec;
+
+                        if (!currentLiveScreenerCandle || currentLiveScreenerCandle.time < expectedCandleTime) {
+                            const prevClose = currentLiveScreenerCandle ? currentLiveScreenerCandle.close : tradePrice;
+                            currentLiveScreenerCandle = {
+                                time: expectedCandleTime,
+                                open: prevClose,
+                                high: Math.max(prevClose, tradePrice),
+                                low: Math.min(prevClose, tradePrice),
+                                close: tradePrice
+                            };
+                        } else {
+                            currentLiveScreenerCandle.close = tradePrice;
+                            if (tradePrice > currentLiveScreenerCandle.high) currentLiveScreenerCandle.high = tradePrice;
+                            if (tradePrice < currentLiveScreenerCandle.low) currentLiveScreenerCandle.low = tradePrice;
+                        }
+
+                        if (screenerCandleSeriesInstance) {
+                            screenerCandleSeriesInstance.update(currentLiveScreenerCandle);
+                        }
+
+                        updateScreenerChartLegend(currentLiveScreenerCandle, currentLiveScreenerEma, currentLiveScreenerRsi, currentLiveScreenerUpper, currentLiveScreenerLower);
+                    }
+
+                    if (msg.b !== undefined && msg.a !== undefined) {
+                        const bestBid = parseFloat(msg.b);
+                        const bestAsk = parseFloat(msg.a);
+
+                        const askEl = document.getElementById('screener-live-ask-val');
+                        const bidEl = document.getElementById('screener-live-bid-val');
+                        if (askEl) askEl.textContent = formatCleanPrice(bestAsk);
+                        if (bidEl) bidEl.textContent = formatCleanPrice(bestBid);
+
+                        const midPrice = (bestBid + bestAsk) / 2.0;
+                        const priceEl = document.getElementById('screener-chart-live-price');
+                        if (priceEl && !k && !msg.p) priceEl.textContent = `$${formatCleanPrice(midPrice)}`;
+                    }
+
+                } catch (err) {}
+            };
+
+            screenerChartWsConnection.onerror = () => {};
+            screenerChartWsConnection.onclose = () => {
+                if (currentScreenerStreamingSymbol !== symbol.toUpperCase()) return;
+                currentUrlIdx++;
+                setTimeout(createWs, 1500);
+            };
+        } catch (e) {}
     }
-    const upper = param.seriesData.get(screenerUpperBandSeriesInstance);
-    if (upper && legendUpper && legendUpperWrap) {
-        legendUpperWrap.style.display = 'inline';
-        legendUpper.textContent = formatCleanPrice(upper.value);
+
+    createWs();
+
+    if (screenerCandleCountdownInterval) clearInterval(screenerCandleCountdownInterval);
+    function updateCountdown() {
+        const nowSec = Math.floor((Date.now() + binanceServerTimeOffset) / 1000);
+        let tfSeconds = 900;
+        if (interval === '1m') tfSeconds = 60;
+        else if (interval === '5m') tfSeconds = 300;
+        else if (interval === '15m') tfSeconds = 900;
+        else if (interval === '1h') tfSeconds = 3600;
+        else if (interval === '4h') tfSeconds = 14400;
+        else if (interval === '1d') tfSeconds = 86400;
+
+        const remaining = tfSeconds - (nowSec % tfSeconds);
+        const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
+        const ss = String(remaining % 60).padStart(2, '0');
+        const countdownEl = document.getElementById('screener-live-candle-countdown');
+        if (countdownEl) countdownEl.textContent = `${mm}:${ss}`;
     }
-    const lower = param.seriesData.get(screenerLowerBandSeriesInstance);
-    if (lower && legendLower && legendLowerWrap) {
-        legendLowerWrap.style.display = 'inline';
-        legendLower.textContent = formatCleanPrice(lower.value);
-    }
-    if (screenerRsiSeriesInstance) {
-        const rsi = param.seriesData.get(screenerRsiSeriesInstance);
-        if (rsi && legendRsi) {
-            legendRsi.textContent = Number(rsi.value).toFixed(1);
-        }
-    }
+    updateCountdown();
+    screenerCandleCountdownInterval = setInterval(updateCountdown, 1000);
 }
 
 async function updateScreenerChart(symbol, timeframe, strategyId) {
@@ -4147,14 +4657,65 @@ async function updateScreenerChart(symbol, timeframe, strategyId) {
     const stratId = strategyId || state.screenerStrategy || 'trend_rider_supertrend';
 
     state.screenerActiveSymbol = sym;
+    currentScreenerStreamingSymbol = sym.toUpperCase();
+    currentScreenerStreamingTimeframe = tf;
 
     const titleEl = document.getElementById('screener-chart-symbol-title');
     if (titleEl) titleEl.textContent = `${sym} (${tf})`;
 
-    const overlay = document.getElementById('screener-chart-loading-overlay');
-    if (overlay) overlay.style.display = 'flex';
-
     const reqId = ++activeScreenerChartRequestId;
+    const isSymbolSwitch = (lastScreenerChartSymbol !== sym || lastScreenerChartTf !== tf);
+
+    if (isSymbolSwitch) {
+        lastScreenerChartSymbol = sym;
+        lastScreenerChartTf = tf;
+        currentLiveScreenerCandle = null;
+        currentLiveScreenerEma = null;
+        currentLiveScreenerRsi = null;
+        lastFetchedScreenerCandles = [];
+        lastFetchedScreenerEma = [];
+        lastFetchedScreenerUpper = [];
+        lastFetchedScreenerLower = [];
+        lastFetchedScreenerRsi = [];
+
+        if (screenerChartWsConnection) {
+            try {
+                screenerChartWsConnection.onmessage = null;
+                screenerChartWsConnection.onclose = null;
+                screenerChartWsConnection.onerror = null;
+                screenerChartWsConnection.close();
+            } catch (e) {}
+            screenerChartWsConnection = null;
+        }
+
+        try {
+            screenerCandleSeriesInstance.setData([]);
+            if (screenerEmaLineSeriesInstance) screenerEmaLineSeriesInstance.setData([]);
+            if (screenerUpperBandSeriesInstance) screenerUpperBandSeriesInstance.setData([]);
+            if (screenerLowerBandSeriesInstance) screenerLowerBandSeriesInstance.setData([]);
+            if (screenerRsiSeriesInstance) screenerRsiSeriesInstance.setData([]);
+            screenerCandleSeriesInstance.setMarkers([]);
+            screenerChartInstance.priceScale('right').applyOptions({ autoScale: true });
+            if (screenerRsiChartInstance) screenerRsiChartInstance.priceScale('right').applyOptions({ autoScale: true });
+        } catch (e) {}
+
+        const overlay = document.getElementById('screener-chart-loading-overlay');
+        if (overlay) overlay.style.display = 'flex';
+        setTimeout(() => {
+            const ov = document.getElementById('screener-chart-loading-overlay');
+            if (ov) ov.style.display = 'none';
+        }, 1000);
+    }
+
+    let candles = [];
+    let emaSeries = [];
+    let upperSeries = [];
+    let lowerSeries = [];
+    let rsiSeries = [];
+    let markers = [];
+    let stratName = 'Indikator';
+    let precision = 2;
+    let minMove = 0.01;
 
     try {
         const url = `/api/chart/klines?symbol=${encodeURIComponent(sym)}&timeframe=${encodeURIComponent(tf)}&strategy=${encodeURIComponent(stratId)}&limit=1000`;
@@ -4162,58 +4723,163 @@ async function updateScreenerChart(symbol, timeframe, strategyId) {
         const data = await res.json();
 
         if (reqId !== activeScreenerChartRequestId) return;
-        if (overlay) overlay.style.display = 'none';
 
         if (data.success && data.candles && data.candles.length > 0) {
-            const candles = data.candles;
-            const latestClose = candles[candles.length - 1].close;
-
-            // Update Header Display
-            const priceEl = document.getElementById('screener-chart-live-price');
-            if (priceEl) priceEl.textContent = `$${formatCleanPrice(latestClose, data.precision)}`;
-
-            const emaLegendEl = document.getElementById('screener-chart-ema-legend');
-            if (emaLegendEl && data.ema && data.ema.length > 0) {
-                const lastEma = data.ema[data.ema.length - 1].value;
-                emaLegendEl.textContent = `${data.strategy_name || 'Indikator'}: $${formatCleanPrice(lastEma, data.precision)}`;
-            }
-
-            const rsiHeaderEl = document.getElementById('screener-chart-rsi-header-badge');
-            if (rsiHeaderEl && data.rsi && data.rsi.length > 0) {
-                const lastRsi = data.rsi[data.rsi.length - 1].value;
-                rsiHeaderEl.textContent = `RSI (14): ${lastRsi}`;
-            }
-
-            // Set Price Format
-            const pOptions = {
-                priceFormat: {
-                    type: 'price',
-                    precision: data.precision || 2,
-                    minMove: data.min_move || 0.01
-                }
-            };
-            screenerCandleSeriesInstance.applyOptions(pOptions);
-            if (screenerEmaLineSeriesInstance) screenerEmaLineSeriesInstance.applyOptions(pOptions);
-            if (screenerUpperBandSeriesInstance) screenerUpperBandSeriesInstance.applyOptions(pOptions);
-            if (screenerLowerBandSeriesInstance) screenerLowerBandSeriesInstance.applyOptions(pOptions);
-
-            screenerCandleSeriesInstance.setData(candles);
-            if (screenerEmaLineSeriesInstance) screenerEmaLineSeriesInstance.setData(data.ema || []);
-            if (screenerUpperBandSeriesInstance) screenerUpperBandSeriesInstance.setData(data.upper_band || []);
-            if (screenerLowerBandSeriesInstance) screenerLowerBandSeriesInstance.setData(data.lower_band || []);
-            screenerCandleSeriesInstance.setMarkers(data.markers || []);
-
-            if (screenerRsiSeriesInstance && data.rsi && data.rsi.length > 0) {
-                screenerRsiSeriesInstance.setData(data.rsi);
-            }
-
-            screenerChartInstance.timeScale().fitContent();
+            candles = data.candles;
+            if (data.ema) emaSeries = data.ema;
+            if (data.upper_band) upperSeries = data.upper_band;
+            if (data.lower_band) lowerSeries = data.lower_band;
+            if (data.rsi) rsiSeries = data.rsi;
+            if (data.markers) markers = data.markers;
+            if (data.strategy_name) stratName = data.strategy_name;
+            if (data.precision !== undefined) precision = data.precision;
+            if (data.min_move !== undefined) minMove = data.min_move;
         }
     } catch (e) {
-        if (overlay) overlay.style.display = 'none';
         console.warn('Gagal memuat screener chart:', e);
     }
+
+    const overlayEl = document.getElementById('screener-chart-loading-overlay');
+    if (overlayEl) overlayEl.style.display = 'none';
+
+    if (reqId !== activeScreenerChartRequestId) return;
+    if (!candles || candles.length === 0) return;
+
+    lastFetchedScreenerCandles = candles;
+    currentScreenerStrategyTitle = stratName;
+
+    const latestClose = candles[candles.length - 1].close;
+
+    const symUpper = sym.toUpperCase();
+    if (symUpper.includes('BTC') || latestClose >= 20000) {
+        precision = 1;
+        minMove = 0.1;
+    } else if (symUpper.includes('ETH') || symUpper.includes('BNB') || symUpper.includes('SOL') || latestClose >= 50.0) {
+        precision = 2;
+        minMove = 0.01;
+    } else if (symUpper.includes('NEAR') || symUpper.includes('SUI')) {
+        precision = 3;
+        minMove = 0.001;
+    } else if (latestClose < 0.0001) {
+        precision = 8;
+        minMove = 0.00000001;
+    } else if (latestClose < 0.01) {
+        precision = 6;
+        minMove = 0.000001;
+    } else if (latestClose < 0.1) {
+        precision = 5;
+        minMove = 0.00001;
+    } else if (latestClose < 50.0) {
+        precision = 4;
+        minMove = 0.0001;
+    } else {
+        precision = 2;
+        minMove = 0.01;
+    }
+
+    const pOptions = {
+        priceFormat: {
+            type: 'price',
+            precision: precision,
+            minMove: minMove
+        }
+    };
+    screenerCandleSeriesInstance.applyOptions(pOptions);
+    if (screenerEmaLineSeriesInstance) screenerEmaLineSeriesInstance.applyOptions(pOptions);
+    if (screenerUpperBandSeriesInstance) screenerUpperBandSeriesInstance.applyOptions(pOptions);
+    if (screenerLowerBandSeriesInstance) screenerLowerBandSeriesInstance.applyOptions(pOptions);
+
+    lastFetchedScreenerEma = emaSeries;
+    lastFetchedScreenerUpper = upperSeries;
+    lastFetchedScreenerLower = lowerSeries;
+    lastFetchedScreenerRsi = rsiSeries;
+
+    screenerCandleSeriesInstance.setData(candles);
+    if (screenerEmaLineSeriesInstance) screenerEmaLineSeriesInstance.setData(emaSeries || []);
+    if (screenerUpperBandSeriesInstance) screenerUpperBandSeriesInstance.setData(upperSeries || []);
+    if (screenerLowerBandSeriesInstance) screenerLowerBandSeriesInstance.setData(lowerSeries || []);
+    screenerCandleSeriesInstance.setMarkers(markers || []);
+
+    if (screenerRsiSeriesInstance && rsiSeries.length > 0) {
+        screenerRsiSeriesInstance.setData(rsiSeries);
+    }
+
+    if (candles.length > 0) {
+        const lastBar = candles[candles.length - 1];
+        currentLiveScreenerCandle = {
+            time: lastBar.time,
+            open: lastBar.open,
+            high: lastBar.high,
+            low: lastBar.low,
+            close: lastBar.close
+        };
+    }
+
+    if (isSymbolSwitch || !screenerChartWsConnection) {
+        if (candles.length > 0) {
+            const totalBars = candles.length;
+            const visibleBars = 75;
+            const fromLogical = Math.max(0, totalBars - visibleBars);
+            const toLogical = totalBars + 5;
+            screenerChartInstance.timeScale().setVisibleLogicalRange({ from: fromLogical, to: toLogical });
+            if (screenerRsiChartInstance) {
+                screenerRsiChartInstance.timeScale().setVisibleLogicalRange({ from: fromLogical, to: toLogical });
+            }
+        }
+        screenerChartInstance.priceScale('right').applyOptions({ autoScale: true });
+        if (screenerRsiChartInstance) {
+            screenerRsiChartInstance.priceScale('right').applyOptions({ autoScale: true });
+        }
+        connectScreenerChartWebSocket(sym, tf);
+    }
+
+    if (titleEl) titleEl.textContent = `${sym} (${tf})`;
+
+    const priceEl = document.getElementById('screener-chart-live-price');
+    if (priceEl) priceEl.textContent = `$${formatCleanPrice(latestClose, precision)}`;
+
+    const emaLegendEl = document.getElementById('screener-chart-ema-legend');
+    if (emaLegendEl && emaSeries.length > 0) {
+        const latestEma = emaSeries[emaSeries.length - 1].value;
+        const shortStratLabel = stratName.length > 25 ? stratName.substring(0, 25) + '...' : stratName;
+        emaLegendEl.textContent = `${shortStratLabel}: $${formatCleanPrice(latestEma, precision)}`;
+    }
+
+    const latestC = candles[candles.length - 1];
+    const latestE = emaSeries.length > 0 ? emaSeries[emaSeries.length - 1].value : latestClose;
+    const latestR = rsiSeries.length > 0 ? rsiSeries[rsiSeries.length - 1].value : null;
+    const latestU = upperSeries.length > 0 ? upperSeries[upperSeries.length - 1].value : null;
+    const latestL = lowerSeries.length > 0 ? lowerSeries[lowerSeries.length - 1].value : null;
+    currentLiveScreenerRsi = latestR;
+    currentLiveScreenerUpper = latestU;
+    currentLiveScreenerLower = latestL;
+    updateScreenerChartLegend(latestC, latestE, latestR, latestU, latestL);
 }
+
+function changeScreenerChartTimeframe(tf) {
+    const validTfs = ['1m', '5m', '15m', '1h', '4h', '1d'];
+    const chosenTf = validTfs.includes(tf) ? tf : '15m';
+    state.screenerTimeframe = chosenTf;
+
+    const btns = document.querySelectorAll('#screener-chart-tf-buttons .tf-btn');
+    btns.forEach(b => {
+        if (b.getAttribute('data-screener-chart-tf') === chosenTf) b.classList.add('active');
+        else b.classList.remove('active');
+    });
+
+    const tfBtnsTop = document.querySelectorAll('#screener-tf-buttons .tf-btn');
+    tfBtnsTop.forEach(b => {
+        if (b.getAttribute('data-screener-tf') === chosenTf) b.classList.add('active');
+        else b.classList.remove('active');
+    });
+
+    const overlay = document.getElementById('screener-chart-loading-overlay');
+    if (overlay) overlay.style.display = 'flex';
+    
+    updateScreenerChart(state.screenerActiveSymbol, state.screenerTimeframe, state.screenerStrategy);
+    loadStrategyScreenerData(true);
+}
+window.changeScreenerChartTimeframe = changeScreenerChartTimeframe;
 
 function updateScreenerPresetUI() {
     const presetBtns = document.querySelectorAll('.btn-preset-scanner[data-screener-preset]');

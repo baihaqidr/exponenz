@@ -883,31 +883,39 @@
                         </div>
                     </div>
 
-                    <!-- 2. INTERACTIVE SCREENER STRATEGY LIVE CHART (SYNCHRONIZED WITH STRATEGY & RADAR TABLE) -->
-                    <section class="card screener-chart-section" id="screener-chart-card" style="margin-bottom: 1.5rem; padding: 1.25rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);">
+                    <!-- 2. LIVE TRADINGVIEW CANDLESTICK CHART WITH STRATEGY & SIGNALS PLOTTING (100% EXACT COPY OF LIVE BOT CHART) -->
+                    <section class="card bot-chart-section" id="screener-chart-card" style="margin-bottom: 1.5rem; padding: 1.25rem;">
                         <div class="card-header" style="margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
                             <div class="chart-header-left" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                                <div class="card-title" style="margin-bottom: 0; display: flex; align-items: center; gap: 8px;">
-                                    <i class="fa-solid fa-chart-candlestick" style="color: #ea580c; font-size: 1.15rem;"></i>
-                                    <span id="screener-chart-symbol-title" style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">1000PEPEUSDT (15m)</span>
-                                    <span class="chart-badge-tag" style="background: rgba(234, 88, 12, 0.12); color: #ea580c; font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; font-weight: 700;">Live Strategy Monitor</span>
+                                <div class="card-title" style="margin-bottom: 0;">
+                                    <i class="fa-solid fa-chart-candlestick" style="color: #FF6A00;"></i>
+                                    <span id="screener-chart-symbol-title">1000PEPEUSDT (15m)</span>
+                                    <span class="chart-badge-tag" style="background: rgba(255, 106, 0, 0.12); color: #FF6A00; font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; font-weight: 700;">Live Binance Futures</span>
                                 </div>
                                 <div class="chart-price-display" style="display: flex; align-items: baseline; gap: 0.75rem;">
-                                    <span id="screener-chart-live-price" class="font-mono" style="font-size: 1.25rem; font-weight: 800; color: #0f172a;">$0.0000</span>
+                                    <span id="screener-chart-live-price" class="font-mono" style="font-size: 1.25rem; font-weight: 800; color: #111;">$0.0000</span>
                                     <span id="screener-chart-ema-legend" class="font-mono" style="font-size: 0.82rem; font-weight: 700; color: #f59e0b; background: rgba(245, 158, 11, 0.1); padding: 2px 6px; border-radius: 4px;">Indikator: $0.0000</span>
                                     <span id="screener-chart-rsi-header-badge" class="font-mono" style="font-size: 0.82rem; font-weight: 700; color: #8b5cf6; background: rgba(139, 92, 246, 0.1); padding: 2px 6px; border-radius: 4px;">RSI (14): --</span>
                                 </div>
                             </div>
                             <div class="chart-header-right" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
                                 <div class="chart-legend-pills" style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.78rem; font-weight: 700;">
-                                    <span style="display: inline-flex; align-items: center; gap: 4px; color: #10b981; background: rgba(16,185,129,0.1); padding: 2px 8px; border-radius: 4px;"><i class="fa-solid fa-arrow-up"></i> BUY (Entry Long)</span>
-                                    <span style="display: inline-flex; align-items: center; gap: 4px; color: #ef4444; background: rgba(239,68,68,0.1); padding: 2px 8px; border-radius: 4px;"><i class="fa-solid fa-xmark"></i> CLOSE (Tutup Posisi)</span>
+                                    <span id="screener-legend-badge-buy" style="display: inline-flex; align-items: center; gap: 4px; color: #10b981; background: rgba(16,185,129,0.1); padding: 2px 8px; border-radius: 4px;"><i class="fa-solid fa-arrow-up"></i> BUY (Entry Long)</span>
+                                    <span id="screener-legend-badge-sell" style="display: inline-flex; align-items: center; gap: 4px; color: #ef4444; background: rgba(239,68,68,0.1); padding: 2px 8px; border-radius: 4px;"><i class="fa-solid fa-xmark"></i> CLOSE (Tutup Posisi)</span>
+                                </div>
+                                <div class="timeframe-group" id="screener-chart-tf-buttons" style="display: inline-flex; gap: 4px;">
+                                    <button type="button" class="tf-btn" data-screener-chart-tf="1m" onclick="changeScreenerChartTimeframe('1m')">1m</button>
+                                    <button type="button" class="tf-btn" data-screener-chart-tf="5m" onclick="changeScreenerChartTimeframe('5m')">5m</button>
+                                    <button type="button" class="tf-btn active" data-screener-chart-tf="15m" onclick="changeScreenerChartTimeframe('15m')">15m</button>
+                                    <button type="button" class="tf-btn" data-screener-chart-tf="1h" onclick="changeScreenerChartTimeframe('1h')">1h</button>
+                                    <button type="button" class="tf-btn" data-screener-chart-tf="4h" onclick="changeScreenerChartTimeframe('4h')">4h</button>
+                                    <button type="button" class="tf-btn" data-screener-chart-tf="1d" onclick="changeScreenerChartTimeframe('1d')">1d</button>
                                 </div>
                             </div>
                         </div>
                         <!-- Chart Canvas Container (Main Candlestick & Overlays) -->
-                        <div id="screener-live-chart-container" style="width: 100%; height: 350px; border-radius: 8px 8px 0 0; overflow: hidden; background: #ffffff; border: 1px solid #e2e8f0; border-bottom: none; position: relative;">
-                            <!-- Dynamic Hover OHLC & Indicator Legend -->
+                        <div id="screener-live-chart-container" style="width: 100%; height: 350px; border-radius: 8px 8px 0 0; overflow: hidden; background: #ffffff; border: 1px solid var(--border-color); border-bottom: none; position: relative;">
+                            <!-- Binance Style Live OHLC & Dynamic Indicator Hover Legend -->
                             <div id="screener-chart-ohlc-legend" style="position: absolute; top: 10px; left: 12px; z-index: 4; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 0.78rem; pointer-events: none; line-height: 1.45; background: rgba(255,255,255,0.94); backdrop-filter: blur(4px); padding: 5px 10px; border-radius: 6px; border: 1px solid rgba(226, 232, 240, 0.85); box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
                                 <div id="screener-legend-line1" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: #475569;">
                                     <span id="screener-legend-time" style="color: #64748b; font-weight: 600;">--/--/-- --:--</span>
@@ -922,19 +930,37 @@
                                     <span id="screener-legend-upper-wrap" style="color: #06b6d4; font-weight: 700; display: none;">Upper: <strong id="screener-legend-upper" style="color: #06b6d4;">-</strong></span>
                                     <span style="color: #f59e0b; font-weight: 700;"><span id="screener-legend-ema-label">Main Ind</span>: <strong id="screener-legend-ema" style="color: #f59e0b;">-</strong></span>
                                     <span id="screener-legend-lower-wrap" style="color: #ec4899; font-weight: 700; display: none;">Lower: <strong id="screener-legend-lower" style="color: #ec4899;">-</strong></span>
-                                    <span style="color: #8b5cf6; font-weight: 700;"><span id="screener-legend-rsi-title">RSI (14)</span>: <strong id="screener-legend-rsi" style="color: #8b5cf6;">-</strong></span>
+                                    <span style="color: #8b5cf6; font-weight: 700;"><span id="screener-legend-rsi-title">RSI (14)</span>: <strong id="screener-legend-rsi" style="color: #8b5cf6;">-</strong> <span id="screener-legend-rsi-badge" style="font-size: 0.7rem; font-weight: 800; padding: 1px 6px; border-radius: 4px; display: none;"></span></span>
+                                </div>
+                            </div>
+
+                            <!-- Binance Official Real-Time Ask / Bid & Countdown Pill Tag -->
+                            <div id="screener-chart-bid-ask-box" style="position: absolute; right: 75px; top: 10px; z-index: 4; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 0.72rem; display: flex; align-items: center; gap: 4px; pointer-events: none;">
+                                <div style="background: rgba(246, 70, 93, 0.95); color: #fff; padding: 2px 7px; border-radius: 4px; font-weight: 700; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(246,70,93,0.2);">
+                                    <span style="font-size: 0.62rem; opacity: 0.85;">Ask</span>
+                                    <span id="screener-live-ask-val">-</span>
+                                </div>
+                                <div style="background: rgba(14, 203, 129, 0.95); color: #fff; padding: 2px 7px; border-radius: 4px; font-weight: 700; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(14,203,129,0.2);">
+                                    <span style="font-size: 0.62rem; opacity: 0.85;">Bid</span>
+                                    <span id="screener-live-bid-val">-</span>
+                                </div>
+                                <div id="screener-live-candle-countdown" style="background: rgba(15, 23, 42, 0.85); color: #f8fafc; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 0.7rem;">
+                                    00:00
                                 </div>
                             </div>
 
                             <!-- Loading Overlay -->
-                            <div id="screener-chart-loading-overlay" style="position: absolute; inset: 0; background: rgba(255,255,255,0.7); display: none; align-items: center; justify-content: center; z-index: 10;">
-                                <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 10px 18px; border-radius: 8px; font-weight: 700; color: #ea580c; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
-                                    <i class="fa-solid fa-spinner fa-spin"></i> Memuat Data Chart...
-                                </div>
+                            <div id="screener-chart-loading-overlay" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.85); z-index: 5; font-weight: 700; color: #64748b;">
+                                <i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px; color: #FF6A00;"></i> Memuat Live Chart Binance & Plotting Indikator...
                             </div>
                         </div>
-                        <!-- Subpane RSI Chart Canvas Container -->
-                        <div id="screener-live-rsi-chart-container" style="width: 100%; height: 90px; border-radius: 0 0 8px 8px; overflow: hidden; background: #ffffff; border: 1px solid #e2e8f0; position: relative;"></div>
+
+                        <!-- RSI (14) OSCILLATOR SUB-PANE -->
+                        <div id="screener-live-rsi-container" style="width: 100%; height: 110px; border-radius: 0 0 8px 8px; overflow: hidden; background: #ffffff; border: 1px solid var(--border-color); position: relative;">
+                            <div id="screener-rsi-subpane-title" style="position: absolute; top: 6px; left: 12px; z-index: 4; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 0.72rem; font-weight: 700; color: #8b5cf6; pointer-events: none; background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(226,232,240,0.8);">
+                                RSI (14) <span style="color: #64748b; font-weight: 500; font-size: 0.68rem;">[OB: 70 / OS: 30]</span>
+                            </div>
+                        </div>
                     </section>
 
                     <!-- 3. INTEGRATED PAPER TRADING TRACKER (FILTERED BY SELECTED STRATEGY) -->
