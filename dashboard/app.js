@@ -3942,11 +3942,6 @@ state.screenerData = [];
 state.filteredScreenerData = [];
 state.screenerActiveSymbol = '1000PEPEUSDT';
 
-let screenerChartInstance = null;
-let screenerCandleSeriesInstance = null;
-let screenerEmaLineSeriesInstance = null;
-let screenerUpperBandSeriesInstance = null;
-let screenerLowerBandSeriesInstance = null;
 // --- 13. LIVE TRADINGVIEW CANDLESTICK CHART FOR SCREENER (100% EXACT COPY OF LIVE BOT CHART) ---
 let screenerChartInstance = null;
 let screenerRsiChartInstance = null;
