@@ -4999,9 +4999,11 @@ async function loadPumpSniperData(forceRefresh = false) {
     const countEl = document.getElementById('screener-pump-total-count');
     const minPctSelect = document.getElementById('screener-pump-min-pct');
     const minVolSelect = document.getElementById('screener-pump-min-vol');
+    const methodSelect = document.getElementById('screener-pump-strategy-select');
 
     if (minPctSelect) state.pumpMinPct = parseFloat(minPctSelect.value) || 2.0;
     if (minVolSelect) state.pumpMinVol = parseFloat(minVolSelect.value) || 1.5;
+    if (methodSelect) state.pumpMethod = methodSelect.value || 'candle_spike_volume';
 
     if (!tbody) return;
 
@@ -5010,7 +5012,7 @@ async function loadPumpSniperData(forceRefresh = false) {
             <tr>
                 <td colspan="9" class="loading-cell" style="padding: 28px; color: #64748b;">
                     <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.3rem; color: #f59e0b; margin-bottom: 6px; display: block;"></i>
-                    Memindai anomali lonjakan lilin [${state.pumpTimeframe || '1m'}] & volume surge (${state.pumpActivePreset || 'top_50'})...
+                    Memindai anomali momentum lilin [${state.pumpTimeframe || '1m'}] & volume surge (${state.pumpActivePreset || 'top_50'})...
                 </td>
             </tr>
         `;
@@ -5022,11 +5024,12 @@ async function loadPumpSniperData(forceRefresh = false) {
         const minVol = (state.pumpMinVol !== undefined) ? state.pumpMinVol : 1.5;
         const preset = state.pumpActivePreset || 'top_50';
         const presetParam = preset ? `&preset=${encodeURIComponent(preset)}` : '';
+        const method = state.pumpMethod || 'candle_spike_volume';
         
-        let url = `/api/screener/strategy-scan?strategy=pump_sniper&mode=pump&timeframe=${encodeURIComponent(tf)}&min_pct=${encodeURIComponent(minPct)}&min_vol_mult=${encodeURIComponent(minVol)}&limit=60${presetParam}`;
+        let url = `/api/screener/strategy-scan?strategy=pump_sniper&mode=pump&method=${encodeURIComponent(method)}&timeframe=${encodeURIComponent(tf)}&min_pct=${encodeURIComponent(minPct)}&min_vol_mult=${encodeURIComponent(minVol)}&limit=60${presetParam}`;
         let res = await fetch(url);
         if (!res.ok) {
-            url = `/api/screener/pump-spikes?timeframe=${encodeURIComponent(tf)}&min_pct=${encodeURIComponent(minPct)}&min_vol_mult=${encodeURIComponent(minVol)}&limit=60${presetParam}`;
+            url = `/api/screener/pump-spikes?method=${encodeURIComponent(method)}&timeframe=${encodeURIComponent(tf)}&min_pct=${encodeURIComponent(minPct)}&min_vol_mult=${encodeURIComponent(minVol)}&limit=60${presetParam}`;
             res = await fetch(url);
         }
 
@@ -5041,12 +5044,12 @@ async function loadPumpSniperData(forceRefresh = false) {
                         badgeEl.style.background = 'rgba(245, 158, 11, 0.15)';
                         badgeEl.style.color = '#d97706';
                         badgeEl.style.borderColor = '#f59e0b';
-                        badgeEl.innerHTML = `🚀 <strong>${pumpCount} Koin Terdeteksi Pump / Surge</strong> (${tf})`;
+                        badgeEl.innerHTML = `⚡ <strong>${pumpCount} Koin Terdeteksi Momentum Aktif</strong> (${tf})`;
                     } else {
                         badgeEl.style.background = 'rgba(100, 116, 139, 0.1)';
                         badgeEl.style.color = '#64748b';
                         badgeEl.style.borderColor = '#cbd5e1';
-                        badgeEl.innerHTML = `⚪ 0 Pump Terdeteksi (${tf} Standby)`;
+                        badgeEl.innerHTML = `⚪ 0 Momentum Terdeteksi (${tf} Standby)`;
                     }
                 }
 
@@ -5059,10 +5062,10 @@ async function loadPumpSniperData(forceRefresh = false) {
             }
         }
     } catch (e) {
-        console.warn('Gagal memuat data pump sniper:', e);
+        console.warn('Gagal memuat data momentum screener:', e);
     }
 
-    tbody.innerHTML = `<tr><td colspan="9" class="error-cell" style="padding: 24px; color: #e11d48;">Gagal memuat radar pump. Silakan klik "Scan Pump Live" untuk mencoba kembali.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="error-cell" style="padding: 24px; color: #e11d48;">Gagal memuat radar momentum. Silakan klik "Scan Momentum Live" untuk mencoba kembali.</td></tr>`;
 }
 window.loadPumpSniperData = loadPumpSniperData;
 

@@ -793,13 +793,13 @@
                     </div>
                 </section>
 
-                    <!-- 1. RADAR SUB-MODE SWITCHER (STRATEGY SIGNALS vs MARKET PUMP SNIPER) -->
+                    <!-- 1. RADAR SUB-MODE SWITCHER (STRATEGY SIGNALS vs REAL-TIME MOMENTUM SCREENER) -->
                     <div class="screener-mode-tabs" style="display: flex; gap: 10px; margin-bottom: 16px; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; flex-wrap: wrap;">
                         <button type="button" id="screener-mode-btn-strategy" class="btn-subtab active" onclick="switchScreenerRadarMode('strategy')" style="font-weight: 800; padding: 9px 20px; border-radius: 8px; border: 1px solid #ea580c; background: #ea580c; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(234,88,12,0.2);">
-                            <i class="fa-solid fa-crosshairs"></i> 🎯 Strategy Signal Radar
+                            <i class="fa-solid fa-crosshairs"></i> 🎯 Technical Strategy Screener
                         </button>
                         <button type="button" id="screener-mode-btn-pump" class="btn-subtab" onclick="switchScreenerRadarMode('pump')" style="font-weight: 800; padding: 9px 20px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.9rem;">
-                            <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> 🚀 1M/5M Pump &amp; Volume Sniper <span class="tag-badge" style="background: rgba(245,158,11,0.15); color: #d97706; font-size: 0.68rem; padding: 1px 6px;">MARKET RADAR</span>
+                            <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> ⚡ Real-Time Momentum Screener <span class="tag-badge" style="background: rgba(245,158,11,0.15); color: #d97706; font-size: 0.68rem; padding: 1px 6px;">LIVE MOMENTUM</span>
                         </button>
                     </div>
 
@@ -883,31 +883,44 @@
                         </div>
                     </div>
 
-                    <!-- 1B. MARKET PUMP & VOLUME SPIKE SNIPER CONTROLS (MODE PUMP SNIPER) -->
+                    <!-- 1B. REAL-TIME MOMENTUM SCREENER CONTROLS (MODE MOMENTUM) -->
                     <div id="screener-pump-filters-row" style="display: none; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9;">
-                        <!-- SPIKE TIMEFRAME -->
+                        <!-- MOMENTUM STRATEGY / METHOD SELECTOR -->
+                        <div class="filter-group" style="min-width: 280px; flex: 1.2;">
+                            <label style="font-size: 0.8rem; font-weight: 800; color: #f59e0b; display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                                <i class="fa-solid fa-gauge-high"></i> PILIHAN METODE MOMENTUM:
+                            </label>
+                            <select id="screener-pump-strategy-select" class="dropdown-custom" style="width: 100%; font-weight: 700; color: #0f172a; font-size: 0.92rem; background: #f8fafc; border-color: #cbd5e1;" onchange="loadPumpSniperData(true)">
+                                <option value="candle_spike_volume" selected>🚀 1M/5M Candle Spike &amp; Volume Surge</option>
+                                <option value="cumulative_5bar_momentum">📈 Cumulative 5-Bar Momentum Wave</option>
+                                <option value="breakout_24h_high">💥 Breakout 24H High with Volume Burst</option>
+                                <option value="rapid_rsi_extreme">⚡ Rapid RSI Extreme Scalper</option>
+                            </select>
+                        </div>
+
+                        <!-- MOMENTUM TIMEFRAME -->
                         <div class="filter-group">
                             <label style="font-size: 0.8rem; font-weight: 800; color: #f59e0b; display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                                <i class="fa-solid fa-stopwatch"></i> CANDLE SPIKE INTERVAL:
+                                <i class="fa-solid fa-stopwatch"></i> INTERVAL MOMENTUM:
                             </label>
                             <div class="chart-timeframe-group" id="screener-pump-tf-buttons">
-                                <button class="tf-btn active" data-pump-tf="1m" onclick="changePumpSniperTimeframe('1m')">1m Spike</button>
-                                <button class="tf-btn" data-pump-tf="5m" onclick="changePumpSniperTimeframe('5m')">5m Spike</button>
-                                <button class="tf-btn" data-pump-tf="15m" onclick="changePumpSniperTimeframe('15m')">15m Spike</button>
+                                <button class="tf-btn active" data-pump-tf="1m" onclick="changePumpSniperTimeframe('1m')">1m</button>
+                                <button class="tf-btn" data-pump-tf="5m" onclick="changePumpSniperTimeframe('5m')">5m</button>
+                                <button class="tf-btn" data-pump-tf="15m" onclick="changePumpSniperTimeframe('15m')">15m</button>
                             </div>
                         </div>
 
-                        <!-- MINIMUM SPIKE THRESHOLD -->
+                        <!-- MINIMUM THRESHOLD -->
                         <div class="filter-group" style="min-width: 200px;">
                             <label style="font-size: 0.8rem; font-weight: 800; color: #10b981; margin-bottom: 6px; display: block;">
                                 <i class="fa-solid fa-arrow-trend-up"></i> MINIMAL KENAIKAN:
                             </label>
                             <select id="screener-pump-min-pct" class="dropdown-custom" style="font-weight: 700; background: #f8fafc; border-color: #cbd5e1;" onchange="loadPumpSniperData(true)">
                                 <option value="2.0">🔥 &gt; +2.0% (Early Momentum)</option>
-                                <option value="3.0" selected>🚀 &gt; +3.0% (High Spike)</option>
+                                <option value="3.0" selected>🚀 &gt; +3.0% (High Surge)</option>
                                 <option value="5.0">⚡ &gt; +5.0% (Super Pump)</option>
                                 <option value="8.0">💥 &gt; +8.0% (Extreme Surge)</option>
-                                <option value="0.0">⚡ Tampilkan Semua Spike (+ / -)</option>
+                                <option value="0.0">⚡ Tampilkan Semua Momentum (+ / -)</option>
                             </select>
                         </div>
 
@@ -924,17 +937,16 @@
                             </select>
                         </div>
 
-
                         <!-- ACTION BUTTONS -->
                         <div class="filter-group" style="align-self: flex-end; margin-bottom: 2px; display: flex; gap: 8px;">
                             <button class="btn-primary" style="background: #f59e0b; border-color: #f59e0b; color: #111; padding: 8px 16px; font-weight: 800; border-radius: 8px; display: flex; align-items: center; gap: 6px;" onclick="loadPumpSniperData(true)">
-                                <i class="fa-solid fa-radar"></i> Scan Pump Live
+                                <i class="fa-solid fa-radar"></i> Scan Momentum Live
                             </button>
                         </div>
 
-                        <!-- UNIVERSE AUTO-SCANNER PRESETS FOR PUMP SNIPER -->
+                        <!-- UNIVERSE AUTO-SCANNER PRESETS FOR MOMENTUM SCREENER -->
                         <div class="universe-presets-row" style="width: 100%; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                            <span class="universe-presets-label" style="font-weight: 700; font-size: 0.82rem; color: #475569;"><i class="fa-solid fa-layer-group" style="color: #f59e0b;"></i> Scope Koin Pump:</span>
+                            <span class="universe-presets-label" style="font-weight: 700; font-size: 0.82rem; color: #475569;"><i class="fa-solid fa-layer-group" style="color: #f59e0b;"></i> Scope Koin Momentum:</span>
                             <button type="button" class="btn-preset-scanner" data-pump-preset="top_10_pnl" onclick="applyPumpPreset('top_10_pnl')"><i class="fa-solid fa-crown"></i> Top 10 Major</button>
                             <button type="button" class="btn-preset-scanner" data-pump-preset="top_25" onclick="applyPumpPreset('top_25')"><i class="fa-solid fa-fire"></i> Scan Top 25 Volatile</button>
                             <button type="button" class="btn-preset-scanner active-preset" data-pump-preset="top_50" onclick="applyPumpPreset('top_50')"><i class="fa-solid fa-chart-simple"></i> Scan Top 50 Koin</button>
@@ -1148,15 +1160,15 @@
                         </div>
                     </div>
 
-                    <!-- 3B. PUMP & VOLUME SPIKE SNIPER TABLE CONTAINER (MODE PUMP SNIPER) -->
+                    <!-- 3B. REAL-TIME MOMENTUM SCREENER TABLE CONTAINER (MODE MOMENTUM) -->
                     <div id="screener-pump-table-container" style="display: none;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-top: 4px;">
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <span class="tag-badge" id="screener-pump-count-badge" style="background: rgba(245, 158, 11, 0.15); color: #d97706; font-weight: 800; border: 1px solid #f59e0b;">
-                                    🚀 0 Koin Terdeteksi Pump Spike
+                                    ⚡ 0 Koin Terdeteksi Momentum Aktif
                                 </span>
                                 <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;" id="screener-pump-desc-badge">
-                                    Radar Real-Time Anomali Volume &amp; Lonjakan Harga Cepat
+                                    Radar Real-Time Anomali Volume, Akselerasi Momentum &amp; Breakout
                                 </span>
                             </div>
                             <span id="screener-pump-total-count" style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Menampilkan 0 Koin</span>

@@ -388,6 +388,8 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                 from src.screener_engine import bollinger_screener
 
                 mode = query_params.get("mode", [query_params.get("type", ["strategy"])[0]])[0]
+                method = query_params.get("method", ["candle_spike_volume"])[0]
+
                 if parsed.path == "/api/screener/pump-spikes" or mode == "pump":
                     tf = query_params.get("timeframe", ["1m"])[0]
                     min_pct = float(query_params.get("min_pct", [2.0])[0])
@@ -403,12 +405,14 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                         min_vol_mult=min_vol,
                         limit=limit,
                         preset=preset,
-                        custom_symbols=custom_symbols
+                        custom_symbols=custom_symbols,
+                        method=method
                     )
                     pump_count = sum(1 for x in data if x.get("is_pump"))
                     self.send_json({
                         "success": True,
                         "timeframe": tf,
+                        "method": method,
                         "min_pct": min_pct,
                         "preset": preset,
                         "count": len(data),
@@ -431,7 +435,8 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                     limit=limit,
                     signal_only=signal_only,
                     preset=preset,
-                    custom_symbols=custom_symbols
+                    custom_symbols=custom_symbols,
+                    method=method
                 )
                 open_signals_count = sum(1 for x in data if x.get("is_open_signal"))
                 self.send_json({
