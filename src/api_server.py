@@ -387,12 +387,24 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                 tf = query_params.get("timeframe", ["15m"])[0]
                 limit = int(query_params.get("limit", [50])[0])
                 signal_only = query_params.get("signal_only", ["false"])[0].lower() in ["true", "1", "yes"]
-                data = bollinger_screener.scan_strategy(strategy_id=strat_id, timeframe=tf, limit=limit, signal_only=signal_only)
+                preset = query_params.get("preset", [None])[0]
+                symbols_raw = query_params.get("symbols", [None])[0]
+                custom_symbols = [s.strip().upper() for s in symbols_raw.split(",") if s.strip()] if symbols_raw else None
+                
+                data = bollinger_screener.scan_strategy(
+                    strategy_id=strat_id,
+                    timeframe=tf,
+                    limit=limit,
+                    signal_only=signal_only,
+                    preset=preset,
+                    custom_symbols=custom_symbols
+                )
                 open_signals_count = sum(1 for x in data if x.get("is_open_signal"))
                 self.send_json({
                     "success": True,
                     "strategy_id": strat_id,
                     "timeframe": tf,
+                    "preset": preset,
                     "count": len(data),
                     "open_signals_count": open_signals_count,
                     "pairs": data

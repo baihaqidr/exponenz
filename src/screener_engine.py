@@ -21,6 +21,27 @@ FUTURES_PAIR_MAPPING = {
     "NEIROCTOUSDT": "1000NEIROCTOUSDT",
 }
 
+SCREENER_PRESETS = {
+    "top_10_pnl": ["ETHUSDT", "BTCUSDT", "SOLUSDT", "DOGEUSDT", "1000PEPEUSDT", "SUIUSDT", "NEARUSDT", "BNBUSDT", "AVAXUSDT", "ENAUSDT"],
+    "top_12": ["ETHUSDT", "BTCUSDT", "SOLUSDT", "DOGEUSDT", "SUIUSDT", "NEARUSDT", "BNBUSDT", "1000PEPEUSDT", "AVAXUSDT", "LINKUSDT", "XRPUSDT", "ADAUSDT"],
+    "top_25": ["ETHUSDT", "BTCUSDT", "SOLUSDT", "DOGEUSDT", "SUIUSDT", "NEARUSDT", "BNBUSDT", "1000PEPEUSDT", "AVAXUSDT", "LINKUSDT", "XRPUSDT", "ADAUSDT", "APTUSDT", "ARBUSDT", "OPUSDT", "INJUSDT", "TIAUSDT", "RENDERUSDT", "FETUSDT", "TAOUSDT", "SEIUSDT", "WIFUSDT", "1000SHIBUSDT", "DOTUSDT", "LTCUSDT"],
+    "top_50": [
+        "ETHUSDT", "BTCUSDT", "SOLUSDT", "DOGEUSDT", "SUIUSDT", "NEARUSDT", "BNBUSDT", "1000PEPEUSDT", "AVAXUSDT", "LINKUSDT",
+        "XRPUSDT", "ADAUSDT", "APTUSDT", "ARBUSDT", "OPUSDT", "INJUSDT", "TIAUSDT", "RENDERUSDT", "FETUSDT", "TAOUSDT",
+        "SEIUSDT", "WIFUSDT", "1000SHIBUSDT", "DOTUSDT", "LTCUSDT", "1000BONKUSDT", "1000FLOKIUSDT", "ENAUSDT", "HBARUSDT", "TRXUSDT",
+        "FTMUSDT", "GALAUSDT", "SANDUSDT", "MANAUSDT", "CRVUSDT", "DYDXUSDT", "AAVEUSDT", "UNIUSDT", "PENDLEUSDT", "JTOUSDT",
+        "JUPUSDT", "ORDIUSDT", "BLURUSDT", "KASUSDT", "STXUSDT", "ATOMUSDT", "FILUSDT", "ICPUSDT", "RUNEUSDT", "THETAUSDT"
+    ],
+    "all_coins": [
+        "ETHUSDT", "BTCUSDT", "SOLUSDT", "DOGEUSDT", "SUIUSDT", "NEARUSDT", "BNBUSDT", "1000PEPEUSDT", "AVAXUSDT", "LINKUSDT",
+        "XRPUSDT", "ADAUSDT", "APTUSDT", "ARBUSDT", "OPUSDT", "INJUSDT", "TIAUSDT", "RENDERUSDT", "FETUSDT", "TAOUSDT",
+        "SEIUSDT", "WIFUSDT", "1000SHIBUSDT", "DOTUSDT", "LTCUSDT", "1000BONKUSDT", "1000FLOKIUSDT", "ENAUSDT", "HBARUSDT", "TRXUSDT",
+        "FTMUSDT", "GALAUSDT", "SANDUSDT", "MANAUSDT", "CRVUSDT", "DYDXUSDT", "AAVEUSDT", "UNIUSDT", "PENDLEUSDT", "JTOUSDT",
+        "JUPUSDT", "ORDIUSDT", "BLURUSDT", "KASUSDT", "STXUSDT", "ATOMUSDT", "FILUSDT", "ICPUSDT", "RUNEUSDT", "THETAUSDT",
+        "ALGOUSDT", "AXSUSDT", "BCHUSDT", "ETCUSDT", "XLMUSDT", "GMXUSDT", "KAVAUSDT", "POLUSDT", "MKRUSDT", "SNXUSDT"
+    ]
+}
+
 class BollingerScreenerEngine:
     """
     Mesin Screening Binance USDT-M Futures Multi-Timeframe.
@@ -35,55 +56,13 @@ class BollingerScreenerEngine:
         self.symbols_cache = []
         self.symbols_cache_ts = 0
 
-    def get_top_symbols(self, limit: int = 60) -> List[str]:
-        now = time.time()
-        if self.symbols_cache and (now - self.symbols_cache_ts < 300):
-            return self.symbols_cache[:limit]
+    def get_top_symbols(self, limit: int = 50, preset: str = None) -> List[str]:
+        if preset and preset in SCREENER_PRESETS:
+            return SCREENER_PRESETS[preset][:limit]
 
-        symbols = []
-        urls = [
-            "https://fapi.binance.com/fapi/v1/ticker/24hr",
-            "https://testnet.binancefuture.com/fapi/v1/ticker/24hr",
-            "https://data-api.binance.vision/api/v3/ticker/24hr"
-        ]
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        for u in urls:
-            try:
-                r = requests.get(u, headers=headers, verify=False, timeout=4)
-                if r.status_code == 200:
-                    data = r.json()
-                    if isinstance(data, list) and len(data) > 0:
-                        usdt_pairs = [
-                            x for x in data 
-                            if x.get('symbol', '').endswith('USDT') 
-                            and not any(x['symbol'].startswith(s) for s in ['USDC', 'FDUSD', 'TUSD', 'EUR', 'BUSD', 'DAI'])
-                        ]
-                        usdt_pairs.sort(key=lambda x: float(x.get('quoteVolume', 0)), reverse=True)
-                        mapped = []
-                        for x in usdt_pairs:
-                            s = x['symbol']
-                            if s in FUTURES_PAIR_MAPPING:
-                                s = FUTURES_PAIR_MAPPING[s]
-                            if s not in mapped:
-                                mapped.append(s)
-                        if mapped:
-                            symbols = mapped
-                            break
-            except Exception:
-                continue
-
-        if not symbols:
-            symbols = [
-                "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "DOGEUSDT", "SUIUSDT", "NEARUSDT", "AVAXUSDT",
-                "XRPUSDT", "LINKUSDT", "ADAUSDT", "APTUSDT", "ARBUSDT", "OPUSDT", "INJUSDT", "TIAUSDT",
-                "RENDERUSDT", "FETUSDT", "TAOUSDT", "SEIUSDT", "WIFUSDT", "1000SHIBUSDT", "DOTUSDT", "LTCUSDT",
-                "1000PEPEUSDT", "1000BONKUSDT", "1000FLOKIUSDT", "ENAUSDT", "ASTERUSDT", "HBARUSDT", "VTHOUSDT",
-                "SAGAUSDT", "ONEUSDT", "GTCUSDT", "MAGICUSDT", "TRXUSDT"
-            ]
-
-        self.symbols_cache = symbols
-        self.symbols_cache_ts = now
-        return self.symbols_cache[:limit]
+        # Use verified liquid universe directly to prevent low-cap / illiquid / dead tokens from cluttering the screener
+        verified_pool = SCREENER_PRESETS.get("all_coins", [])
+        return verified_pool[:limit]
 
     def _calculate_rsi(self, closes: np.ndarray, period: int = 14) -> float:
         if len(closes) < period + 1:
@@ -236,10 +215,11 @@ class BollingerScreenerEngine:
         except Exception as e:
             return None
 
-    def scan_strategy(self, strategy_id: str = "trend_rider_supertrend", timeframe: str = "15m", limit: int = 50, signal_only: bool = False) -> List[Dict[str, Any]]:
+    def scan_strategy(self, strategy_id: str = "trend_rider_supertrend", timeframe: str = "15m", limit: int = 50, signal_only: bool = False, preset: str = None, custom_symbols: List[str] = None) -> List[Dict[str, Any]]:
         now = time.time()
-        cache_key = f"strat_{strategy_id}_{timeframe}_{limit}"
-        if cache_key in self.cache:
+        preset_key = preset or ("custom" if custom_symbols else "all")
+        cache_key = f"strat_{strategy_id}_{timeframe}_{limit}_{preset_key}"
+        if not custom_symbols and cache_key in self.cache:
             entry = self.cache[cache_key]
             if now - entry["ts"] < self.cache_ttl:
                 data = entry["data"]
@@ -247,7 +227,11 @@ class BollingerScreenerEngine:
                     return [x for x in data if x.get("is_open_signal")]
                 return data
 
-        symbols = self.get_top_symbols(limit=limit)
+        if custom_symbols and len(custom_symbols) > 0:
+            symbols = [s.upper().strip() for s in custom_symbols]
+        else:
+            symbols = self.get_top_symbols(limit=limit, preset=preset)
+
         results = []
 
         with ThreadPoolExecutor(max_workers=16) as executor:
@@ -257,10 +241,11 @@ class BollingerScreenerEngine:
                 if res:
                     results.append(res)
 
-        # Sort: Open signals first, then by RSI / volume
+        # Sort: Open signals first, then by 24h change / volume
         results.sort(key=lambda x: (1 if x.get("is_open_signal") else 0, x.get("volume", 0)), reverse=True)
 
-        self.cache[cache_key] = {"data": results, "ts": now}
+        if not custom_symbols:
+            self.cache[cache_key] = {"data": results, "ts": now}
         if signal_only:
             return [x for x in results if x.get("is_open_signal")]
         return results

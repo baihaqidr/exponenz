@@ -4215,9 +4215,47 @@ async function updateScreenerChart(symbol, timeframe, strategyId) {
     }
 }
 
+function updateScreenerPresetUI() {
+    const presetBtns = document.querySelectorAll('.btn-preset-scanner[data-screener-preset]');
+    presetBtns.forEach(btn => {
+        const p = btn.getAttribute('data-screener-preset');
+        if (p && p === (state.screenerActivePreset || 'top_25')) {
+            btn.classList.add('active-preset');
+        } else {
+            btn.classList.remove('active-preset');
+        }
+    });
+
+    const coinBtns = document.querySelectorAll('.btn-quick-coin[data-screener-coin]');
+    coinBtns.forEach(btn => {
+        const c = btn.getAttribute('data-screener-coin');
+        if (c && c === state.screenerActiveSymbol) {
+            btn.classList.add('active-coin');
+        } else {
+            btn.classList.remove('active-coin');
+        }
+    });
+}
+window.updateScreenerPresetUI = updateScreenerPresetUI;
+
+function applyScreenerPreset(presetKey) {
+    state.screenerActivePreset = presetKey;
+    updateScreenerPresetUI();
+    loadStrategyScreenerData(true);
+}
+window.applyScreenerPreset = applyScreenerPreset;
+
+function quickSelectScreenerCoin(coin) {
+    if (!coin) return;
+    const cleanSym = coin.toUpperCase().trim();
+    selectScreenerChartCoin(cleanSym);
+}
+window.quickSelectScreenerCoin = quickSelectScreenerCoin;
+
 function selectScreenerChartCoin(symbol) {
     if (!symbol) return;
     state.screenerActiveSymbol = symbol.toUpperCase().trim();
+    updateScreenerPresetUI();
     if (!screenerChartInstance) {
         initScreenerChart();
     } else {
@@ -4240,6 +4278,11 @@ async function loadStrategyScreenerData(forceRefresh = false) {
         state.screenerStrategy = stratSelect.value;
     }
 
+    if (!state.screenerActivePreset) {
+        state.screenerActivePreset = 'top_25';
+    }
+    updateScreenerPresetUI();
+
     if (!tbody) return;
 
     if (forceRefresh || state.screenerData.length === 0) {
@@ -4247,14 +4290,15 @@ async function loadStrategyScreenerData(forceRefresh = false) {
             <tr>
                 <td colspan="11" class="loading-cell" style="padding: 28px; color: #64748b;">
                     <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.3rem; color: #ea580c; margin-bottom: 6px; display: block;"></i>
-                    Memindai kondisi lilin [${state.screenerTimeframe}] untuk strategi <strong>${state.screenerStrategy}</strong> di seluruh pair Binance Futures...
+                    Memindai kondisi lilin [${state.screenerTimeframe}] untuk strategi <strong>${state.screenerStrategy}</strong> (${state.screenerActivePreset})...
                 </td>
             </tr>
         `;
     }
 
     try {
-        const url = `/api/screener/strategy-scan?strategy=${encodeURIComponent(state.screenerStrategy)}&timeframe=${encodeURIComponent(state.screenerTimeframe)}&limit=60`;
+        const presetParam = state.screenerActivePreset ? `&preset=${encodeURIComponent(state.screenerActivePreset)}` : '';
+        const url = `/api/screener/strategy-scan?strategy=${encodeURIComponent(state.screenerStrategy)}&timeframe=${encodeURIComponent(state.screenerTimeframe)}&limit=60${presetParam}`;
         const res = await fetch(url);
         if (res.ok) {
             const data = await res.json();
@@ -4293,6 +4337,7 @@ async function loadStrategyScreenerData(forceRefresh = false) {
                 }
 
                 filterAndRenderScreenerTable();
+                updateScreenerPresetUI();
                 return;
             }
         }
@@ -4937,6 +4982,9 @@ window.loadStrategyClosedTrades = loadStrategyClosedTrades;
 window.initScreenerChart = initScreenerChart;
 window.updateScreenerChart = updateScreenerChart;
 window.selectScreenerChartCoin = selectScreenerChartCoin;
+window.applyScreenerPreset = applyScreenerPreset;
+window.quickSelectScreenerCoin = quickSelectScreenerCoin;
+window.updateScreenerPresetUI = updateScreenerPresetUI;
 // Backwards compatibility alias
 window.closeTursoPosition = closeStrategyPosition;
 window.loadTursoStrategyPositions = loadStrategyPositions;

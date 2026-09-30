@@ -854,6 +854,33 @@
                                 <i class="fa-solid fa-plus"></i> Buka Paper Trade
                             </button>
                         </div>
+
+                        <!-- UNIVERSE AUTO-SCANNER PRESETS (100% SYNC DENGAN LIVE BOT DEMO) -->
+                        <div class="universe-presets-row" style="width: 100%; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <span class="universe-presets-label" style="font-weight: 700; font-size: 0.82rem; color: #475569;"><i class="fa-solid fa-layer-group" style="color: #ea580c;"></i> Auto-Scanner Presets:</span>
+                            <button type="button" class="btn-preset-scanner" data-screener-preset="top_10_pnl" onclick="applyScreenerPreset('top_10_pnl')"><i class="fa-solid fa-crown"></i> Top 10 PnL Terbanyak</button>
+                            <button type="button" class="btn-preset-scanner" data-screener-preset="top_12" onclick="applyScreenerPreset('top_12')"><i class="fa-solid fa-bolt"></i> Scan Top 12 Major</button>
+                            <button type="button" class="btn-preset-scanner active-preset" data-screener-preset="top_25" onclick="applyScreenerPreset('top_25')"><i class="fa-solid fa-fire"></i> Scan Top 25 Volatile</button>
+                            <button type="button" class="btn-preset-scanner" data-screener-preset="top_50" onclick="applyScreenerPreset('top_50')"><i class="fa-solid fa-chart-simple"></i> Scan Top 50 Koin</button>
+                            <button type="button" class="btn-preset-scanner" data-screener-preset="all_coins" onclick="applyScreenerPreset('all_coins')"><i class="fa-solid fa-globe"></i> Scan Seluruh Koin (Auto-Hunt)</button>
+                        </div>
+
+                        <!-- POPULAR QUICK PRESET BUTTONS (LANGSUNG LOAD KE LIVE CHART) -->
+                        <div class="popular-coins-row" style="width: 100%; margin-top: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <span class="popular-label" style="font-weight: 700; font-size: 0.8rem; color: #64748b;">Pilih Koin Satuan (Live Chart):</span>
+                            <div class="popular-pills-list" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                <button type="button" class="btn-quick-coin" data-screener-coin="ETHUSDT" onclick="quickSelectScreenerCoin('ETHUSDT')">+ ETH</button>
+                                <button type="button" class="btn-quick-coin" data-screener-coin="BTCUSDT" onclick="quickSelectScreenerCoin('BTCUSDT')">+ BTC</button>
+                                <button type="button" class="btn-quick-coin" data-screener-coin="SOLUSDT" onclick="quickSelectScreenerCoin('SOLUSDT')">+ SOL</button>
+                                <button type="button" class="btn-quick-coin" data-screener-coin="DOGEUSDT" onclick="quickSelectScreenerCoin('DOGEUSDT')">+ DOGE</button>
+                                <button type="button" class="btn-quick-coin" data-screener-coin="1000PEPEUSDT" onclick="quickSelectScreenerCoin('1000PEPEUSDT')">+ PEPE</button>
+                                <button type="button" class="btn-quick-coin" data-screener-coin="SUIUSDT" onclick="quickSelectScreenerCoin('SUIUSDT')">+ SUI</button>
+                                <button type="button" class="btn-quick-coin" data-screener-coin="NEARUSDT" onclick="quickSelectScreenerCoin('NEARUSDT')">+ NEAR</button>
+                                <button type="button" class="btn-quick-coin" data-screener-coin="XRPUSDT" onclick="quickSelectScreenerCoin('XRPUSDT')">+ XRP</button>
+                                <button type="button" class="btn-quick-coin" data-screener-coin="BNBUSDT" onclick="quickSelectScreenerCoin('BNBUSDT')">+ BNB</button>
+                                <button type="button" class="btn-quick-coin" data-screener-coin="AVAXUSDT" onclick="quickSelectScreenerCoin('AVAXUSDT')">+ AVAX</button>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- 2. INTERACTIVE SCREENER STRATEGY LIVE CHART (SYNCHRONIZED WITH STRATEGY & RADAR TABLE) -->
