@@ -793,10 +793,18 @@
                     </div>
                 </section>
 
-                <!-- UNIFIED INTEGRATED CARD: STRATEGY SELECTOR + PAPER TRADING TRACKER + LIVE SCREENER -->
-                <section class="card" style="margin-bottom: 22px; border: 1px solid #e2e8f0; background: #ffffff; color: #0f172a; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border-radius: 12px;">
-                    <!-- 1. TOP STRATEGY SELECTOR & SCAN CONTROLS (SYNC WITH BACKTEST & DEMO) -->
-                    <div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9;">
+                    <!-- 1. RADAR SUB-MODE SWITCHER (STRATEGY SIGNALS vs MARKET PUMP SNIPER) -->
+                    <div class="screener-mode-tabs" style="display: flex; gap: 10px; margin-bottom: 16px; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; flex-wrap: wrap;">
+                        <button type="button" id="screener-mode-btn-strategy" class="btn-subtab active" onclick="switchScreenerRadarMode('strategy')" style="font-weight: 800; padding: 9px 20px; border-radius: 8px; border: 1px solid #ea580c; background: #ea580c; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(234,88,12,0.2);">
+                            <i class="fa-solid fa-crosshairs"></i> 🎯 Strategy Signal Radar
+                        </button>
+                        <button type="button" id="screener-mode-btn-pump" class="btn-subtab" onclick="switchScreenerRadarMode('pump')" style="font-weight: 800; padding: 9px 20px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.9rem;">
+                            <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> 🚀 1M/5M Pump &amp; Volume Sniper <span class="tag-badge" style="background: rgba(245,158,11,0.15); color: #d97706; font-size: 0.68rem; padding: 1px 6px;">MARKET RADAR</span>
+                        </button>
+                    </div>
+
+                    <!-- 1A. STRATEGY SELECTOR & SCAN CONTROLS (MODE STRATEGY) -->
+                    <div id="screener-strategy-filters-row" style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9;">
                         <!-- STRATEGY SELECTOR -->
                         <div class="filter-group" style="min-width: 280px; flex: 1.2;">
                             <label style="font-size: 0.8rem; font-weight: 800; color: #ea580c; display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
@@ -816,7 +824,7 @@
 
                         <!-- TIMEFRAME BUTTONS -->
                         <div class="filter-group">
-                            <label style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 6px; display: block;">TIMEFRAME EKSEKUSI:</label>
+                            <label style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 6px; display: block;">TIMEFRAME SCANNER:</label>
                             <div class="chart-timeframe-group" id="screener-tf-buttons">
                                 <button class="tf-btn" data-screener-tf="1m" onclick="changeScreenerTimeframe('1m')">1m</button>
                                 <button class="tf-btn" data-screener-tf="5m" onclick="changeScreenerTimeframe('5m')">5m</button>
@@ -881,6 +889,74 @@
                                 <button type="button" class="btn-quick-coin" data-screener-coin="BNBUSDT" onclick="quickSelectScreenerCoin('BNBUSDT')">+ BNB</button>
                                 <button type="button" class="btn-quick-coin" data-screener-coin="AVAXUSDT" onclick="quickSelectScreenerCoin('AVAXUSDT')">+ AVAX</button>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- 1B. MARKET PUMP & VOLUME SPIKE SNIPER CONTROLS (MODE PUMP SNIPER) -->
+                    <div id="screener-pump-filters-row" style="display: none; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9;">
+                        <!-- SPIKE TIMEFRAME -->
+                        <div class="filter-group">
+                            <label style="font-size: 0.8rem; font-weight: 800; color: #f59e0b; display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                                <i class="fa-solid fa-stopwatch"></i> CANDLE SPIKE INTERVAL:
+                            </label>
+                            <div class="chart-timeframe-group" id="screener-pump-tf-buttons">
+                                <button class="tf-btn active" data-pump-tf="1m" onclick="changePumpSniperTimeframe('1m')">1m Spike</button>
+                                <button class="tf-btn" data-pump-tf="5m" onclick="changePumpSniperTimeframe('5m')">5m Spike</button>
+                                <button class="tf-btn" data-pump-tf="15m" onclick="changePumpSniperTimeframe('15m')">15m Spike</button>
+                            </div>
+                        </div>
+
+                        <!-- MINIMUM SPIKE THRESHOLD -->
+                        <div class="filter-group" style="min-width: 200px;">
+                            <label style="font-size: 0.8rem; font-weight: 800; color: #10b981; margin-bottom: 6px; display: block;">
+                                <i class="fa-solid fa-arrow-trend-up"></i> MINIMAL KENAIKAN:
+                            </label>
+                            <select id="screener-pump-min-pct" class="dropdown-custom" style="font-weight: 700; background: #f8fafc; border-color: #cbd5e1;" onchange="loadPumpSniperData(true)">
+                                <option value="2.0">🔥 &gt; +2.0% (Early Momentum)</option>
+                                <option value="3.0" selected>🚀 &gt; +3.0% (High Spike)</option>
+                                <option value="5.0">⚡ &gt; +5.0% (Super Pump)</option>
+                                <option value="8.0">💥 &gt; +8.0% (Extreme Surge)</option>
+                                <option value="0.0">⚡ Tampilkan Semua Spike (+ / -)</option>
+                            </select>
+                        </div>
+
+                        <!-- VOLUME MULTIPLIER FILTER -->
+                        <div class="filter-group" style="min-width: 190px;">
+                            <label style="font-size: 0.8rem; font-weight: 800; color: #0284c7; margin-bottom: 6px; display: block;">
+                                <i class="fa-solid fa-chart-column"></i> VOLUME SURGE:
+                            </label>
+                            <select id="screener-pump-min-vol" class="dropdown-custom" style="font-weight: 700; background: #f8fafc; border-color: #cbd5e1;" onchange="loadPumpSniperData(true)">
+                                <option value="1.0">Semua Volume</option>
+                                <option value="1.5" selected>Min 1.5x Volume Normal</option>
+                                <option value="2.5">Min 2.5x Volume Normal</option>
+                                <option value="4.0">Min 4.0x Volume Meledak</option>
+                            </select>
+                        </div>
+
+                        <!-- SEARCH BOX -->
+                        <div class="filter-group" style="min-width: 150px;">
+                            <label style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 6px; display: block;">CARI KOIN:</label>
+                            <div class="search-box" style="width: 100%; position: relative;">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="screener-pump-search" placeholder="Cari koin..." style="padding-right: 28px;" oninput="onPumpSearchInput(this.value)">
+                                <button type="button" id="btn-clear-pump-search" onclick="clearPumpSearch()" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 0.85rem; display: none; padding: 2px 4px;">✕</button>
+                            </div>
+                        </div>
+
+                        <!-- ACTION BUTTONS -->
+                        <div class="filter-group" style="align-self: flex-end; margin-bottom: 2px; display: flex; gap: 8px;">
+                            <button class="btn-primary" style="background: #f59e0b; border-color: #f59e0b; color: #111; padding: 8px 16px; font-weight: 800; border-radius: 8px; display: flex; align-items: center; gap: 6px;" onclick="loadPumpSniperData(true)">
+                                <i class="fa-solid fa-radar"></i> Scan Pump Live
+                            </button>
+                        </div>
+
+                        <!-- UNIVERSE AUTO-SCANNER PRESETS FOR PUMP SNIPER -->
+                        <div class="universe-presets-row" style="width: 100%; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <span class="universe-presets-label" style="font-weight: 700; font-size: 0.82rem; color: #475569;"><i class="fa-solid fa-layer-group" style="color: #f59e0b;"></i> Scope Koin Pump:</span>
+                            <button type="button" class="btn-preset-scanner" data-pump-preset="top_10_pnl" onclick="applyPumpPreset('top_10_pnl')"><i class="fa-solid fa-crown"></i> Top 10 Major</button>
+                            <button type="button" class="btn-preset-scanner" data-pump-preset="top_25" onclick="applyPumpPreset('top_25')"><i class="fa-solid fa-fire"></i> Scan Top 25 Volatile</button>
+                            <button type="button" class="btn-preset-scanner active-preset" data-pump-preset="top_50" onclick="applyPumpPreset('top_50')"><i class="fa-solid fa-chart-simple"></i> Scan Top 50 Koin</button>
+                            <button type="button" class="btn-preset-scanner" data-pump-preset="all_coins" onclick="applyPumpPreset('all_coins')"><i class="fa-solid fa-globe"></i> Scan Seluruh 500+ Koin Binance</button>
                         </div>
                     </div>
 
@@ -1048,45 +1124,86 @@
                         </div>
                     </div>
 
-                    <!-- 3. HEADER SCREENER RADAR -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-top: 4px;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span class="tag-badge" id="screener-open-badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; font-weight: 800; border: 1px solid #10b981;">
-                                🟢 0 Sinyal Open Posisi Aktif
-                            </span>
-                            <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;" id="screener-strategy-desc-badge">
-                                Memindai kondisi lilin real-time Binance Futures
-                            </span>
+                    <!-- 3A. STRATEGY RADAR TABLE CONTAINER (MODE STRATEGY) -->
+                    <div id="screener-strategy-table-container">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-top: 4px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span class="tag-badge" id="screener-open-badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; font-weight: 800; border: 1px solid #10b981;">
+                                    🟢 0 Sinyal Open Posisi Aktif
+                                </span>
+                                <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;" id="screener-strategy-desc-badge">
+                                    Memindai kondisi lilin real-time Binance Futures
+                                </span>
+                            </div>
+                            <span id="screener-pairs-count" style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Menampilkan 0 Pair</span>
                         </div>
-                        <span id="screener-pairs-count" style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Menampilkan 0 Pair</span>
+
+                        <div class="table-responsive">
+                            <table class="data-table" id="screener-table">
+                                <thead>
+                                    <tr>
+                                        <th class="sortable-th" onclick="sortScreenerBy('symbol')">Pair Contract <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-symbol"></i></th>
+                                        <th class="sortable-th" onclick="sortScreenerBy('signal_badge')">Status Sinyal / Posisi <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-signal_badge"></i></th>
+                                        <th class="sortable-th" onclick="sortScreenerBy('signal_side')">Arah (Side) <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-signal_side"></i></th>
+                                        <th class="sortable-th" onclick="sortScreenerBy('entry_price')">Harga Entry (Sinyal) <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-entry_price"></i></th>
+                                        <th class="sortable-th" onclick="sortScreenerBy('current_price')">Harga Live <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-current_price"></i></th>
+                                        <th class="sortable-th" onclick="sortScreenerBy('live_pnl_pct')">Live PnL Est. ($ &amp; %) <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-live_pnl_pct"></i></th>
+                                        <th>Stop Loss (SL)</th>
+                                        <th>Take Profit (TP)</th>
+                                        <th>Kondisi Indikator</th>
+                                        <th class="sortable-th" onclick="sortScreenerBy('price_change_pct')">24h Chg <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-price_change_pct"></i></th>
+                                        <th>Aksi Cepat</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="screener-tbody">
+                                    <tr>
+                                        <td colspan="11" class="loading-cell" style="padding: 28px;">
+                                            <i class="fa-solid fa-spinner fa-spin"></i> Memindai seluruh pair aktif Binance Futures berdasarkan strategi yang dipilih...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
-                    <!-- 4. SCREENER RADAR DATA TABLE WITH HARGA ENTRY, HARGA LIVE & LIVE PNL -->
-                    <div class="table-responsive">
-                        <table class="data-table" id="screener-table">
-                            <thead>
-                                <tr>
-                                    <th class="sortable-th" onclick="sortScreenerBy('symbol')">Pair Contract <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-symbol"></i></th>
-                                    <th class="sortable-th" onclick="sortScreenerBy('signal_badge')">Status Sinyal / Posisi <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-signal_badge"></i></th>
-                                    <th class="sortable-th" onclick="sortScreenerBy('signal_side')">Arah (Side) <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-signal_side"></i></th>
-                                    <th class="sortable-th" onclick="sortScreenerBy('entry_price')">Harga Entry (Sinyal) <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-entry_price"></i></th>
-                                    <th class="sortable-th" onclick="sortScreenerBy('current_price')">Harga Live <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-current_price"></i></th>
-                                    <th class="sortable-th" onclick="sortScreenerBy('live_pnl_pct')">Live PnL Est. ($ &amp; %) <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-live_pnl_pct"></i></th>
-                                    <th>Stop Loss (SL)</th>
-                                    <th>Take Profit (TP)</th>
-                                    <th>Kondisi Indikator</th>
-                                    <th class="sortable-th" onclick="sortScreenerBy('price_change_pct')">24h Chg <i class="fa-solid fa-sort sort-icon" id="sort-icon-screen-price_change_pct"></i></th>
-                                    <th>Aksi Cepat</th>
-                                </tr>
-                            </thead>
-                            <tbody id="screener-tbody">
-                                <tr>
-                                    <td colspan="11" class="loading-cell" style="padding: 28px;">
-                                        <i class="fa-solid fa-spinner fa-spin"></i> Memindai seluruh pair aktif Binance Futures berdasarkan strategi yang dipilih...
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <!-- 3B. PUMP & VOLUME SPIKE SNIPER TABLE CONTAINER (MODE PUMP SNIPER) -->
+                    <div id="screener-pump-table-container" style="display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-top: 4px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span class="tag-badge" id="screener-pump-count-badge" style="background: rgba(245, 158, 11, 0.15); color: #d97706; font-weight: 800; border: 1px solid #f59e0b;">
+                                    🚀 0 Koin Terdeteksi Pump Spike
+                                </span>
+                                <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;" id="screener-pump-desc-badge">
+                                    Radar Real-Time Anomali Volume &amp; Lonjakan Harga Cepat
+                                </span>
+                            </div>
+                            <span id="screener-pump-total-count" style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Menampilkan 0 Koin</span>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="data-table" id="screener-pump-table">
+                                <thead>
+                                    <tr>
+                                        <th class="sortable-th" onclick="sortPumpBy('symbol')">Pair Contract <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-symbol"></i></th>
+                                        <th class="sortable-th" onclick="sortPumpBy('spike_1m_pct')">1m Candle Spike % <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-spike_1m_pct"></i></th>
+                                        <th class="sortable-th" onclick="sortPumpBy('spike_5m_pct')">5m Momentum % <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-spike_5m_pct"></i></th>
+                                        <th class="sortable-th" onclick="sortPumpBy('vol_multiplier')">Volume Surge (Nx) <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-vol_multiplier"></i></th>
+                                        <th class="sortable-th" onclick="sortPumpBy('rsi')">RSI (1m) <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-rsi"></i></th>
+                                        <th class="sortable-th" onclick="sortPumpBy('current_price')">Harga Live <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-current_price"></i></th>
+                                        <th class="sortable-th" onclick="sortPumpBy('price_change_pct')">24h Chg % <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-price_change_pct"></i></th>
+                                        <th>Status Deteksi</th>
+                                        <th>Aksi Snipe</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="screener-pump-tbody">
+                                    <tr>
+                                        <td colspan="9" class="loading-cell" style="padding: 28px;">
+                                            <i class="fa-solid fa-spinner fa-spin"></i> Memindai seluruh pasar untuk koin yang mengalami lonjakan harga &amp; volume...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </section>
             </div>

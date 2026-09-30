@@ -380,9 +380,43 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                     self.send_json({"success": False, "error": "Gagal mengambil data candle Binance"})
             except Exception as e:
                 self.send_json({"success": False, "error": str(e)})
-        elif parsed.path == "/api/screener/strategy-scan" or parsed.path == "/api/screener/scan":
+        elif parsed.path in ["/api/screener/strategy-scan", "/api/screener/scan", "/api/screener/pump-spikes"]:
             try:
+                import importlib
+                import src.screener_engine
+                importlib.reload(src.screener_engine)
                 from src.screener_engine import bollinger_screener
+
+                mode = query_params.get("mode", [query_params.get("type", ["strategy"])[0]])[0]
+                if parsed.path == "/api/screener/pump-spikes" or mode == "pump":
+                    tf = query_params.get("timeframe", ["1m"])[0]
+                    min_pct = float(query_params.get("min_pct", [2.0])[0])
+                    min_vol = float(query_params.get("min_vol_mult", [1.5])[0])
+                    limit = int(query_params.get("limit", [50])[0])
+                    preset = query_params.get("preset", [None])[0]
+                    symbols_raw = query_params.get("symbols", [None])[0]
+                    custom_symbols = [s.strip().upper() for s in symbols_raw.split(",") if s.strip()] if symbols_raw else None
+
+                    data = bollinger_screener.scan_pump_spikes(
+                        timeframe=tf,
+                        min_pct=min_pct,
+                        min_vol_mult=min_vol,
+                        limit=limit,
+                        preset=preset,
+                        custom_symbols=custom_symbols
+                    )
+                    pump_count = sum(1 for x in data if x.get("is_pump"))
+                    self.send_json({
+                        "success": True,
+                        "timeframe": tf,
+                        "min_pct": min_pct,
+                        "preset": preset,
+                        "count": len(data),
+                        "pump_count": pump_count,
+                        "pairs": data
+                    })
+                    return
+
                 strat_id = query_params.get("strategy", ["trend_rider_supertrend"])[0]
                 tf = query_params.get("timeframe", ["15m"])[0]
                 limit = int(query_params.get("limit", [50])[0])

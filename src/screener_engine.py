@@ -281,6 +281,114 @@ class BollingerScreenerEngine:
             return [x for x in results if x.get("is_open_signal")]
         return results
 
+    def _evaluate_pump_spike(self, symbol: str, timeframe: str = "1m") -> Optional[Dict[str, Any]]:
+        clean_sym = symbol.upper().strip()
+        if clean_sym in FUTURES_PAIR_MAPPING:
+            clean_sym = FUTURES_PAIR_MAPPING[clean_sym]
+
+        try:
+            from src.data_fetcher import fetch_fast_api_klines
+            df = fetch_fast_api_klines(clean_sym, timeframe, total_candles=50)
+            if df is None or len(df) < 20:
+                return None
+
+            curr_close = float(df['close'].iloc[-1])
+            curr_open = float(df['open'].iloc[-1])
+            curr_vol = float(df['volume'].iloc[-1]) if 'volume' in df.columns else 0.0
+
+            # 1m Candle Spike %
+            spike_1m_pct = ((curr_close - curr_open) / curr_open) * 100.0 if curr_open > 0 else 0.0
+            
+            # 5m Momentum %
+            five_bar_open = float(df['open'].iloc[-5]) if len(df) >= 5 else curr_open
+            spike_5m_pct = ((curr_close - five_bar_open) / five_bar_open) * 100.0 if five_bar_open > 0 else 0.0
+
+            # 15m Momentum %
+            fifteen_bar_open = float(df['open'].iloc[-15]) if len(df) >= 15 else five_bar_open
+            spike_15m_pct = ((curr_close - fifteen_bar_open) / fifteen_bar_open) * 100.0 if fifteen_bar_open > 0 else 0.0
+
+            # Volume Surge Multiplier
+            past_vols = df['volume'].iloc[-21:-1] if 'volume' in df.columns and len(df) >= 21 else pd.Series([curr_vol])
+            avg_vol = float(past_vols.mean()) if len(past_vols) > 0 else (curr_vol or 1.0)
+            vol_mult = round(curr_vol / (avg_vol + 1e-6), 1) if avg_vol > 0 else 1.0
+
+            # 1m RSI
+            rsi = self._calculate_rsi(df['close'].values, period=14)
+
+            # 24h Change % (estimate from 50 bars)
+            chg_24h = ((curr_close - df['close'].iloc[0]) / df['close'].iloc[0]) * 100.0 if df['close'].iloc[0] > 0 else 0.0
+
+            # Status Badge
+            if spike_1m_pct >= 5.0 or spike_5m_pct >= 8.0:
+                badge = f"🚀 SUPER PUMP (+{round(spike_1m_pct, 1)}%)"
+                badge_color = "#10b981"
+                status_desc = f"Lonjakan harga ekstrem +{round(spike_1m_pct, 2)}% dalam 1m"
+            elif vol_mult >= 3.0:
+                badge = f"⚡ VOL SURGE ({vol_mult}x)"
+                badge_color = "#f59e0b"
+                status_desc = f"Volume meledak {vol_mult}x lipat dari normal"
+            elif spike_1m_pct >= 2.5:
+                badge = f"🔥 MOMENTUM (+{round(spike_1m_pct, 1)}%)"
+                badge_color = "#06b6d4"
+                status_desc = f"Momentum bullish kuat +{round(spike_1m_pct, 2)}%"
+            elif spike_1m_pct <= -3.0:
+                badge = f"🔻 DUMP SPIKE ({round(spike_1m_pct, 1)}%)"
+                badge_color = "#f43f5e"
+                status_desc = f"Penurunan tajam {round(spike_1m_pct, 2)}%"
+            else:
+                badge = "📈 NORMAL SPIKE"
+                badge_color = "#8b5cf6"
+                status_desc = "Fluktuasi harga wajar"
+
+            return {
+                "symbol": clean_sym,
+                "current_price": curr_close,
+                "spike_1m_pct": round(spike_1m_pct, 2),
+                "spike_5m_pct": round(spike_5m_pct, 2),
+                "spike_15m_pct": round(spike_15m_pct, 2),
+                "vol_multiplier": vol_mult,
+                "current_volume": round(curr_vol, 2),
+                "rsi": round(rsi, 1),
+                "price_change_pct": round(chg_24h, 2),
+                "badge": badge,
+                "badge_color": badge_color,
+                "status_desc": status_desc,
+                "is_pump": (spike_1m_pct >= 2.0 or spike_5m_pct >= 4.0 or vol_mult >= 2.5)
+            }
+        except Exception:
+            return None
+
+    def scan_pump_spikes(self, timeframe: str = "1m", min_pct: float = 2.0, min_vol_mult: float = 1.5, limit: int = 50, preset: str = None, custom_symbols: List[str] = None) -> List[Dict[str, Any]]:
+        now = time.time()
+        preset_key = preset or ("custom" if custom_symbols else "all")
+        cache_key = f"pump_{timeframe}_{limit}_{preset_key}_{min_pct}_{min_vol_mult}"
+        
+        # 10 second fast cache for live pump sniper
+        if not custom_symbols and cache_key in self.cache:
+            entry = self.cache[cache_key]
+            if now - entry["ts"] < 10:
+                return entry["data"]
+
+        if custom_symbols and len(custom_symbols) > 0:
+            symbols = [s.upper().strip() for s in custom_symbols]
+        else:
+            symbols = self.get_top_symbols(limit=limit, preset=preset)
+
+        results = []
+        with ThreadPoolExecutor(max_workers=16) as executor:
+            futures = [executor.submit(self._evaluate_pump_spike, sym, timeframe) for sym in symbols]
+            for f in futures:
+                res = f.result()
+                if res:
+                    results.append(res)
+
+        # Sort by 1m spike % (terbesar ke terkecil), lalu oleh volume multiplier
+        results.sort(key=lambda x: (x.get("spike_1m_pct", 0), x.get("vol_multiplier", 0)), reverse=True)
+
+        if not custom_symbols:
+            self.cache[cache_key] = {"data": results, "ts": now}
+        return results
+
     def scan_all(self, timeframe: str = "15m", limit: int = 50) -> List[Dict[str, Any]]:
         now = time.time()
         cache_key = f"{timeframe}_{limit}"

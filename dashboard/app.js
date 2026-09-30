@@ -3939,8 +3939,17 @@ state.screenerSearch = '';
 state.screenerSortField = 'is_open_signal';
 state.screenerSortOrder = 'desc';
 state.screenerData = [];
-state.filteredScreenerData = [];
 state.screenerActiveSymbol = '1000PEPEUSDT';
+state.screenerRadarMode = 'strategy';
+state.pumpSniperData = [];
+state.filteredPumpData = [];
+state.pumpTimeframe = '1m';
+state.pumpMinPct = 3.0;
+state.pumpMinVol = 1.5;
+state.pumpSearch = '';
+state.pumpSortField = 'spike_1m_pct';
+state.pumpSortOrder = 'desc';
+state.pumpActivePreset = 'top_50';
 
 // --- 13. LIVE TRADINGVIEW CANDLESTICK CHART FOR SCREENER (100% EXACT COPY OF LIVE BOT CHART) ---
 let screenerChartInstance = null;
@@ -4854,7 +4863,7 @@ async function updateScreenerChart(symbol, timeframe, strategyId) {
 function changeScreenerChartTimeframe(tf) {
     const validTfs = ['1m', '5m', '15m', '1h', '4h', '1d'];
     const chosenTf = validTfs.includes(tf) ? tf : '15m';
-    state.screenerTimeframe = chosenTf;
+    state.screenerChartTimeframe = chosenTf;
 
     const btns = document.querySelectorAll('#screener-chart-tf-buttons .tf-btn');
     btns.forEach(b => {
@@ -4862,19 +4871,329 @@ function changeScreenerChartTimeframe(tf) {
         else b.classList.remove('active');
     });
 
-    const tfBtnsTop = document.querySelectorAll('#screener-tf-buttons .tf-btn');
-    tfBtnsTop.forEach(b => {
-        if (b.getAttribute('data-screener-tf') === chosenTf) b.classList.add('active');
-        else b.classList.remove('active');
-    });
-
     const overlay = document.getElementById('screener-chart-loading-overlay');
     if (overlay) overlay.style.display = 'flex';
     
-    updateScreenerChart(state.screenerActiveSymbol, state.screenerTimeframe, state.screenerStrategy);
-    loadStrategyScreenerData(true);
+    // Opsi A: Lock active coin on chart during multi-timeframe analysis
+    updateScreenerChart(state.screenerActiveSymbol, chosenTf, state.screenerStrategy);
 }
 window.changeScreenerChartTimeframe = changeScreenerChartTimeframe;
+
+function switchScreenerRadarMode(mode) {
+    state.screenerRadarMode = mode;
+    const btnStrat = document.getElementById('screener-mode-btn-strategy');
+    const btnPump = document.getElementById('screener-mode-btn-pump');
+    const rowStrat = document.getElementById('screener-strategy-filters-row');
+    const rowPump = document.getElementById('screener-pump-filters-row');
+    const tableStrat = document.getElementById('screener-strategy-table-container');
+    const tablePump = document.getElementById('screener-pump-table-container');
+
+    if (mode === 'pump') {
+        if (btnStrat) {
+            btnStrat.style.background = '#f8fafc';
+            btnStrat.style.color = '#475569';
+            btnStrat.style.borderColor = '#cbd5e1';
+            btnStrat.style.boxShadow = 'none';
+        }
+        if (btnPump) {
+            btnPump.style.background = '#ea580c';
+            btnPump.style.color = '#fff';
+            btnPump.style.borderColor = '#ea580c';
+            btnPump.style.boxShadow = '0 2px 4px rgba(234,88,12,0.2)';
+        }
+        if (rowStrat) rowStrat.style.display = 'none';
+        if (rowPump) rowPump.style.display = 'flex';
+        if (tableStrat) tableStrat.style.display = 'none';
+        if (tablePump) tablePump.style.display = 'block';
+
+        loadPumpSniperData(true);
+    } else {
+        if (btnStrat) {
+            btnStrat.style.background = '#ea580c';
+            btnStrat.style.color = '#fff';
+            btnStrat.style.borderColor = '#ea580c';
+            btnStrat.style.boxShadow = '0 2px 4px rgba(234,88,12,0.2)';
+        }
+        if (btnPump) {
+            btnPump.style.background = '#f8fafc';
+            btnPump.style.color = '#475569';
+            btnPump.style.borderColor = '#cbd5e1';
+            btnPump.style.boxShadow = 'none';
+        }
+        if (rowStrat) rowStrat.style.display = 'flex';
+        if (rowPump) rowPump.style.display = 'none';
+        if (tableStrat) tableStrat.style.display = 'block';
+        if (tablePump) tablePump.style.display = 'none';
+
+        loadStrategyScreenerData(true);
+    }
+}
+window.switchScreenerRadarMode = switchScreenerRadarMode;
+
+function changePumpSniperTimeframe(tf) {
+    const validTfs = ['1m', '5m', '15m'];
+    state.pumpTimeframe = validTfs.includes(tf) ? tf : '1m';
+    const btns = document.querySelectorAll('#screener-pump-tf-buttons .tf-btn');
+    btns.forEach(b => {
+        if (b.getAttribute('data-pump-tf') === state.pumpTimeframe) b.classList.add('active');
+        else b.classList.remove('active');
+    });
+    loadPumpSniperData(true);
+}
+window.changePumpSniperTimeframe = changePumpSniperTimeframe;
+
+function applyPumpPreset(presetKey) {
+    state.pumpActivePreset = presetKey;
+    const btns = document.querySelectorAll('.btn-preset-scanner[data-pump-preset]');
+    btns.forEach(b => {
+        if (b.getAttribute('data-pump-preset') === presetKey) b.classList.add('active-preset');
+        else b.classList.remove('active-preset');
+    });
+    loadPumpSniperData(true);
+}
+window.applyPumpPreset = applyPumpPreset;
+
+function onPumpSearchInput(val) {
+    state.pumpSearch = val ? val.toLowerCase().trim() : '';
+    const clearBtn = document.getElementById('btn-clear-pump-search');
+    if (clearBtn) clearBtn.style.display = val ? 'block' : 'none';
+    filterAndRenderPumpTable();
+}
+window.onPumpSearchInput = onPumpSearchInput;
+
+function clearPumpSearch() {
+    state.pumpSearch = '';
+    const input = document.getElementById('screener-pump-search');
+    if (input) input.value = '';
+    const clearBtn = document.getElementById('btn-clear-pump-search');
+    if (clearBtn) clearBtn.style.display = 'none';
+    filterAndRenderPumpTable();
+}
+window.clearPumpSearch = clearPumpSearch;
+
+function sortPumpBy(field) {
+    if (state.pumpSortField === field) {
+        state.pumpSortOrder = state.pumpSortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+        state.pumpSortField = field;
+        state.pumpSortOrder = 'desc';
+    }
+
+    const allIcons = document.querySelectorAll('#screener-pump-table .sort-icon');
+    allIcons.forEach(ic => {
+        ic.className = 'fa-solid fa-sort sort-icon';
+    });
+
+    const activeIcon = document.getElementById(`sort-icon-pump-${field}`);
+    if (activeIcon) {
+        activeIcon.className = `fa-solid ${state.pumpSortOrder === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} sort-icon active`;
+    }
+
+    filterAndRenderPumpTable();
+}
+window.sortPumpBy = sortPumpBy;
+
+async function loadPumpSniperData(forceRefresh = false) {
+    const tbody = document.getElementById('screener-pump-tbody');
+    const badgeEl = document.getElementById('screener-pump-count-badge');
+    const countEl = document.getElementById('screener-pump-total-count');
+    const minPctSelect = document.getElementById('screener-pump-min-pct');
+    const minVolSelect = document.getElementById('screener-pump-min-vol');
+
+    if (minPctSelect) state.pumpMinPct = parseFloat(minPctSelect.value) || 2.0;
+    if (minVolSelect) state.pumpMinVol = parseFloat(minVolSelect.value) || 1.5;
+
+    if (!tbody) return;
+
+    if (forceRefresh || state.pumpSniperData.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" class="loading-cell" style="padding: 28px; color: #64748b;">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.3rem; color: #f59e0b; margin-bottom: 6px; display: block;"></i>
+                    Memindai anomali lonjakan lilin [${state.pumpTimeframe}] & volume surge (${state.pumpActivePreset})...
+                </td>
+            </tr>
+        `;
+    }
+
+    try {
+        const presetParam = state.pumpActivePreset ? `&preset=${encodeURIComponent(state.pumpActivePreset)}` : '';
+        const url = `/api/screener/pump-spikes?timeframe=${encodeURIComponent(state.pumpTimeframe)}&min_pct=${encodeURIComponent(state.pumpMinPct)}&min_vol_mult=${encodeURIComponent(state.pumpMinVol)}&limit=60${presetParam}`;
+        const res = await fetch(url);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.pairs) {
+                state.pumpSniperData = data.pairs;
+                const pumpCount = data.pump_count || data.pairs.filter(p => p.is_pump).length;
+
+                if (badgeEl) {
+                    if (pumpCount > 0) {
+                        badgeEl.style.background = 'rgba(245, 158, 11, 0.15)';
+                        badgeEl.style.color = '#d97706';
+                        badgeEl.style.borderColor = '#f59e0b';
+                        badgeEl.innerHTML = `🚀 <strong>${pumpCount} Koin Terdeteksi Pump / Surge</strong> (${state.pumpTimeframe})`;
+                    } else {
+                        badgeEl.style.background = 'rgba(100, 116, 139, 0.1)';
+                        badgeEl.style.color = '#64748b';
+                        badgeEl.style.borderColor = '#cbd5e1';
+                        badgeEl.innerHTML = `⚪ 0 Pump Terdeteksi (${state.pumpTimeframe} Standby)`;
+                    }
+                }
+
+                if (countEl) {
+                    countEl.textContent = `Menampilkan ${data.pairs.length} Koin (${state.pumpTimeframe})`;
+                }
+
+                filterAndRenderPumpTable();
+                return;
+            }
+        }
+    } catch (e) {
+        console.warn('Gagal memuat data pump sniper:', e);
+    }
+
+    tbody.innerHTML = `<tr><td colspan="9" class="error-cell" style="padding: 24px; color: #e11d48;">Gagal memuat radar pump. Silakan klik "Scan Pump Live" untuk mencoba kembali.</td></tr>`;
+}
+window.loadPumpSniperData = loadPumpSniperData;
+
+function filterAndRenderPumpTable() {
+    const tbody = document.getElementById('screener-pump-tbody');
+    const countEl = document.getElementById('screener-pump-total-count');
+    if (!tbody) return;
+
+    let filtered = [...state.pumpSniperData];
+
+    // Filter by Min Pct Threshold
+    if (state.pumpMinPct > 0) {
+        filtered = filtered.filter(p => (p.spike_1m_pct >= state.pumpMinPct || p.spike_5m_pct >= state.pumpMinPct));
+    }
+
+    // Filter by Search Query
+    if (state.pumpSearch) {
+        const q = state.pumpSearch.toLowerCase().trim();
+        filtered = filtered.filter(p => p.symbol.toLowerCase().includes(q));
+    }
+
+    // Sorting
+    const field = state.pumpSortField || 'spike_1m_pct';
+    const order = state.pumpSortOrder || 'desc';
+    filtered.sort((a, b) => {
+        let valA = a[field];
+        let valB = b[field];
+
+        if (typeof valA === 'string') {
+            const comp = valA.localeCompare(valB || '');
+            return order === 'asc' ? comp : -comp;
+        }
+
+        valA = Number(valA || 0);
+        valB = Number(valB || 0);
+        return order === 'asc' ? valA - valB : valB - valA;
+    });
+
+    state.filteredPumpData = filtered;
+    if (countEl) {
+        countEl.textContent = `Menampilkan ${filtered.length} dari ${state.pumpSniperData.length} Koin (${state.pumpTimeframe})`;
+    }
+
+    tbody.innerHTML = '';
+    if (filtered.length === 0) {
+        if (state.pumpSearch) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="loading-cell" style="padding: 30px 15px; color: #64748b; background: #fafbfc;">
+                        <i class="fa-solid fa-filter-circle-xmark" style="font-size: 1.4rem; color: #94a3b8; display: block; margin-bottom: 6px;"></i>
+                        Tidak ada koin pump yang sesuai dengan pencarian <strong>"${state.pumpSearch}"</strong>.
+                        <div style="margin-top: 10px;">
+                            <button type="button" class="btn-clear-coins" onclick="clearPumpSearch()" style="padding: 4px 12px; font-size: 0.8rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; color: #334155; font-weight: 700;">
+                                ✕ Reset Pencarian "${state.pumpSearch}"
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="loading-cell" style="padding: 34px 20px; background: #fafbfc;">
+                        <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">
+                            <i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Saat ini belum ada koin yang lonjak &gt; +${state.pumpMinPct}% pada timeframe ${state.pumpTimeframe}
+                        </div>
+                        <div style="font-size: 0.85rem; color: #64748b; max-width: 600px; margin: 0 auto; line-height: 1.5;">
+                            Pasar sedang dalam volatilitas wajar. Anda dapat menurunkan ambang batas ke <strong>"🔥 &gt; +2.0%"</strong> atau mengganti interval ke <strong>"5m Spike"</strong> untuk memantau pergerakan lebih awal.
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+        return;
+    }
+
+    filtered.forEach(pair => {
+        const tr = document.createElement('tr');
+        const sp1m = Number(pair.spike_1m_pct || 0);
+        const sp5m = Number(pair.spike_5m_pct || 0);
+        const volN = Number(pair.vol_multiplier || 1.0);
+        const chg = Number(pair.price_change_pct || 0);
+
+        tr.style.cursor = 'pointer';
+        tr.onclick = () => selectScreenerChartCoin(pair.symbol);
+
+        if (pair.is_pump || sp1m >= 3.0) {
+            tr.style.background = 'rgba(245, 158, 11, 0.05)';
+        }
+
+        const sp1mSign = sp1m >= 0 ? '+' : '';
+        const sp1mColor = sp1m >= 3.0 ? '#10b981; font-weight:800;' : (sp1m > 0 ? '#059669;' : '#f43f5e;');
+        
+        const sp5mSign = sp5m >= 0 ? '+' : '';
+        const sp5mColor = sp5m >= 5.0 ? '#10b981; font-weight:800;' : (sp5m > 0 ? '#059669;' : '#f43f5e;');
+
+        const volColor = volN >= 3.0 ? '#ea580c; font-weight:800;' : (volN >= 1.5 ? '#d97706;' : '#64748b;');
+
+        tr.innerHTML = `
+            <td>
+                <strong style="color: #0f172a; font-size: 0.95rem;">${pair.symbol}</strong>
+                ${pair.is_pump ? '<span style="display:block; font-size:0.7rem; color:#d97706; font-weight:800;">⚡ MOMENTUM SPIKE</span>' : ''}
+            </td>
+            <td class="font-mono" style="font-size: 0.95rem; color: ${sp1mColor}">
+                ${sp1mSign}${sp1m.toFixed(2)}%
+            </td>
+            <td class="font-mono" style="font-size: 0.92rem; color: ${sp5mColor}">
+                ${sp5mSign}${sp5m.toFixed(2)}%
+            </td>
+            <td class="font-mono" style="font-size: 0.92rem; color: ${volColor}">
+                ${volN.toFixed(1)}x Vol Normal
+            </td>
+            <td class="font-mono" style="font-size: 0.88rem; color: ${pair.rsi >= 70 ? '#ef4444; font-weight:800;' : (pair.rsi <= 30 ? '#10b981; font-weight:800;' : '#64748b;')}">
+                ${pair.rsi || '-'}
+            </td>
+            <td class="font-mono" style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">
+                $${formatCleanPrice(pair.current_price)}
+            </td>
+            <td class="font-mono ${chg >= 0 ? 'text-profit font-bold' : 'text-loss font-bold'}" style="font-size: 0.85rem;">
+                ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%
+            </td>
+            <td>
+                <span class="tag-badge" style="background: ${pair.badge_color || '#64748b'}18; color: ${pair.badge_color || '#64748b'}; border: 1px solid ${pair.badge_color || '#64748b'}44; font-weight: 800;">
+                    ${pair.badge || 'NORMAL'}
+                </span>
+            </td>
+            <td>
+                <button class="btn-log-action" style="background: rgba(234, 88, 12, 0.12); border-color: #ea580c; color: #c2410c; font-weight: 800; margin-right: 4px; padding: 5px 8px; border-radius: 6px;" onclick="event.stopPropagation(); selectScreenerChartCoin('${pair.symbol}')" title="Buka Live Chart ${pair.symbol}">
+                    <i class="fa-solid fa-chart-candlestick"></i> Chart
+                </button>
+                <button class="btn-log-action" style="background: rgba(16, 185, 129, 0.18); border-color: #10b981; color: #059669; font-weight: 800; margin-right: 4px; padding: 5px 10px; border-radius: 6px;" onclick="event.stopPropagation(); openPaperTradeFromScreener('${pair.symbol}', 'LONG', ${pair.current_price})" title="Quick Snipe Buka Paper Trade Sekarang">
+                    <i class="fa-solid fa-bolt"></i> Snipe Long
+                </button>
+                <button class="btn-log-action" style="background: rgba(59, 130, 246, 0.12); border-color: #3b82f6; color: #2563eb; font-weight: 700; margin-right: 4px; padding: 5px 8px; border-radius: 6px;" onclick="event.stopPropagation(); addPairToBotWatchlist('${pair.symbol}')" title="Masukkan ke Watchlist Bot">
+                    <i class="fa-solid fa-plus"></i> Watchlist
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
 
 function updateScreenerPresetUI() {
     const presetBtns = document.querySelectorAll('.btn-preset-scanner[data-screener-preset]');
@@ -4920,7 +5239,7 @@ function selectScreenerChartCoin(symbol) {
     if (!screenerChartInstance) {
         initScreenerChart();
     } else {
-        updateScreenerChart(state.screenerActiveSymbol, state.screenerTimeframe, state.screenerStrategy);
+        updateScreenerChart(state.screenerActiveSymbol, state.screenerChartTimeframe || state.screenerTimeframe, state.screenerStrategy);
     }
     const card = document.getElementById('screener-chart-card');
     if (card) {
@@ -4985,16 +5304,20 @@ async function loadStrategyScreenerData(forceRefresh = false) {
                     stratDescEl.textContent = `Strategi: ${data.pairs[0]?.strategy_name || state.screenerStrategy}`;
                 }
 
-                // If active coin not in list or if there is an open position, pick first open position
-                const openPairs = data.pairs.filter(p => p.is_open_signal);
-                if (openPairs.length > 0 && (!state.screenerActiveSymbol || !openPairs.some(p => p.symbol === state.screenerActiveSymbol))) {
-                    state.screenerActiveSymbol = openPairs[0].symbol;
-                } else if (!state.screenerActiveSymbol && data.pairs.length > 0) {
-                    state.screenerActiveSymbol = data.pairs[0].symbol;
+                // Opsi A: Lock active coin if already set
+                if (!state.screenerActiveSymbol) {
+                    const openPairs = data.pairs.filter(p => p.is_open_signal);
+                    if (openPairs.length > 0) {
+                        state.screenerActiveSymbol = openPairs[0].symbol;
+                    } else if (data.pairs.length > 0) {
+                        state.screenerActiveSymbol = data.pairs[0].symbol;
+                    } else {
+                        state.screenerActiveSymbol = '1000PEPEUSDT';
+                    }
                 }
 
                 if (screenerChartInstance) {
-                    updateScreenerChart(state.screenerActiveSymbol, state.screenerTimeframe, state.screenerStrategy);
+                    updateScreenerChart(state.screenerActiveSymbol, state.screenerChartTimeframe || state.screenerTimeframe, state.screenerStrategy);
                 }
 
                 filterAndRenderScreenerTable();
@@ -5039,7 +5362,7 @@ function onScreenerStrategyChanged() {
         }
     }
     if (screenerChartInstance) {
-        updateScreenerChart(state.screenerActiveSymbol, state.screenerTimeframe, state.screenerStrategy);
+        updateScreenerChart(state.screenerActiveSymbol, state.screenerChartTimeframe || state.screenerTimeframe, state.screenerStrategy);
     }
     loadStrategyScreenerData(true);
     loadStrategyPositions();
@@ -5675,10 +5998,15 @@ window.selectScreenerChartCoin = selectScreenerChartCoin;
 window.applyScreenerPreset = applyScreenerPreset;
 window.quickSelectScreenerCoin = quickSelectScreenerCoin;
 window.updateScreenerPresetUI = updateScreenerPresetUI;
-// Backwards compatibility alias
-window.closeTursoPosition = closeStrategyPosition;
-window.loadTursoStrategyPositions = loadStrategyPositions;
-window.loadTursoClosedTrades = loadStrategyClosedTrades;
+window.switchScreenerRadarMode = switchScreenerRadarMode;
+window.changePumpSniperTimeframe = changePumpSniperTimeframe;
+window.applyPumpPreset = applyPumpPreset;
+window.onPumpSearchInput = onPumpSearchInput;
+window.clearPumpSearch = clearPumpSearch;
+window.sortPumpBy = sortPumpBy;
+window.loadPumpSniperData = loadPumpSniperData;
+window.filterAndRenderPumpTable = filterAndRenderPumpTable;
+
 
 
 
