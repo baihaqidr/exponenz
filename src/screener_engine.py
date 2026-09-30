@@ -96,7 +96,7 @@ class BollingerScreenerEngine:
 
         try:
             from src.data_fetcher import fetch_fast_api_klines
-            df = fetch_fast_api_klines(clean_sym, timeframe, total_candles=500)
+            df = fetch_fast_api_klines(clean_sym, timeframe, total_candles=1000)
             if df is None or len(df) < 30:
                 return None
 
@@ -137,9 +137,9 @@ class BollingerScreenerEngine:
                 s_val = float(sig_df['ema_slow'].iloc[-1])
                 indicator_summary = f"EMA9: ${round(f_val, 4)} | EMA21: ${round(s_val, 4)}"
 
-            # Run realistic backtest engine matching the Live Chart exactly
+            # Run realistic backtest engine matching the Live Chart & Backtest Matrix exactly
             is_long_only = getattr(strat, "is_long_only", False)
-            engine = BacktestEngine(initial_capital=1000.0, leverage=3.0, risk_per_trade_pct="fixed_250", is_long_only=is_long_only)
+            engine = BacktestEngine(initial_capital=1000.0, leverage=2.0, risk_per_trade_pct=0.02, is_long_only=is_long_only)
             bt_res = engine.run(sig_df)
             open_pos = bt_res.get("open_position")
 
@@ -154,7 +154,7 @@ class BollingerScreenerEngine:
             live_pnl_usd = 0.0
             default_notional = 50.0
 
-            # STRICT CRITERIA: A coin is marked as Active Open Signal ONLY if it currently holds an open position (BUY executed and NOT closed)
+            # STRICT CRITERIA: A coin is marked as Active Open Signal if it currently holds an open position or has an active unclosed entry
             if open_pos is not None:
                 is_open_signal = True
                 signal_side = open_pos.get("type", "LONG")
@@ -187,6 +187,37 @@ class BollingerScreenerEngine:
                     signal_badge = "🔴 POSISI SHORT AKTIF"
                     signal_color = "#f43f5e"
                     signal_desc = f"Posisi Short Terbuka ({holding_str})"
+            else:
+                # Check recent candle signals (within last 3 candles) if not yet exited
+                recent = sig_df.tail(3)
+                for idx in range(len(recent) - 1, -1, -1):
+                    r_row = recent.iloc[idx]
+                    if r_row.get('exit_long', 0) == 1:
+                        break
+                    if r_row.get('enter_long', 0) == 1 or r_row.get('signal', 0) == 1:
+                        is_open_signal = True
+                        signal_side = "LONG"
+                        entry_price = float(r_row['close'])
+                        signal_badge = "🟢 SINYAL BUY AKTIF"
+                        signal_color = "#10b981"
+                        signal_desc = "Sinyal Buy Baru Terkonfirmasi"
+                        if entry_price > 0:
+                            gross_pct = ((curr_price - entry_price) / entry_price) * 100.0
+                            live_pnl_pct = gross_pct - 0.08
+                            live_pnl_usd = (live_pnl_pct / 100.0) * default_notional
+                        break
+                    elif not is_long_only and (r_row.get('enter_short', 0) == 1 or r_row.get('signal', 0) == -1):
+                        is_open_signal = True
+                        signal_side = "SHORT"
+                        entry_price = float(r_row['close'])
+                        signal_badge = "🔴 SINYAL SHORT AKTIF"
+                        signal_color = "#f43f5e"
+                        signal_desc = "Sinyal Short Baru Terkonfirmasi"
+                        if entry_price > 0:
+                            gross_pct = ((entry_price - curr_price) / entry_price) * 100.0
+                            live_pnl_pct = gross_pct - 0.08
+                            live_pnl_usd = (live_pnl_pct / 100.0) * default_notional
+                        break
 
             return {
                 "symbol": clean_sym,

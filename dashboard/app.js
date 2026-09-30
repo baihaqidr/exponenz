@@ -5140,9 +5140,26 @@ function filterAndRenderScreenerTable() {
         countEl.textContent = `Menampilkan ${filtered.length} dari ${state.screenerData.length} Pair (${state.screenerTimeframe})`;
     }
 
+    const clearBtn = document.getElementById('btn-clear-screener-search');
+    if (clearBtn) clearBtn.style.display = state.screenerSearch ? 'block' : 'none';
+
     tbody.innerHTML = '';
     if (filtered.length === 0) {
-        if (state.screenerSignalMode === 'open_signals_only') {
+        if (state.screenerSearch) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="11" class="loading-cell" style="padding: 30px 15px; color: #64748b; background: #fafbfc;">
+                        <i class="fa-solid fa-filter-circle-xmark" style="font-size: 1.4rem; color: #94a3b8; display: block; margin-bottom: 6px;"></i>
+                        Tidak ada koin${state.screenerSignalMode === 'open_signals_only' ? ' dengan sinyal Open Position aktif' : ''} yang sesuai dengan pencarian <strong>"${state.screenerSearch}"</strong>.
+                        <div style="margin-top: 10px;">
+                            <button type="button" class="btn-clear-coins" onclick="clearScreenerSearch()" style="padding: 4px 12px; font-size: 0.8rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; color: #334155; font-weight: 700;">
+                                ✕ Reset Pencarian "${state.screenerSearch}"
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        } else if (state.screenerSignalMode === 'open_signals_only') {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="11" class="loading-cell" style="padding: 34px 20px; background: #fafbfc;">
@@ -5160,7 +5177,7 @@ function filterAndRenderScreenerTable() {
                 <tr>
                     <td colspan="11" class="loading-cell" style="padding: 30px 15px; color: #64748b; background: #fafbfc;">
                         <i class="fa-solid fa-filter-circle-xmark" style="font-size: 1.4rem; color: #94a3b8; display: block; margin-bottom: 6px;"></i>
-                        Tidak ada koin yang sesuai dengan pencarian <strong>"${state.screenerSearch}"</strong>.
+                        Tidak ada data koin yang tersedia untuk ditampilkan.
                     </td>
                 </tr>
             `;
@@ -5605,12 +5622,24 @@ function testPairInBacktest(symbol) {
     runMasterMatrix();
 }
 
+function clearScreenerSearch() {
+    state.screenerSearch = '';
+    const searchInput = document.getElementById('screener-search');
+    if (searchInput) searchInput.value = '';
+    const clearBtn = document.getElementById('btn-clear-screener-search');
+    if (clearBtn) clearBtn.style.display = 'none';
+    filterAndRenderScreenerTable();
+}
+window.clearScreenerSearch = clearScreenerSearch;
+
 // Bind Screener Filter Events
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('screener-search');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             state.screenerSearch = e.target.value;
+            const clearBtn = document.getElementById('btn-clear-screener-search');
+            if (clearBtn) clearBtn.style.display = e.target.value ? 'block' : 'none';
             filterAndRenderScreenerTable();
         });
     }
