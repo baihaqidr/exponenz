@@ -547,6 +547,7 @@ function switchTab(tab) {
     } else if (tab === 'screener') {
         if (tabBtnScreener) tabBtnScreener.classList.add('active');
         if (viewScreener) viewScreener.style.display = 'block';
+        setTimeout(initScreenerChart, 150);
         loadStrategyScreenerData();
         loadStrategyPositions();
     }
@@ -3930,7 +3931,7 @@ async function clientSideBollingerScan(timeframe = '15m') {
     return results;
 }
 
-// --- 13. MULTI-STRATEGY OPEN SIGNAL SCREENER ENGINE ---
+// --- 13. MULTI-STRATEGY OPEN SIGNAL SCREENER ENGINE WITH SYNCHRONIZED LIVE CHART ---
 state.screenerStrategy = 'trend_rider_supertrend';
 state.screenerTimeframe = '15m';
 state.screenerSignalMode = 'open_signals_only';
@@ -3939,6 +3940,294 @@ state.screenerSortField = 'is_open_signal';
 state.screenerSortOrder = 'desc';
 state.screenerData = [];
 state.filteredScreenerData = [];
+state.screenerActiveSymbol = '1000PEPEUSDT';
+
+let screenerChartInstance = null;
+let screenerCandleSeriesInstance = null;
+let screenerEmaLineSeriesInstance = null;
+let screenerUpperBandSeriesInstance = null;
+let screenerLowerBandSeriesInstance = null;
+let screenerRsiChartInstance = null;
+let screenerRsiSeriesInstance = null;
+let activeScreenerChartRequestId = 0;
+
+function initScreenerChart() {
+    const chartContainer = document.getElementById('screener-live-chart-container');
+    const rsiContainer = document.getElementById('screener-live-rsi-chart-container');
+    if (!chartContainer || !rsiContainer) return;
+
+    if (!screenerChartInstance) {
+        screenerChartInstance = LightweightCharts.createChart(chartContainer, {
+            width: chartContainer.clientWidth || 800,
+            height: 350,
+            layout: {
+                background: { color: '#ffffff' },
+                textColor: '#475569',
+                fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+            },
+            grid: {
+                vertLines: { color: 'rgba(226, 232, 240, 0.6)' },
+                horzLines: { color: 'rgba(226, 232, 240, 0.6)' }
+            },
+            crosshair: {
+                mode: LightweightCharts.CrosshairMode.Normal,
+                vertLine: { color: '#94a3b8', width: 1, style: 2 },
+                horzLine: { color: '#94a3b8', width: 1, style: 2 }
+            },
+            rightPriceScale: {
+                borderColor: '#cbd5e1',
+                autoScale: true,
+                scaleMargins: { top: 0.1, bottom: 0.2 }
+            },
+            timeScale: {
+                borderColor: '#cbd5e1',
+                timeVisible: true,
+                secondsVisible: false
+            }
+        });
+
+        screenerCandleSeriesInstance = screenerChartInstance.addCandlestickSeries({
+            upColor: '#0ecb81',
+            downColor: '#f6465d',
+            borderUpColor: '#0ecb81',
+            borderDownColor: '#f6465d',
+            wickUpColor: '#0ecb81',
+            wickDownColor: '#f6465d'
+        });
+
+        screenerUpperBandSeriesInstance = screenerChartInstance.addLineSeries({
+            color: '#06b6d4',
+            lineWidth: 1,
+            lineStyle: 2,
+            priceLineVisible: false
+        });
+
+        screenerEmaLineSeriesInstance = screenerChartInstance.addLineSeries({
+            color: '#f59e0b',
+            lineWidth: 2,
+            priceLineVisible: false
+        });
+
+        screenerLowerBandSeriesInstance = screenerChartInstance.addLineSeries({
+            color: '#ec4899',
+            lineWidth: 1,
+            lineStyle: 2,
+            priceLineVisible: false
+        });
+
+        screenerChartInstance.subscribeCrosshairMove(param => {
+            updateScreenerChartLegendHover(param);
+        });
+
+        window.addEventListener('resize', () => {
+            if (screenerChartInstance && chartContainer) {
+                screenerChartInstance.resize(chartContainer.clientWidth, 350);
+            }
+        });
+    }
+
+    if (!screenerRsiChartInstance) {
+        screenerRsiChartInstance = LightweightCharts.createChart(rsiContainer, {
+            width: rsiContainer.clientWidth || 800,
+            height: 90,
+            layout: {
+                background: { color: '#ffffff' },
+                textColor: '#64748b',
+                fontFamily: "'Inter', sans-serif"
+            },
+            grid: {
+                vertLines: { color: 'rgba(226, 232, 240, 0.4)' },
+                horzLines: { color: 'rgba(226, 232, 240, 0.4)' }
+            },
+            rightPriceScale: {
+                borderColor: '#cbd5e1',
+                scaleMargins: { top: 0.1, bottom: 0.1 }
+            },
+            timeScale: {
+                borderColor: '#cbd5e1',
+                visible: false
+            }
+        });
+
+        screenerRsiSeriesInstance = screenerRsiChartInstance.addLineSeries({
+            color: '#8b5cf6',
+            lineWidth: 1.5,
+            priceLineVisible: false
+        });
+
+        screenerRsiSeriesInstance.createPriceLine({ price: 70, color: '#ef4444', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: '70' });
+        screenerRsiSeriesInstance.createPriceLine({ price: 30, color: '#10b981', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: '30' });
+
+        screenerChartInstance.timeScale().subscribeVisibleLogicalRangeChange(range => {
+            screenerRsiChartInstance.timeScale().setVisibleLogicalRange(range);
+        });
+        screenerRsiChartInstance.timeScale().subscribeVisibleLogicalRangeChange(range => {
+            screenerChartInstance.timeScale().setVisibleLogicalRange(range);
+        });
+
+        window.addEventListener('resize', () => {
+            if (screenerRsiChartInstance && rsiContainer) {
+                screenerRsiChartInstance.resize(rsiContainer.clientWidth, 90);
+            }
+        });
+    }
+
+    const curSym = state.screenerActiveSymbol || '1000PEPEUSDT';
+    const curTf = state.screenerTimeframe || '15m';
+    const curStrat = state.screenerStrategy || 'trend_rider_supertrend';
+    updateScreenerChart(curSym, curTf, curStrat);
+}
+
+function updateScreenerChartLegendHover(param) {
+    const legendTime = document.getElementById('screener-legend-time');
+    const legendOpen = document.getElementById('screener-legend-open');
+    const legendHigh = document.getElementById('screener-legend-high');
+    const legendLow = document.getElementById('screener-legend-low');
+    const legendClose = document.getElementById('screener-legend-close');
+    const legendChange = document.getElementById('screener-legend-change');
+    const legendRange = document.getElementById('screener-legend-range');
+    const legendEma = document.getElementById('screener-legend-ema');
+    const legendUpper = document.getElementById('screener-legend-upper');
+    const legendUpperWrap = document.getElementById('screener-legend-upper-wrap');
+    const legendLower = document.getElementById('screener-legend-lower');
+    const legendLowerWrap = document.getElementById('screener-legend-lower-wrap');
+    const legendRsi = document.getElementById('screener-legend-rsi');
+
+    if (!param || !param.time || !param.seriesData) return;
+
+    const candle = param.seriesData.get(screenerCandleSeriesInstance);
+    if (candle) {
+        const d = new Date(param.time * 1000);
+        const timeStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} WIB`;
+        if (legendTime) legendTime.textContent = timeStr;
+        if (legendOpen) legendOpen.textContent = formatCleanPrice(candle.open);
+        if (legendHigh) legendHigh.textContent = formatCleanPrice(candle.high);
+        if (legendLow) legendLow.textContent = formatCleanPrice(candle.low);
+        if (legendClose) legendClose.textContent = formatCleanPrice(candle.close);
+
+        const chg = ((candle.close - candle.open) / candle.open) * 100;
+        const color = chg >= 0 ? '#0ecb81' : '#f6465d';
+        if (legendChange) {
+            legendChange.textContent = `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%`;
+            legendChange.style.color = color;
+        }
+        if (legendRange) {
+            const rng = ((candle.high - candle.low) / candle.low) * 100;
+            legendRange.textContent = `${rng.toFixed(2)}%`;
+        }
+    }
+
+    const ema = param.seriesData.get(screenerEmaLineSeriesInstance);
+    if (ema && legendEma) {
+        legendEma.textContent = formatCleanPrice(ema.value);
+    }
+    const upper = param.seriesData.get(screenerUpperBandSeriesInstance);
+    if (upper && legendUpper && legendUpperWrap) {
+        legendUpperWrap.style.display = 'inline';
+        legendUpper.textContent = formatCleanPrice(upper.value);
+    }
+    const lower = param.seriesData.get(screenerLowerBandSeriesInstance);
+    if (lower && legendLower && legendLowerWrap) {
+        legendLowerWrap.style.display = 'inline';
+        legendLower.textContent = formatCleanPrice(lower.value);
+    }
+    if (screenerRsiSeriesInstance) {
+        const rsi = param.seriesData.get(screenerRsiSeriesInstance);
+        if (rsi && legendRsi) {
+            legendRsi.textContent = Number(rsi.value).toFixed(1);
+        }
+    }
+}
+
+async function updateScreenerChart(symbol, timeframe, strategyId) {
+    if (!screenerChartInstance || !screenerCandleSeriesInstance) return;
+
+    const sym = symbol || state.screenerActiveSymbol || '1000PEPEUSDT';
+    const tf = timeframe || state.screenerTimeframe || '15m';
+    const stratId = strategyId || state.screenerStrategy || 'trend_rider_supertrend';
+
+    state.screenerActiveSymbol = sym;
+
+    const titleEl = document.getElementById('screener-chart-symbol-title');
+    if (titleEl) titleEl.textContent = `${sym} (${tf})`;
+
+    const overlay = document.getElementById('screener-chart-loading-overlay');
+    if (overlay) overlay.style.display = 'flex';
+
+    const reqId = ++activeScreenerChartRequestId;
+
+    try {
+        const url = `/api/chart/klines?symbol=${encodeURIComponent(sym)}&timeframe=${encodeURIComponent(tf)}&strategy=${encodeURIComponent(stratId)}&limit=1000`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (reqId !== activeScreenerChartRequestId) return;
+        if (overlay) overlay.style.display = 'none';
+
+        if (data.success && data.candles && data.candles.length > 0) {
+            const candles = data.candles;
+            const latestClose = candles[candles.length - 1].close;
+
+            // Update Header Display
+            const priceEl = document.getElementById('screener-chart-live-price');
+            if (priceEl) priceEl.textContent = `$${formatCleanPrice(latestClose, data.precision)}`;
+
+            const emaLegendEl = document.getElementById('screener-chart-ema-legend');
+            if (emaLegendEl && data.ema && data.ema.length > 0) {
+                const lastEma = data.ema[data.ema.length - 1].value;
+                emaLegendEl.textContent = `${data.strategy_name || 'Indikator'}: $${formatCleanPrice(lastEma, data.precision)}`;
+            }
+
+            const rsiHeaderEl = document.getElementById('screener-chart-rsi-header-badge');
+            if (rsiHeaderEl && data.rsi && data.rsi.length > 0) {
+                const lastRsi = data.rsi[data.rsi.length - 1].value;
+                rsiHeaderEl.textContent = `RSI (14): ${lastRsi}`;
+            }
+
+            // Set Price Format
+            const pOptions = {
+                priceFormat: {
+                    type: 'price',
+                    precision: data.precision || 2,
+                    minMove: data.min_move || 0.01
+                }
+            };
+            screenerCandleSeriesInstance.applyOptions(pOptions);
+            if (screenerEmaLineSeriesInstance) screenerEmaLineSeriesInstance.applyOptions(pOptions);
+            if (screenerUpperBandSeriesInstance) screenerUpperBandSeriesInstance.applyOptions(pOptions);
+            if (screenerLowerBandSeriesInstance) screenerLowerBandSeriesInstance.applyOptions(pOptions);
+
+            screenerCandleSeriesInstance.setData(candles);
+            if (screenerEmaLineSeriesInstance) screenerEmaLineSeriesInstance.setData(data.ema || []);
+            if (screenerUpperBandSeriesInstance) screenerUpperBandSeriesInstance.setData(data.upper_band || []);
+            if (screenerLowerBandSeriesInstance) screenerLowerBandSeriesInstance.setData(data.lower_band || []);
+            screenerCandleSeriesInstance.setMarkers(data.markers || []);
+
+            if (screenerRsiSeriesInstance && data.rsi && data.rsi.length > 0) {
+                screenerRsiSeriesInstance.setData(data.rsi);
+            }
+
+            screenerChartInstance.timeScale().fitContent();
+        }
+    } catch (e) {
+        if (overlay) overlay.style.display = 'none';
+        console.warn('Gagal memuat screener chart:', e);
+    }
+}
+
+function selectScreenerChartCoin(symbol) {
+    if (!symbol) return;
+    state.screenerActiveSymbol = symbol.toUpperCase().trim();
+    if (!screenerChartInstance) {
+        initScreenerChart();
+    } else {
+        updateScreenerChart(state.screenerActiveSymbol, state.screenerTimeframe, state.screenerStrategy);
+    }
+    const card = document.getElementById('screener-chart-card');
+    if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
 
 async function loadStrategyScreenerData(forceRefresh = false) {
     const tbody = document.getElementById('screener-tbody');
@@ -3956,8 +4245,8 @@ async function loadStrategyScreenerData(forceRefresh = false) {
     if (forceRefresh || state.screenerData.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="loading-cell" style="padding: 28px; color: #64748b;">
-                    <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.3rem; color: #f97316; margin-bottom: 6px; display: block;"></i>
+                <td colspan="11" class="loading-cell" style="padding: 28px; color: #64748b;">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.3rem; color: #ea580c; margin-bottom: 6px; display: block;"></i>
                     Memindai kondisi lilin [${state.screenerTimeframe}] untuk strategi <strong>${state.screenerStrategy}</strong> di seluruh pair Binance Futures...
                 </td>
             </tr>
@@ -3991,6 +4280,18 @@ async function loadStrategyScreenerData(forceRefresh = false) {
                     stratDescEl.textContent = `Strategi: ${data.pairs[0]?.strategy_name || state.screenerStrategy}`;
                 }
 
+                // If active coin not in list or if there is an open position, pick first open position
+                const openPairs = data.pairs.filter(p => p.is_open_signal);
+                if (openPairs.length > 0 && (!state.screenerActiveSymbol || !openPairs.some(p => p.symbol === state.screenerActiveSymbol))) {
+                    state.screenerActiveSymbol = openPairs[0].symbol;
+                } else if (!state.screenerActiveSymbol && data.pairs.length > 0) {
+                    state.screenerActiveSymbol = data.pairs[0].symbol;
+                }
+
+                if (screenerChartInstance) {
+                    updateScreenerChart(state.screenerActiveSymbol, state.screenerTimeframe, state.screenerStrategy);
+                }
+
                 filterAndRenderScreenerTable();
                 return;
             }
@@ -3999,37 +4300,7 @@ async function loadStrategyScreenerData(forceRefresh = false) {
         console.warn('Gagal memuat scan strategi screener:', e);
     }
 
-    // Fallback: try bollinger endpoint if failed
-    try {
-        const res2 = await fetch(`/api/screener/bollinger?timeframe=${state.screenerTimeframe}&limit=60`);
-        if (res2.ok) {
-            const data2 = await res2.json();
-            if (data2.success && data2.pairs) {
-                state.screenerData = data2.pairs.map(p => ({
-                    symbol: p.symbol,
-                    timeframe: state.screenerTimeframe,
-                    strategy_id: state.screenerStrategy,
-                    strategy_name: 'Bollinger Bands Volatility',
-                    current_price: p.current_price,
-                    is_open_signal: (Number(p.rsi || 50) <= 30.0) || (Number(p.percent_b || 50) <= 0.0),
-                    signal_side: (Number(p.rsi || 50) <= 30.0) ? 'LONG' : ((Number(p.rsi || 50) >= 70.0) ? 'SHORT' : 'STANDBY'),
-                    signal_badge: (Number(p.rsi || 50) <= 30.0) ? '🟢 OPEN LONG ENTRY' : ((Number(p.rsi || 50) >= 70.0) ? '🔴 OPEN SHORT ENTRY' : '⏳ STANDBY'),
-                    signal_color: (Number(p.rsi || 50) <= 30.0) ? '#10b981' : ((Number(p.rsi || 50) >= 70.0) ? '#f43f5e' : '#64748b'),
-                    sl_price: p.lower_band,
-                    tp_price: p.upper_band,
-                    rsi: p.rsi,
-                    bandwidth_pct: p.bandwidth_pct,
-                    indicator_summary: `RSI: ${p.rsi} | BBW: ${p.bandwidth_pct}%`,
-                    price_change_pct: p.price_change_pct,
-                    volume: p.volume
-                }));
-                filterAndRenderScreenerTable();
-                return;
-            }
-        }
-    } catch (err) {}
-
-    tbody.innerHTML = `<tr><td colspan="9" class="error-cell" style="padding: 24px; color: #e11d48;">Gagal memuat data screening pasar. Silakan klik "Scan Pasar" untuk mencoba kembali.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" class="error-cell" style="padding: 24px; color: #e11d48;">Gagal memuat data screening pasar. Silakan klik "Scan Pasar" untuk mencoba kembali.</td></tr>`;
 }
 
 function onScreenerStrategyChanged() {
@@ -4061,6 +4332,9 @@ function onScreenerStrategyChanged() {
             trackerTitle.textContent = `Posisi Terbuka Strategi: ${stratLabel}`;
         }
     }
+    if (screenerChartInstance) {
+        updateScreenerChart(state.screenerActiveSymbol, state.screenerTimeframe, state.screenerStrategy);
+    }
     loadStrategyScreenerData(true);
     loadStrategyPositions();
     if (state.strategySubTab === 'history') {
@@ -4086,6 +4360,10 @@ function changeScreenerTimeframe(tf) {
         if (b.getAttribute('data-screener-tf') === chosenTf) b.classList.add('active');
         else b.classList.remove('active');
     });
+
+    if (screenerChartInstance) {
+        updateScreenerChart(state.screenerActiveSymbol, state.screenerTimeframe, state.screenerStrategy);
+    }
 
     loadStrategyScreenerData(true);
 }
@@ -4190,6 +4468,9 @@ function filterAndRenderScreenerTable() {
         const sideColor = pair.signal_side === 'LONG' ? '#059669' : (pair.signal_side === 'SHORT' ? '#e11d48' : '#64748b');
         const chg = Number(pair.price_change_pct || 0);
 
+        tr.style.cursor = 'pointer';
+        tr.onclick = () => selectScreenerChartCoin(pair.symbol);
+
         if (isSignal) {
             tr.style.background = pair.signal_side === 'LONG' ? 'rgba(16, 185, 129, 0.05)' : 'rgba(244, 63, 94, 0.05)';
         }
@@ -4223,7 +4504,7 @@ function filterAndRenderScreenerTable() {
                 </span>
             </td>
             <td class="font-mono" style="font-size: 0.9rem; color: #475569; font-weight: 700;">
-                $${formatCleanPrice(pair.entry_price || pair.current_price)}
+                ${pair.entry_price > 0 ? '$' + formatCleanPrice(pair.entry_price) : '-'}
             </td>
             <td class="font-mono" style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">
                 $${formatCleanPrice(pair.current_price)}
@@ -4244,14 +4525,14 @@ function filterAndRenderScreenerTable() {
                 ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%
             </td>
             <td>
-                <button class="btn-log-action" style="background: rgba(16, 185, 129, 0.18); border-color: #10b981; color: #059669; font-weight: 800; margin-right: 4px; padding: 5px 10px; border-radius: 6px;" onclick="openPaperTradeFromScreener('${pair.symbol}', '${pair.signal_side || 'LONG'}', ${pair.current_price})" title="Eksekusi Simulasi Paper Trade Sekarang">
+                <button class="btn-log-action" style="background: rgba(234, 88, 12, 0.12); border-color: #ea580c; color: #c2410c; font-weight: 800; margin-right: 4px; padding: 5px 8px; border-radius: 6px;" onclick="event.stopPropagation(); selectScreenerChartCoin('${pair.symbol}')" title="Lihat Live Chart & Sinyal">
+                    <i class="fa-solid fa-chart-candlestick"></i> Chart
+                </button>
+                <button class="btn-log-action" style="background: rgba(16, 185, 129, 0.18); border-color: #10b981; color: #059669; font-weight: 800; margin-right: 4px; padding: 5px 10px; border-radius: 6px;" onclick="event.stopPropagation(); openPaperTradeFromScreener('${pair.symbol}', '${pair.signal_side || 'LONG'}', ${pair.current_price})" title="Eksekusi Simulasi Paper Trade Sekarang">
                     <i class="fa-solid fa-bolt"></i> Buka Paper Trade
                 </button>
-                <button class="btn-log-action" style="background: rgba(59, 130, 246, 0.12); border-color: #3b82f6; color: #2563eb; font-weight: 700; margin-right: 4px; padding: 5px 8px; border-radius: 6px;" onclick="addPairToBotWatchlist('${pair.symbol}')" title="Masukkan ke Watchlist Bot">
+                <button class="btn-log-action" style="background: rgba(59, 130, 246, 0.12); border-color: #3b82f6; color: #2563eb; font-weight: 700; margin-right: 4px; padding: 5px 8px; border-radius: 6px;" onclick="event.stopPropagation(); addPairToBotWatchlist('${pair.symbol}')" title="Masukkan ke Watchlist Bot">
                     <i class="fa-solid fa-plus"></i> Watchlist
-                </button>
-                <button class="btn-log-action" style="background: rgba(100, 116, 139, 0.12); border-color: #94a3b8; color: #475569; font-weight: 700; padding: 5px 8px; border-radius: 6px;" onclick="testPairInBacktest('${pair.symbol}')" title="Uji Backtest Strategi">
-                    <i class="fa-solid fa-chart-line"></i> Backtest
                 </button>
             </td>
         `;
@@ -4653,6 +4934,9 @@ window.submitNewStrategyPosition = submitNewStrategyPosition;
 window.closeStrategyPosition = closeStrategyPosition;
 window.loadStrategyPositions = loadStrategyPositions;
 window.loadStrategyClosedTrades = loadStrategyClosedTrades;
+window.initScreenerChart = initScreenerChart;
+window.updateScreenerChart = updateScreenerChart;
+window.selectScreenerChartCoin = selectScreenerChartCoin;
 // Backwards compatibility alias
 window.closeTursoPosition = closeStrategyPosition;
 window.loadTursoStrategyPositions = loadStrategyPositions;

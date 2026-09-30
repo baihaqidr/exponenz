@@ -8,13 +8,26 @@ from concurrent.futures import ThreadPoolExecutor
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+FUTURES_PAIR_MAPPING = {
+    "PEPEUSDT": "1000PEPEUSDT",
+    "SHIBUSDT": "1000SHIBUSDT",
+    "BONKUSDT": "1000BONKUSDT",
+    "FLOKIUSDT": "1000FLOKIUSDT",
+    "LUNCUSDT": "1000LUNCUSDT",
+    "RATSUSDT": "1000RATSUSDT",
+    "SATSUSDT": "1000SATSUSDT",
+    "CATUSDT": "1000CATUSDT",
+    "MOGUSDT": "1000MOGUSDT",
+    "NEIROCTOUSDT": "1000NEIROCTOUSDT",
+}
+
 class BollingerScreenerEngine:
     """
-    Mesin Screening Bollinger Bands Binance Futures Multi-Timeframe.
+    Mesin Screening Binance USDT-M Futures Multi-Timeframe.
     Menghitung:
     1. Bollinger Bandwidth (BBW%): (Upper - Lower) / Mid * 100%
     2. %B (Posisi Harga vs Bands): (Price - Lower) / (Upper - Lower)
-    3. Status Ekstrem: Super Expansion (Ledakan Tren) vs Super Squeeze (Persiapan Ledakan).
+    3. Status Ekstrem & Sinyal Open Position Strategi Stateful (100% Match dengan Live Chart).
     """
     def __init__(self):
         self.cache = {}
@@ -24,30 +37,38 @@ class BollingerScreenerEngine:
 
     def get_top_symbols(self, limit: int = 60) -> List[str]:
         now = time.time()
-        if self.symbols_cache and (now - self.symbols_cache_ts < 600):
+        if self.symbols_cache and (now - self.symbols_cache_ts < 300):
             return self.symbols_cache[:limit]
 
         symbols = []
         urls = [
-            "https://data-api.binance.vision/api/v3/ticker/24hr",
-            "https://api.binance.com/api/v3/ticker/24hr"
+            "https://fapi.binance.com/fapi/v1/ticker/24hr",
+            "https://testnet.binancefuture.com/fapi/v1/ticker/24hr",
+            "https://data-api.binance.vision/api/v3/ticker/24hr"
         ]
         headers = {'User-Agent': 'Mozilla/5.0'}
         for u in urls:
             try:
-                r = requests.get(u, headers=headers, verify=False, timeout=5)
+                r = requests.get(u, headers=headers, verify=False, timeout=4)
                 if r.status_code == 200:
                     data = r.json()
-                    if isinstance(data, list):
+                    if isinstance(data, list) and len(data) > 0:
                         usdt_pairs = [
                             x for x in data 
                             if x.get('symbol', '').endswith('USDT') 
                             and not any(x['symbol'].startswith(s) for s in ['USDC', 'FDUSD', 'TUSD', 'EUR', 'BUSD', 'DAI'])
                         ]
-                        # Urutkan berdasarkan quote volume 24h tertinggi
                         usdt_pairs.sort(key=lambda x: float(x.get('quoteVolume', 0)), reverse=True)
-                        symbols = [x['symbol'] for x in usdt_pairs]
-                        break
+                        mapped = []
+                        for x in usdt_pairs:
+                            s = x['symbol']
+                            if s in FUTURES_PAIR_MAPPING:
+                                s = FUTURES_PAIR_MAPPING[s]
+                            if s not in mapped:
+                                mapped.append(s)
+                        if mapped:
+                            symbols = mapped
+                            break
             except Exception:
                 continue
 
@@ -55,8 +76,9 @@ class BollingerScreenerEngine:
             symbols = [
                 "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "DOGEUSDT", "SUIUSDT", "NEARUSDT", "AVAXUSDT",
                 "XRPUSDT", "LINKUSDT", "ADAUSDT", "APTUSDT", "ARBUSDT", "OPUSDT", "INJUSDT", "TIAUSDT",
-                "RENDERUSDT", "FETUSDT", "TAOUSDT", "SEIUSDT", "WIFUSDT", "SHIBUSDT", "DOTUSDT", "LTCUSDT",
-                "PEPEUSDT", "1000PEPEUSDT", "SAGAUSDT", "ONEUSDT", "GTCUSDT", "MAGICUSDT", "TRXUSDT"
+                "RENDERUSDT", "FETUSDT", "TAOUSDT", "SEIUSDT", "WIFUSDT", "1000SHIBUSDT", "DOTUSDT", "LTCUSDT",
+                "1000PEPEUSDT", "1000BONKUSDT", "1000FLOKIUSDT", "ENAUSDT", "ASTERUSDT", "HBARUSDT", "VTHOUSDT",
+                "SAGAUSDT", "ONEUSDT", "GTCUSDT", "MAGICUSDT", "TRXUSDT"
             ]
 
         self.symbols_cache = symbols
@@ -88,179 +110,24 @@ class BollingerScreenerEngine:
                 rsi = 100.0 - (100.0 / (1.0 + rs))
         return float(rsi)
 
-    def _fetch_klines_and_calc_bb(self, symbol: str, timeframe: str = "15m", period: int = 20, std_dev: float = 2.0) -> Optional[Dict[str, Any]]:
-        clean_sym = symbol.upper().strip()
-        spot_sym = clean_sym[4:] if clean_sym.startswith("1000") else clean_sym
-
-        # Fetch Klines (70 candles for accurate RSI 14 & BB 20)
-        limit_count = 70
-        urls = [
-            f"https://data-api.binance.vision/api/v3/klines?symbol={spot_sym}&interval={timeframe}&limit={limit_count}",
-            f"https://testnet.binancefuture.com/fapi/v1/klines?symbol={clean_sym}&interval={timeframe}&limit={limit_count}"
-        ]
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        candles = None
-        for u in urls:
-            try:
-                r = requests.get(u, headers=headers, verify=False, timeout=3)
-                if r.status_code == 200:
-                    d = r.json()
-                    if isinstance(d, list) and len(d) >= period:
-                        candles = d
-                        break
-            except Exception:
-                continue
-
-        if not candles:
-            return None
-
-        try:
-            closes = np.array([float(c[4]) for c in candles], dtype=np.float64)
-            highs = np.array([float(c[2]) for c in candles], dtype=np.float64)
-            lows = np.array([float(c[3]) for c in candles], dtype=np.float64)
-            volumes = np.array([float(c[5]) for c in candles], dtype=np.float64)
-
-            curr_price = float(closes[-1])
-            curr_volume = float(volumes[-1])
-
-            # Hitung RSI (14 period)
-            rsi = self._calculate_rsi(closes, period=14)
-
-            # Hitung Bollinger Bands (SMA 20 & Standard Deviation 2.0)
-            window_closes = closes[-period:]
-            sma = float(np.mean(window_closes))
-            std = float(np.std(window_closes))
-
-            upper_band = sma + (std_dev * std)
-            lower_band = sma - (std_dev * std)
-
-            # Bollinger Bandwidth % (BBW)
-            if sma > 0:
-                bandwidth_pct = ((upper_band - lower_band) / sma) * 100.0
-            else:
-                bandwidth_pct = 0.0
-
-            # %B (Posisi relatif harga di dalam band: <0 = tembus bawah, >100 = tembus atas)
-            band_range = upper_band - lower_band
-            if band_range > 0:
-                percent_b = ((curr_price - lower_band) / band_range) * 100.0
-            else:
-                percent_b = 50.0
-
-            # 24h change estimasi dari candle awal
-            price_change_pct = ((curr_price - closes[0]) / closes[0]) * 100.0 if closes[0] > 0 else 0.0
-
-            # Klasifikasi Kondisi Bollinger & RSI Combo
-            is_oversold_combo = (curr_price <= lower_band or percent_b <= 0.0) and (rsi <= 30.0)
-            is_overbought_combo = (curr_price >= upper_band or percent_b >= 100.0) and (rsi >= 70.0)
-
-            if is_oversold_combo:
-                signal = "SUPER OVERSOLD (RSI < 30 & BELOW LOWER)"
-                signal_color = "#10b981"
-                signal_badge = "🚀 OVERSOLD LONG (RSI<30)"
-            elif is_overbought_combo:
-                signal = "SUPER OVERBOUGHT (RSI > 70 & ABOVE UPPER)"
-                signal_color = "#f43f5e"
-                signal_badge = "⚠️ OVERBOUGHT SHORT (RSI>70)"
-            elif percent_b >= 100.0:
-                signal = "SUPER BREAKOUT (ABOVE UPPER)"
-                signal_color = "#38bdf8"
-                signal_badge = "🔥 TEMBUS UPPER"
-            elif percent_b <= 0.0:
-                signal = "SUPER DUMP (BELOW LOWER)"
-                signal_color = "#fb7185"
-                signal_badge = "📉 TEMBUS LOWER"
-            elif rsi <= 30.0:
-                signal = "RSI OVERSOLD (RSI < 30)"
-                signal_color = "#34d399"
-                signal_badge = "💎 RSI OVERSOLD"
-            elif rsi >= 70.0:
-                signal = "RSI OVERBOUGHT (RSI > 70)"
-                signal_color = "#f87171"
-                signal_badge = "⚡ RSI OVERBOUGHT"
-            elif bandwidth_pct >= 12.0:
-                signal = "SUPER EXPANSION (HIGH VOLATILITY)"
-                signal_color = "#60a5fa"
-                signal_badge = "⚡ SUPER EXPANSION"
-            elif bandwidth_pct <= 3.0:
-                signal = "SUPER SQUEEZE (READY TO EXPLODE)"
-                signal_color = "#f59e0b"
-                signal_badge = "🎯 SUPER SQUEEZE"
-            else:
-                signal = "NORMAL VOLATILITY"
-                signal_color = "#64748b"
-                signal_badge = "NORMAL"
-
-            return {
-                "symbol": clean_sym,
-                "timeframe": timeframe,
-                "current_price": curr_price,
-                "rsi": round(rsi, 2),
-                "upper_band": round(upper_band, 6) if upper_band < 1 else round(upper_band, 4),
-                "mid_band": round(sma, 6) if sma < 1 else round(sma, 4),
-                "lower_band": round(lower_band, 6) if lower_band < 1 else round(lower_band, 4),
-                "bandwidth_pct": round(bandwidth_pct, 2),
-                "percent_b": round(percent_b, 1),
-                "price_change_pct": round(price_change_pct, 2),
-                "signal": signal,
-                "signal_color": signal_color,
-                "signal_badge": signal_badge,
-                "is_oversold_combo": is_oversold_combo,
-                "volume": round(curr_volume, 2)
-            }
-        except Exception as e:
-            return None
-
-    def _fetch_klines_df(self, symbol: str, timeframe: str = "15m", limit: int = 120) -> Optional[pd.DataFrame]:
-        clean_sym = symbol.upper().strip()
-        spot_sym = clean_sym[4:] if clean_sym.startswith("1000") else clean_sym
-
-        urls = [
-            f"https://data-api.binance.vision/api/v3/klines?symbol={spot_sym}&interval={timeframe}&limit={limit}",
-            f"https://testnet.binancefuture.com/fapi/v1/klines?symbol={clean_sym}&interval={timeframe}&limit={limit}",
-            f"https://api.binance.com/api/v3/klines?symbol={spot_sym}&interval={timeframe}&limit={limit}"
-        ]
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        candles = None
-        for u in urls:
-            try:
-                r = requests.get(u, headers=headers, verify=False, timeout=3.5)
-                if r.status_code == 200:
-                    d = r.json()
-                    if isinstance(d, list) and len(d) >= 20:
-                        candles = d
-                        break
-            except Exception:
-                continue
-
-        if not candles:
-            return None
-
-        try:
-            df = pd.DataFrame(candles, columns=[
-                'timestamp', 'open', 'high', 'low', 'close', 'volume',
-                'close_time', 'quote_volume', 'trades', 'taker_buy_base', 'taker_buy_quote', 'ignored'
-            ])
-            for col in ['open', 'high', 'low', 'close', 'volume']:
-                df[col] = df[col].astype(float)
-            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-            return df
-        except Exception:
-            return None
-
     def evaluate_symbol_strategy(self, symbol: str, strategy_id: str, timeframe: str = "15m") -> Optional[Dict[str, Any]]:
-        df = self._fetch_klines_df(symbol, timeframe, limit=120)
-        if df is None or len(df) < 20:
-            return None
+        clean_sym = symbol.upper().strip()
+        if clean_sym in FUTURES_PAIR_MAPPING:
+            clean_sym = FUTURES_PAIR_MAPPING[clean_sym]
 
         try:
+            from src.data_fetcher import fetch_fast_api_klines
+            df = fetch_fast_api_klines(clean_sym, timeframe, total_candles=500)
+            if df is None or len(df) < 30:
+                return None
+
             from src.strategy_registry import get_strategy_instance
             from src.backtester import BacktestEngine
             strat = get_strategy_instance(strategy_id)
             sig_df = strat.generate_signals(df)
 
             curr_price = float(df['close'].iloc[-1])
-            curr_volume = float(df['volume'].iloc[-1])
+            curr_volume = float(df['volume'].iloc[-1]) if 'volume' in df.columns else 0.0
             price_change_pct = ((curr_price - df['close'].iloc[0]) / df['close'].iloc[0]) * 100.0 if df['close'].iloc[0] > 0 else 0.0
 
             # Dynamic SL & TP extraction
@@ -291,34 +158,24 @@ class BollingerScreenerEngine:
                 s_val = float(sig_df['ema_slow'].iloc[-1])
                 indicator_summary = f"EMA9: ${round(f_val, 4)} | EMA21: ${round(s_val, 4)}"
 
-            # Run realistic backtest engine on candle sequence to find active open position
+            # Run realistic backtest engine matching the Live Chart exactly
             is_long_only = getattr(strat, "is_long_only", False)
             engine = BacktestEngine(initial_capital=1000.0, leverage=3.0, risk_per_trade_pct="fixed_250", is_long_only=is_long_only)
             bt_res = engine.run(sig_df)
             open_pos = bt_res.get("open_position")
-
-            # Also check raw triggers on latest candle
-            last_sig = int(sig_df['signal'].iloc[-1]) if ('signal' in sig_df and pd.notna(sig_df['signal'].iloc[-1])) else 0
-            enter_long = 1 if ('enter_long' in sig_df and pd.notna(sig_df['enter_long'].iloc[-1]) and float(sig_df['enter_long'].iloc[-1]) == 1) else (1 if last_sig == 1 else 0)
-            
-            if is_long_only:
-                enter_short = 0
-            elif 'enter_short' in sig_df:
-                enter_short = 1 if (pd.notna(sig_df['enter_short'].iloc[-1]) and float(sig_df['enter_short'].iloc[-1]) == 1) else 0
-            else:
-                enter_short = 1 if ('enter_long' not in sig_df and last_sig == -1) else 0
 
             is_open_signal = False
             signal_side = "STANDBY"
             signal_badge = "⏳ STANDBY"
             signal_color = "#64748b"
             signal_desc = "Menunggu konfirmasi setup strategi"
-            entry_price = curr_price
+            entry_price = 0.0
             holding_str = "-"
             live_pnl_pct = 0.0
             live_pnl_usd = 0.0
             default_notional = 50.0
 
+            # STRICT CRITERIA: A coin is marked as Active Open Signal ONLY if it currently holds an open position (BUY executed and NOT closed)
             if open_pos is not None:
                 is_open_signal = True
                 signal_side = open_pos.get("type", "LONG")
@@ -328,7 +185,7 @@ class BollingerScreenerEngine:
                 if entry_time:
                     try:
                         latest_time = df['timestamp'].iloc[-1]
-                        dur = latest_time - entry_time
+                        dur = pd.to_datetime(latest_time) - pd.to_datetime(entry_time)
                         dur_h = int(dur.total_seconds() // 3600)
                         dur_m = int((dur.total_seconds() % 3600) // 60)
                         holding_str = f"{dur_h}j {dur_m}m" if dur_h > 0 else f"{dur_m}m"
@@ -351,27 +208,9 @@ class BollingerScreenerEngine:
                     signal_badge = "🔴 POSISI SHORT AKTIF"
                     signal_color = "#f43f5e"
                     signal_desc = f"Posisi Short Terbuka ({holding_str})"
-            elif enter_long == 1:
-                is_open_signal = True
-                signal_side = "LONG"
-                entry_price = curr_price
-                signal_badge = "🟢 BARU TRIGGER LONG"
-                signal_color = "#10b981"
-                signal_desc = f"Trigger Buy/Long Aktif ({timeframe})"
-                live_pnl_pct = -0.08
-                live_pnl_usd = (live_pnl_pct / 100.0) * default_notional
-            elif enter_short == 1 and not is_long_only:
-                is_open_signal = True
-                signal_side = "SHORT"
-                entry_price = curr_price
-                signal_badge = "🔴 BARU TRIGGER SHORT"
-                signal_color = "#f43f5e"
-                signal_desc = f"Trigger Sell/Short Aktif ({timeframe})"
-                live_pnl_pct = -0.08
-                live_pnl_usd = (live_pnl_pct / 100.0) * default_notional
 
             return {
-                "symbol": symbol.upper().strip(),
+                "symbol": clean_sym,
                 "timeframe": timeframe,
                 "strategy_id": strategy_id,
                 "strategy_name": getattr(strat, "name", strategy_id),
@@ -388,8 +227,8 @@ class BollingerScreenerEngine:
                 "tp_price": round(tp_price, 6) if tp_price and tp_price < 1 else (round(tp_price, 4) if tp_price else None),
                 "rsi": round(rsi, 1),
                 "bandwidth_pct": round(bbw, 2),
-                "upper_band": round(upper_band, 4),
-                "lower_band": round(lower_band, 4),
+                "upper_band": round(upper_band, 6) if upper_band < 1 else round(upper_band, 4),
+                "lower_band": round(lower_band, 6) if lower_band < 1 else round(lower_band, 4),
                 "indicator_summary": indicator_summary,
                 "price_change_pct": round(price_change_pct, 2),
                 "volume": round(curr_volume, 2)
