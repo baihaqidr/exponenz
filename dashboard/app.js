@@ -5005,43 +5005,53 @@ async function loadPumpSniperData(forceRefresh = false) {
 
     if (!tbody) return;
 
-    if (forceRefresh || state.pumpSniperData.length === 0) {
+    if (forceRefresh || !state.pumpSniperData || state.pumpSniperData.length === 0) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="9" class="loading-cell" style="padding: 28px; color: #64748b;">
                     <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.3rem; color: #f59e0b; margin-bottom: 6px; display: block;"></i>
-                    Memindai anomali lonjakan lilin [${state.pumpTimeframe}] & volume surge (${state.pumpActivePreset})...
+                    Memindai anomali lonjakan lilin [${state.pumpTimeframe || '1m'}] & volume surge (${state.pumpActivePreset || 'top_50'})...
                 </td>
             </tr>
         `;
     }
 
     try {
-        const presetParam = state.pumpActivePreset ? `&preset=${encodeURIComponent(state.pumpActivePreset)}` : '';
-        const url = `/api/screener/pump-spikes?timeframe=${encodeURIComponent(state.pumpTimeframe)}&min_pct=${encodeURIComponent(state.pumpMinPct)}&min_vol_mult=${encodeURIComponent(state.pumpMinVol)}&limit=60${presetParam}`;
-        const res = await fetch(url);
+        const tf = state.pumpTimeframe || '1m';
+        const minPct = (state.pumpMinPct !== undefined) ? state.pumpMinPct : 2.0;
+        const minVol = (state.pumpMinVol !== undefined) ? state.pumpMinVol : 1.5;
+        const preset = state.pumpActivePreset || 'top_50';
+        const presetParam = preset ? `&preset=${encodeURIComponent(preset)}` : '';
+        
+        let url = `/api/screener/strategy-scan?strategy=pump_sniper&mode=pump&timeframe=${encodeURIComponent(tf)}&min_pct=${encodeURIComponent(minPct)}&min_vol_mult=${encodeURIComponent(minVol)}&limit=60${presetParam}`;
+        let res = await fetch(url);
+        if (!res.ok) {
+            url = `/api/screener/pump-spikes?timeframe=${encodeURIComponent(tf)}&min_pct=${encodeURIComponent(minPct)}&min_vol_mult=${encodeURIComponent(minVol)}&limit=60${presetParam}`;
+            res = await fetch(url);
+        }
+
         if (res.ok) {
             const data = await res.json();
             if (data.success && data.pairs) {
                 state.pumpSniperData = data.pairs;
-                const pumpCount = data.pump_count || data.pairs.filter(p => p.is_pump).length;
+                const pumpCount = (data.pump_count !== undefined) ? data.pump_count : data.pairs.filter(p => p.is_pump || (p.spike_1m_pct >= 2.0)).length;
 
                 if (badgeEl) {
                     if (pumpCount > 0) {
                         badgeEl.style.background = 'rgba(245, 158, 11, 0.15)';
                         badgeEl.style.color = '#d97706';
                         badgeEl.style.borderColor = '#f59e0b';
-                        badgeEl.innerHTML = `🚀 <strong>${pumpCount} Koin Terdeteksi Pump / Surge</strong> (${state.pumpTimeframe})`;
+                        badgeEl.innerHTML = `🚀 <strong>${pumpCount} Koin Terdeteksi Pump / Surge</strong> (${tf})`;
                     } else {
                         badgeEl.style.background = 'rgba(100, 116, 139, 0.1)';
                         badgeEl.style.color = '#64748b';
                         badgeEl.style.borderColor = '#cbd5e1';
-                        badgeEl.innerHTML = `⚪ 0 Pump Terdeteksi (${state.pumpTimeframe} Standby)`;
+                        badgeEl.innerHTML = `⚪ 0 Pump Terdeteksi (${tf} Standby)`;
                     }
                 }
 
                 if (countEl) {
-                    countEl.textContent = `Menampilkan ${data.pairs.length} Koin (${state.pumpTimeframe})`;
+                    countEl.textContent = `Menampilkan ${data.pairs.length} Koin (${tf})`;
                 }
 
                 filterAndRenderPumpTable();

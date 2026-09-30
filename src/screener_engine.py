@@ -247,6 +247,9 @@ class BollingerScreenerEngine:
             return None
 
     def scan_strategy(self, strategy_id: str = "trend_rider_supertrend", timeframe: str = "15m", limit: int = 50, signal_only: bool = False, preset: str = None, custom_symbols: List[str] = None) -> List[Dict[str, Any]]:
+        if strategy_id in ["pump_sniper", "pump", "pump_spikes"]:
+            return self.scan_pump_spikes(timeframe=timeframe, limit=limit, preset=preset, custom_symbols=custom_symbols)
+
         now = time.time()
         preset_key = preset or ("custom" if custom_symbols else "all")
         cache_key = f"strat_{strategy_id}_{timeframe}_{limit}_{preset_key}"
