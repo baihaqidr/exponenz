@@ -10,7 +10,6 @@ import urllib3
 import pandas as pd
 
 BINANCE_FUTURES_FAPI_URL = "https://fapi.binance.com/fapi/v1/klines"
-BINANCE_TESTNET_FAPI_URL = "https://testnet.binancefuture.com/fapi/v1/klines"
 BINANCE_PUBLIC_KLINES_URL = "https://data-api.binance.vision/api/v3/klines"
 BINANCE_FUTURES_MONTHLY_URL = "https://data.binance.vision/data/futures/um/monthly/klines"
 
