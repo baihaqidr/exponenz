@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg-dark { fill: #181818; }
+      .replit-orange { fill: #FF3C00; }
+      .warm-white { fill: #FAF6F1; }
+      .light-orange { fill: #FF764D; }
+    </style>
+  </defs>
+  
+  <!-- Canvas Background (Dark Terminal) -->
+  <rect width="512" height="512" rx="48" class="bg-dark"/>
+  
+  <!-- Alt 4: Replit 3-Tier "C + E" Synthesis (Dark Terminal Edition) -->
+  <g transform="translate(106, 106)">
+    <!-- Top "C" Arm (Off-White / Cream) -->
+    <rect x="0" y="0" width="280" height="60" rx="30" class="warm-white"/>
+    
+    <!-- Vertical "C" Spine (Off-White / Cream) -->
+    <rect x="0" y="0" width="60" height="300" rx="30" class="warm-white"/>
+    
+    <!-- Bottom "C" Arm (Off-White / Cream) -->
+    <rect x="0" y="240" width="280" height="60" rx="30" class="warm-white"/>
+    
+    <!-- Inner Exponential "E" Core (Replit Orange Thrust) -->
+    <rect x="40" y="120" width="220" height="60" rx="30" class="replit-orange"/>
+    
+    <!-- Leading Forward Indicator (Light Orange) -->
+    <rect x="230" y="120" width="50" height="60" rx="25" class="light-orange"/>
+  </g>
+</svg>

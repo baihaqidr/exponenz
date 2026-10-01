@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg { fill: #FAF6F1; }
+      .replit-orange { fill: #FF3C00; }
+    </style>
+  </defs>
+  
+  <!-- Canvas Background -->
+  <rect width="512" height="512" rx="48" class="bg"/>
+  
+  <!-- Alt 2: Monolithic C + E Hybrid (Deep C Cavity with Centered Replit Tongue) -->
+  <g transform="translate(116, 116)">
+    <path class="replit-orange" d="
+      M 32,0 
+      H 248 
+      C 265.673,0 280,14.327 280,32 
+      C 280,49.673 265.673,64 248,64 
+      H 80 
+      C 71.163,64 64,71.163 64,80 
+      V 112 
+      C 64,120.837 71.163,128 80,128 
+      H 176 
+      C 193.673,128 208,138.745 208,152 
+      C 208,165.255 193.673,176 176,176 
+      H 80 
+      C 71.163,176 64,183.163 64,192 
+      V 224 
+      C 64,232.837 71.163,240 80,240 
+      H 248 
+      C 265.673,240 280,254.327 280,272 
+      C 280,289.673 265.673,304 248,304 
+      H 32 
+      C 14.327,304 0,289.673 0,272 
+      V 32 
+      C 0,14.327 14.327,0 32,0 
+      Z
+    "/>
+  </g>
+</svg>
