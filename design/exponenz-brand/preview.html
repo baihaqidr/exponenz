@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EXPONENZ - Official Brand Identity &amp; Logo Alternatives</title>
+    <title>EXPONENZ - Replit-Style Logo Exploration</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
@@ -35,13 +35,13 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1280px;
             margin: 0 auto;
         }
 
         header {
             text-align: center;
-            margin-bottom: 48px;
+            margin-bottom: 40px;
             padding-bottom: 24px;
             border-bottom: 2px solid var(--warm-light-gray);
         }
@@ -71,6 +71,59 @@
             font-weight: 500;
         }
 
+        /* DNA Comparison Banner */
+        .dna-banner {
+            background: var(--white);
+            border: 2px solid var(--orange);
+            border-radius: 16px;
+            padding: 24px 32px;
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            box-shadow: 0 4px 20px rgba(255, 60, 0, 0.08);
+        }
+
+        .dna-info h3 {
+            font-size: 1.3rem;
+            font-weight: 900;
+            color: var(--off-black);
+            margin-bottom: 6px;
+        }
+
+        .dna-info p {
+            font-size: 0.92rem;
+            color: var(--medium-gray);
+        }
+
+        .dna-visuals {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .dna-box {
+            text-align: center;
+        }
+
+        .dna-box span {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-top: 6px;
+            color: var(--medium-gray);
+        }
+
+        .dna-box svg, .dna-box img {
+            width: 72px;
+            height: 72px;
+            border-radius: 12px;
+            background: var(--off-white);
+            padding: 8px;
+            border: 1px solid var(--warm-light-gray);
+        }
+
         .section-header {
             margin-top: 40px;
             margin-bottom: 24px;
@@ -93,7 +146,7 @@
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
             gap: 28px;
             margin-bottom: 48px;
         }
@@ -126,7 +179,7 @@
         }
 
         .card-title {
-            font-size: 1.15rem;
+            font-size: 1.2rem;
             font-weight: 800;
             display: flex;
             align-items: center;
@@ -134,10 +187,10 @@
         }
 
         .card-desc {
-            font-size: 0.88rem;
+            font-size: 0.9rem;
             color: var(--medium-gray);
             margin-top: 6px;
-            line-height: 1.4;
+            line-height: 1.45;
         }
 
         .card.dark-theme .card-desc {
@@ -148,11 +201,11 @@
             background: rgba(0, 0, 0, 0.02);
             border: 1px dashed var(--warm-light-gray);
             border-radius: 12px;
-            padding: 36px 20px;
+            padding: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 160px;
+            min-height: 220px;
             margin-bottom: 20px;
         }
 
@@ -164,9 +217,30 @@
         .logo-preview-box img, .logo-preview-box svg {
             max-width: 100%;
             height: auto;
-            max-height: 110px;
+            max-height: 180px;
         }
 
+        .btn-download {
+            background: var(--orange);
+            color: var(--white);
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.88rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+
+        .btn-download:hover {
+            opacity: 0.9;
+        }
+
+        /* PALETTE SECTION */
         .palette-section {
             background: var(--white);
             border: 1px solid var(--warm-light-gray);
@@ -203,116 +277,115 @@
             font-weight: 700;
             opacity: 0.85;
         }
-
-        .btn-download {
-            background: var(--orange);
-            color: var(--white);
-            border: none;
-            padding: 10px 18px;
-            border-radius: 8px;
-            font-weight: 700;
-            font-size: 0.88rem;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            text-decoration: none;
-            transition: opacity 0.2s;
-        }
-
-        .btn-download:hover {
-            opacity: 0.9;
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <div class="badge"><i class="fa-solid fa-sparkles"></i> OFFICIAL BRAND KIT</div>
+            <div class="badge"><i class="fa-solid fa-sparkles"></i> EXPONENZ BRAND SYSTEM</div>
             <h1>EXPONENZ</h1>
-            <p class="subtitle">Brand Identity &amp; Logo System terinspirasi dari Replit Design System</p>
+            <p class="subtitle">Eksplorasi Logo Bentuk 'E' dengan Pure Style &amp; Geometry Modular Replit</p>
         </header>
 
-        <!-- 4 ALTERNATIF BERBASIS SIMBOL 'E' DENGAN LASER HORIZON -->
+        <!-- DNA COMPARISON BANNER -->
+        <div class="dna-banner">
+            <div class="dna-info">
+                <h3><i class="fa-solid fa-dna" style="color: #FF3C00;"></i> Pure Replit Design Language Alignment</h3>
+                <p>Mengadopsi bentuk balok modular sudut tumpul (squircle/capsule pill radius), fillet interior terpadu, dan palet warna resmi Replit (#FF3C00 &amp; #181818).</p>
+            </div>
+            <div class="dna-visuals">
+                <div class="dna-box">
+                    <img src="../replit-brand/Logo%20Kit/Replit%20Primary%20Logo/Replit%20Symbol/Replit-Logo-Symbol.svg" alt="Replit Logo Original">
+                    <span>Replit Original</span>
+                </div>
+                <div style="font-size: 1.5rem; color: var(--medium-gray); font-weight: 900;">➔</div>
+                <div class="dna-box">
+                    <img src="./alternatives/Alt-1-Replit-Modular-E.svg" alt="Exponenz E Style">
+                    <span>Exponenz 'E'</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4 REPLIT-STYLE 'E' ALTERNATIVES -->
         <div class="section-header">
-            <h2><i class="fa-solid fa-layer-group" style="color: #FF3C00;"></i> 4 Alternatif Desain Berbasis Simbol 'E' Laser</h2>
-            <p>Eksplorasi 4 karakter visual berbeda berbasis bentuk 'E' dengan aksen laser horizon Replit Orange (#FF3C00)</p>
+            <h2><i class="fa-solid fa-shapes" style="color: #FF3C00;"></i> 4 Alternatif Logo 'E' Berbasis Style Replit</h2>
+            <p>Bentuk huruf 'E' yang dirancang menggunakan modul balok sudut tumpul khas arsitektur identitas Replit</p>
         </div>
 
         <div class="grid">
-            <!-- ALT 1: LASER HORIZON E -->
+            <!-- REPLIT ALT 1: MODULAR CONNECTED E -->
             <div class="card">
                 <div>
                     <div class="card-header">
                         <div class="card-title">
-                            <span><i class="fa-solid fa-bolt" style="color: #FF3C00;"></i> Alternatif 1: Laser Horizon E</span>
+                            <span><i class="fa-solid fa-cube" style="color: #FF3C00;"></i> 01. Replit Modular 'E' (Monolith)</span>
                             <span style="font-size: 0.75rem; color: var(--medium-gray);">Vector SVG</span>
                         </div>
-                        <p class="card-desc">Bentuk murni kurva geometris 'E' hitam pekat dengan potongan sinar laser horizontal gradasi Replit Orange (#FF3C00) membelah tengah.</p>
+                        <p class="card-desc">Bentuk huruf 'E' monolitik dengan batang vertikal yang menyambung mulus ke 3 lengan balok horizontal berujung kapsul tumpul khas Replit.</p>
                     </div>
                     <div class="logo-preview-box">
-                        <img src="./alternatives/Alt-1-Laser-Horizon.svg" alt="Alt 1 Laser Horizon E">
+                        <img src="./alternatives/Alt-1-Replit-Modular-E.svg" alt="Alt 1 Replit Modular E">
                     </div>
                 </div>
                 <div>
-                    <a href="./alternatives/Alt-1-Laser-Horizon.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download Alt 1 (SVG)</a>
+                    <a href="./alternatives/Alt-1-Replit-Modular-E.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download SVG</a>
                 </div>
             </div>
 
-            <!-- ALT 2: MODULAR BLOCK E -->
+            <!-- REPLIT ALT 2: 3-BRICK STACK -->
             <div class="card">
                 <div>
                     <div class="card-header">
                         <div class="card-title">
-                            <span><i class="fa-solid fa-cubes" style="color: #FF3C00;"></i> Alternatif 2: Modular Block E</span>
+                            <span><i class="fa-solid fa-cubes-stacked" style="color: #FF3C00;"></i> 02. Replit 3-Brick Architecture</span>
                             <span style="font-size: 0.75rem; color: var(--medium-gray);">Vector SVG</span>
                         </div>
-                        <p class="card-desc">Konsep arsitektur modular khas Replit: 3 balok geometris sudut membulat dengan pilar tengah Replit Orange menonjol ke depan.</p>
+                        <p class="card-desc">3 balok kapsul modular Replit terpisah yang diposisikan horizontal dengan tulang jangkar hitam `#181818` serta titik code prompt putih.</p>
                     </div>
                     <div class="logo-preview-box">
-                        <img src="./alternatives/Alt-2-Modular-Block.svg" alt="Alt 2 Modular Block E">
+                        <img src="./alternatives/Alt-2-Replit-Brick-Stack.svg" alt="Alt 2 Replit Brick Stack">
                     </div>
                 </div>
                 <div>
-                    <a href="./alternatives/Alt-2-Modular-Block.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download Alt 2 (SVG)</a>
+                    <a href="./alternatives/Alt-2-Replit-Brick-Stack.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download SVG</a>
                 </div>
             </div>
 
-            <!-- ALT 3: QUANT ASCENDING E -->
+            <!-- REPLIT ALT 3: SEAMLESS RIBBON E -->
             <div class="card">
                 <div>
                     <div class="card-header">
                         <div class="card-title">
-                            <span><i class="fa-solid fa-arrow-trend-up" style="color: #FF3C00;"></i> Alternatif 3: Quant Ascending E</span>
+                            <span><i class="fa-solid fa-bezier-curve" style="color: #FF3C00;"></i> 03. Seamless Fillet Ribbon 'E'</span>
                             <span style="font-size: 0.75rem; color: var(--medium-gray);">Vector SVG</span>
                         </div>
-                        <p class="card-desc">Kurva bulan sabit 'E' yang mengintegrasikan panah breakout eksponensial di tengahnya, melambangkan pertumbuhan profit kuantitatif.</p>
+                        <p class="card-desc">Menggunakan kurva kalkulasi presisi Replit dengan radius fillet interior yang halus, membentuk huruf 'E' yang sangat harmonis dan solid.</p>
                     </div>
                     <div class="logo-preview-box">
-                        <img src="./alternatives/Alt-3-Quant-Ascending.svg" alt="Alt 3 Quant Ascending E">
+                        <img src="./alternatives/Alt-3-Replit-Ribbon-E.svg" alt="Alt 3 Replit Ribbon E">
                     </div>
                 </div>
                 <div>
-                    <a href="./alternatives/Alt-3-Quant-Ascending.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download Alt 3 (SVG)</a>
+                    <a href="./alternatives/Alt-3-Replit-Ribbon-E.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download SVG</a>
                 </div>
             </div>
 
-            <!-- ALT 4: NEON FLARE DARK -->
+            <!-- REPLIT ALT 4: TERMINAL STEPPED E DARK -->
             <div class="card dark-theme">
                 <div>
                     <div class="card-header">
                         <div class="card-title">
-                            <span><i class="fa-solid fa-moon" style="color: #FF3C00;"></i> Alternatif 4: Neon Flare Terminal</span>
+                            <span><i class="fa-solid fa-terminal" style="color: #FF3C00;"></i> 04. Terminal Stepped 'E' (Dark)</span>
                             <span style="font-size: 0.75rem; color: var(--warm-light-gray);">Dark Mode SVG</span>
                         </div>
-                        <p class="card-desc">Varian High-Tech Trading Terminal: Outline 'E' minimalis dengan pendaran neon laser horizon tajam berlatar belakang gelap (#181818).</p>
+                        <p class="card-desc">Edisi Dark Mode Terminal: Menggabungkan balok Replit dengan balok tengah beraksen terang `#FF764D` yang melambangkan momentum eksponensial.</p>
                     </div>
                     <div class="logo-preview-box">
-                        <img src="./alternatives/Alt-4-Neon-Flare-Dark.svg" alt="Alt 4 Neon Flare Dark">
+                        <img src="./alternatives/Alt-4-Replit-Stepped-E-Dark.svg" alt="Alt 4 Replit Stepped E Dark">
                     </div>
                 </div>
                 <div>
-                    <a href="./alternatives/Alt-4-Neon-Flare-Dark.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download Alt 4 (SVG)</a>
+                    <a href="./alternatives/Alt-4-Replit-Stepped-E-Dark.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download SVG</a>
                 </div>
             </div>
         </div>

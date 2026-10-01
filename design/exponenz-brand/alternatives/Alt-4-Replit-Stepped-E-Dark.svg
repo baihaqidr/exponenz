@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg-dark { fill: #181818; }
+      .replit-orange { fill: #FF3C00; }
+      .accent-glow { fill: #FF764D; }
+      .cream-text { fill: #FAF6F1; }
+    </style>
+  </defs>
+  
+  <!-- Canvas Background (Replit Dark) -->
+  <rect width="512" height="512" rx="48" class="bg-dark"/>
+  
+  <!-- Alt 4: Replit Terminal Stepped "E" (Dark Edition with Quant Accent) -->
+  <g transform="translate(116, 116)">
+    <!-- Top Modular Block -->
+    <rect x="0" y="0" width="240" height="56" rx="28" class="replit-orange"/>
+    
+    <!-- Middle Extended Exponential Core Block (Bright Accent) -->
+    <rect x="0" y="116" width="280" height="56" rx="28" class="accent-glow"/>
+    
+    <!-- Bottom Modular Block -->
+    <rect x="0" y="232" width="240" height="56" rx="28" class="replit-orange"/>
+    
+    <!-- Left Vertical Anchor Stem -->
+    <rect x="0" y="0" width="56" height="288" rx="28" class="replit-orange"/>
+  </g>
+</svg>

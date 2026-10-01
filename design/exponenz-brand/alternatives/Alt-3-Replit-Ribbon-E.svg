@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg { fill: #FAF6F1; }
+      .replit-orange { fill: #FF3C00; }
+      .replit-dark { fill: #181818; }
+    </style>
+  </defs>
+  
+  <!-- Canvas Background -->
+  <rect width="512" height="512" rx="48" class="bg"/>
+  
+  <!-- Alt 3: Replit Continuous Ribbon "E" (Pure Replit Filleted Geometry) -->
+  <g transform="translate(116, 116)">
+    <!-- Seamless continuous path matching Replit's exact corner radius (R=28) and inner fillets -->
+    <path class="replit-orange" fill-rule="evenodd" d="
+      M 28,0 
+      H 240 
+      C 255.464,0 268,12.536 268,28 
+      C 268,43.464 255.464,56 240,56 
+      H 84 
+      C 68.536,56 56,68.536 56,84 
+      V 88 
+      C 56,103.464 68.536,116 84,116 
+      H 200 
+      C 215.464,116 228,128.536 228,144 
+      C 228,159.464 215.464,172 200,172 
+      H 84 
+      C 68.536,172 56,184.536 56,200 
+      V 204 
+      C 56,219.464 68.536,232 84,232 
+      H 240 
+      C 255.464,232 268,244.536 268,260 
+      C 268,275.464 255.464,288 240,288 
+      H 28 
+      C 12.536,288 0,275.464 0,260 
+      V 28 
+      C 0,12.536 12.536,0 28,0 
+      Z
+    "/>
+  </g>
+</svg>

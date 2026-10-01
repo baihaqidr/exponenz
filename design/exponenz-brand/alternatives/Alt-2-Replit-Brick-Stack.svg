@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg { fill: #FAF6F1; }
+      .replit-orange { fill: #FF3C00; }
+      .replit-dark { fill: #181818; }
+    </style>
+  </defs>
+  
+  <!-- Canvas Background -->
+  <rect width="512" height="512" rx="48" class="bg"/>
+  
+  <!-- Alt 2: Replit 3-Brick Modular Stack (Distinct Pill Architecture) -->
+  <g transform="translate(106, 116)">
+    <!-- Vertical Anchor Spine -->
+    <rect x="0" y="0" width="64" height="280" rx="32" class="replit-dark"/>
+    
+    <!-- Top Modular Arm (Replit Orange) -->
+    <rect x="24" y="0" width="276" height="64" rx="32" class="replit-orange"/>
+    
+    <!-- Middle Core Thrust Arm (Replit Orange) -->
+    <rect x="24" y="108" width="216" height="64" rx="32" class="replit-orange"/>
+    
+    <!-- Bottom Modular Arm (Replit Orange) -->
+    <rect x="24" y="216" width="276" height="64" rx="32" class="replit-orange"/>
+    
+    <!-- Central Prompt Indicator / Code Dot -->
+    <circle cx="32" cy="140" r="12" fill="#FAF6F1"/>
+  </g>
+</svg>

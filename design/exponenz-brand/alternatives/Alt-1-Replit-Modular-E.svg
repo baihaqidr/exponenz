@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg { fill: #FAF6F1; }
+      .replit-orange { fill: #FF3C00; }
+      .replit-dark { fill: #181818; }
+    </style>
+  </defs>
+  
+  <!-- Canvas Background -->
+  <rect width="512" height="512" rx="48" class="bg"/>
+  
+  <!-- Alt 1: Replit Pure Modular E (Monolithic Stem with 3 Rounded Bars) -->
+  <g transform="translate(116, 100)">
+    <path class="replit-orange" d="
+      M 32,0 
+      H 248 
+      C 265.673,0 280,14.327 280,32 
+      C 280,49.673 265.673,64 248,64 
+      H 80 
+      C 71.163,64 64,71.163 64,80 
+      V 108 
+      C 64,116.837 71.163,124 80,124 
+      H 216 
+      C 233.673,124 248,138.327 248,156 
+      C 248,173.673 233.673,188 216,188 
+      H 80 
+      C 71.163,188 64,195.163 64,204 
+      V 232 
+      C 64,240.837 71.163,248 80,248 
+      H 248 
+      C 265.673,248 280,262.327 280,280 
+      C 280,297.673 265.673,312 248,312 
+      H 32 
+      C 14.327,312 0,297.673 0,280 
+      V 32 
+      C 0,14.327 14.327,0 32,0 
+      Z
+    "/>
+  </g>
+</svg>
