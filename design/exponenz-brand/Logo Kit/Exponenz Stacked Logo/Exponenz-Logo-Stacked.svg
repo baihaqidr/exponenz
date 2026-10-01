@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 500 420">
+  <defs>
+    <style>
+      .exp-symbol {
+        fill: #FF3C00;
+      }
+      .exp-text {
+        fill: #181818;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+      }
+      .exp-sub {
+        fill: #767270;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 700;
+        letter-spacing: 0.28em;
+      }
+    </style>
+  </defs>
+
+  <!-- EXPONENZ GEOMETRIC SYMBOL (Centered) -->
+  <g transform="translate(155, 45)">
+    <!-- Bar 1 -->
+    <path class="exp-symbol" d="M0,140 L0,118 C0,112.5 4.5,108 10,108 L28,108 C33.5,108 38,112.5 38,118 L38,140 C38,145.5 33.5,150 28,150 L10,150 C4.5,150 0,145.5 0,140 Z"/>
+    
+    <!-- Bar 2 -->
+    <path class="exp-symbol" d="M48,140 L48,90 C48,84.5 52.5,80 58,80 L76,80 C81.5,80 86,84.5 86,90 L86,140 C86,145.5 81.5,150 76,150 L58,150 C52.5,150 48,145.5 48,140 Z"/>
+    
+    <!-- Bar 3 -->
+    <path class="exp-symbol" d="M96,140 L96,54 C96,48.5 100.5,44 106,44 L124,44 C129.5,44 134,48.5 134,54 L134,140 C134,145.5 129.5,150 124,150 L106,150 C100.5,150 96,145.5 96,140 Z"/>
+    
+    <!-- Bar 4 -->
+    <path class="exp-symbol" d="M144,140 L144,10 C144,4.5 148.5,0 154,0 L172,0 C177.5,0 182,4.5 182,10 L182,140 C182,145.5 177.5,150 172,150 L154,150 C148.5,150 144,145.5 144,140 Z"/>
+    
+    <!-- Dynamic Sweep Arc -->
+    <path d="M-8,148 C42,144 108,124 186,12 C189,8 195,12 192,17 C118,128 54,154 -6,156 C-11,156 -12,149 -8,148 Z" fill="#FF764D" opacity="0.95"/>
+  </g>
+
+  <!-- WORDMARK (Centered) -->
+  <text x="250" y="275" text-anchor="middle" class="exp-text" font-size="54">EXPONENZ</text>
+  <text x="250" y="315" text-anchor="middle" class="exp-sub" font-size="13">QUANT TRADING &amp; ANALYTICS</text>
+</svg>

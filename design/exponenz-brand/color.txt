@@ -1,0 +1,18 @@
+:root {
+  /* Primary Exponenz Brand Palette (100% Match with Replit Brand Kit) */
+  --color-exponenz-orange: #FF3C00;        /* Core Brand Color (Electric Replit Orange) */
+  --color-exponenz-light-orange: #FF764D;  /* Secondary Accent / Dynamic Gradient */
+  --color-exponenz-pale-orange: #FFB199;   /* Subtle Highlights */
+  
+  --color-exponenz-off-white: #FAF6F1;     /* Primary Canvas / Light Background */
+  --color-exponenz-warm-light-gray: #DBD4CF;/* Neutral Border / Dividers */
+  --color-exponenz-medium-gray: #767270;   /* Secondary Subtitles / Captions */
+  --color-exponenz-dark-gray: #312E2E;     /* Dark Mode Borders & Card Surface */
+  --color-exponenz-off-black: #181818;     /* Primary Typography & Dark Canvas */
+  
+  --color-exponenz-white: #FFFFFF;         /* Crisp White */
+  --color-exponenz-black: #000000;         /* True Black */
+  --color-exponenz-light-gray: #EDEDED;
+  --color-exponenz-light-silver: #E2E2E2;
+  --color-exponenz-silver: #C5C5C5;
+}

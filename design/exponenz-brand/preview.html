@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EXPONENZ - Official Brand Identity &amp; Logo Kit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --orange: #FF3C00;
+            --light-orange: #FF764D;
+            --off-white: #FAF6F1;
+            --off-black: #181818;
+            --dark-gray: #312E2E;
+            --medium-gray: #767270;
+            --warm-light-gray: #DBD4CF;
+            --white: #FFFFFF;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background-color: var(--off-white);
+            color: var(--off-black);
+            padding: 40px 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 48px;
+            padding-bottom: 24px;
+            border-bottom: 2px solid var(--warm-light-gray);
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(255, 60, 0, 0.12);
+            color: var(--orange);
+            font-size: 0.85rem;
+            font-weight: 800;
+            padding: 6px 14px;
+            border-radius: 999px;
+            margin-bottom: 12px;
+            letter-spacing: 0.05em;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+        }
+
+        p.subtitle {
+            font-size: 1.15rem;
+            color: var(--medium-gray);
+            font-weight: 500;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 28px;
+            margin-bottom: 48px;
+        }
+
+        .card {
+            background: var(--white);
+            border: 1px solid var(--warm-light-gray);
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .card.dark-theme {
+            background: var(--off-black);
+            border-color: var(--dark-gray);
+            color: var(--white);
+        }
+
+        .card-header {
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-preview-box {
+            background: rgba(0, 0, 0, 0.02);
+            border: 1px dashed var(--warm-light-gray);
+            border-radius: 12px;
+            padding: 36px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 180px;
+            margin-bottom: 20px;
+        }
+
+        .card.dark-theme .logo-preview-box {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: var(--dark-gray);
+        }
+
+        .logo-preview-box svg {
+            max-width: 100%;
+            height: auto;
+            max-height: 120px;
+        }
+
+        .palette-section {
+            background: var(--white);
+            border: 1px solid var(--warm-light-gray);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 48px;
+        }
+
+        .palette-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .color-chip {
+            border-radius: 10px;
+            padding: 16px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 110px;
+        }
+
+        .color-name {
+            font-weight: 800;
+            font-size: 0.85rem;
+        }
+
+        .color-hex {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            font-weight: 700;
+            opacity: 0.85;
+        }
+
+        .btn-download {
+            background: var(--orange);
+            color: var(--white);
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.88rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+
+        .btn-download:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="badge"><i class="fa-solid fa-sparkles"></i> OFFICIAL BRAND KIT</div>
+            <h1>EXPONENZ</h1>
+            <p class="subtitle">Brand Identity &amp; Logo System terinspirasi dari Replit Design System</p>
+        </header>
+
+        <div class="grid">
+            <!-- 1. PRIMARY LOGO (LIGHT) -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span><i class="fa-solid fa-sun" style="color: #FF3C00;"></i> Primary Logo (Light)</span>
+                        <span style="font-size: 0.75rem; color: var(--medium-gray);">Vector SVG</span>
+                    </div>
+                </div>
+                <div class="logo-preview-box">
+                    <img src="./Logo Kit/Exponenz Primary Logo/Exponenz-Logo-Primary.svg" alt="Exponenz Primary Logo" style="max-height: 90px; width: auto;">
+                </div>
+                <div>
+                    <a href="./Logo Kit/Exponenz Primary Logo/Exponenz-Logo-Primary.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download SVG</a>
+                </div>
+            </div>
+
+            <!-- 2. PRIMARY LOGO (DARK MODE) -->
+            <div class="card dark-theme">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span><i class="fa-solid fa-moon" style="color: #FF3C00;"></i> Primary Logo (Dark)</span>
+                        <span style="font-size: 0.75rem; color: #DBD4CF;">Vector SVG</span>
+                    </div>
+                </div>
+                <div class="logo-preview-box">
+                    <img src="./Logo Kit/Exponenz Primary Logo/Exponenz-Logo-Dark.svg" alt="Exponenz Dark Logo" style="max-height: 90px; width: auto;">
+                </div>
+                <div>
+                    <a href="./Logo Kit/Exponenz Primary Logo/Exponenz-Logo-Dark.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download SVG</a>
+                </div>
+            </div>
+
+            <!-- 3. BRAND SYMBOL ONLY -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span><i class="fa-solid fa-shapes" style="color: #FF3C00;"></i> Symbol Only (Favicon &amp; App Icon)</span>
+                        <span style="font-size: 0.75rem; color: var(--medium-gray);">Vector SVG</span>
+                    </div>
+                </div>
+                <div class="logo-preview-box">
+                    <img src="./Logo Kit/Exponenz Symbol/Exponenz-Symbol.svg" alt="Exponenz Symbol" style="max-height: 100px; width: auto;">
+                </div>
+                <div>
+                    <a href="./Logo Kit/Exponenz Symbol/Exponenz-Symbol.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download SVG</a>
+                </div>
+            </div>
+
+            <!-- 4. STACKED LOGO -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span><i class="fa-solid fa-layer-group" style="color: #FF3C00;"></i> Stacked Logo (Centered)</span>
+                        <span style="font-size: 0.75rem; color: var(--medium-gray);">Vector SVG</span>
+                    </div>
+                </div>
+                <div class="logo-preview-box">
+                    <img src="./Logo Kit/Exponenz Stacked Logo/Exponenz-Logo-Stacked.svg" alt="Exponenz Stacked Logo" style="max-height: 130px; width: auto;">
+                </div>
+                <div>
+                    <a href="./Logo Kit/Exponenz Stacked Logo/Exponenz-Logo-Stacked.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download SVG</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- BRAND COLOR PALETTE -->
+        <div class="palette-section">
+            <h2 style="font-size: 1.4rem; font-weight: 900; margin-bottom: 6px;"><i class="fa-solid fa-palette" style="color: #FF3C00;"></i> Replit Matching Color Palette</h2>
+            <p style="color: var(--medium-gray); font-size: 0.95rem;">Palet warna resmi yang serasi dengan Replit Brand System</p>
+
+            <div class="palette-grid">
+                <div class="color-chip" style="background: #FF3C00; color: #FFFFFF;">
+                    <span class="color-name">Replit Orange</span>
+                    <span class="color-hex">#FF3C00</span>
+                </div>
+                <div class="color-chip" style="background: #FF764D; color: #FFFFFF;">
+                    <span class="color-name">Light Orange</span>
+                    <span class="color-hex">#FF764D</span>
+                </div>
+                <div class="color-chip" style="background: #181818; color: #FFFFFF;">
+                    <span class="color-name">Off Black</span>
+                    <span class="color-hex">#181818</span>
+                </div>
+                <div class="color-chip" style="background: #FAF6F1; color: #181818;">
+                    <span class="color-name">Off White</span>
+                    <span class="color-hex">#FAF6F1</span>
+                </div>
+                <div class="color-chip" style="background: #767270; color: #FFFFFF;">
+                    <span class="color-name">Medium Gray</span>
+                    <span class="color-hex">#767270</span>
+                </div>
+                <div class="color-chip" style="background: #DBD4CF; color: #181818;">
+                    <span class="color-name">Warm Light Gray</span>
+                    <span class="color-hex">#DBD4CF</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
