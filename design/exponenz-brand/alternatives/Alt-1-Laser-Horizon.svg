@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 960 300">
+  <defs>
+    <style>
+      .cls-black { fill: #181818; }
+      .cls-orange { fill: #FF3C00; }
+      .cls-text {
+        fill: #181818;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+      }
+      .cls-sub {
+        fill: #767270;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 700;
+        letter-spacing: 0.28em;
+      }
+    </style>
+    <linearGradient id="laserGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF764D" stop-opacity="0.2"/>
+      <stop offset="25%" stop-color="#FF3C00" stop-opacity="0.9"/>
+      <stop offset="50%" stop-color="#FFA800" stop-opacity="1"/>
+      <stop offset="75%" stop-color="#FF3C00" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#FF764D" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ICON: Laser Horizon E -->
+  <g transform="translate(60, 40)">
+    <!-- Upper & Lower Crescent of E -->
+    <path class="cls-black" d="M125,25 C70,25 25,70 25,125 C25,180 70,225 125,225 L165,225 C173,225 180,218 180,210 L180,195 C180,187 173,180 165,180 L125,180 C95,180 70,155 70,125 C70,95 95,70 125,70 L165,70 C173,70 180,63 180,55 L180,40 C180,32 173,25 165,25 Z"/>
+    
+    <!-- Central Laser Horizon Streak -->
+    <polygon points="0,125 75,116 160,116 220,125 160,134 75,134" fill="url(#laserGrad)"/>
+    <ellipse cx="115" cy="125" rx="14" ry="4" fill="#FFFFFF" opacity="0.9"/>
+  </g>
+
+  <!-- WORDMARK: EXPONENZ -->
+  <text x="320" y="152" class="cls-text" font-size="78">EXPONENZ</text>
+  <text x="324" y="196" class="cls-sub" font-size="16">QUANT TRADING &amp; ANALYTICS</text>
+</svg>

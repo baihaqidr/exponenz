@@ -1,0 +1,15 @@
+:root {
+  --color-replit-orange: #FF3C00;
+  --color-replit-off-white: #FAF6F1;
+  --color-replit-light-orange: #FF764D;
+  --color-replit-pale-orange: #FFB199;
+  --color-replit-warm-light-gray: #DBD4CF;
+  --color-replit-medium-gray: #767270;
+  --color-replit-dark-gray: #312E2E;
+  --color-replit-off-black: #181818;
+  --color-replit-white: #FFFFFF;
+  --color-replit-light-gray: #EDEDED;
+  --color-replit-light-silver: #E2E2E2;
+  --color-replit-silver: #C5C5C5;
+  --color-replit-black: #000000;
+}

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 960 300">
+  <defs>
+    <style>
+      .cls-dark { fill: #181818; }
+      .cls-orange { fill: #FF3C00; }
+      .cls-text {
+        fill: #181818;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+      }
+      .cls-sub {
+        fill: #767270;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 700;
+        letter-spacing: 0.28em;
+      }
+    </style>
+  </defs>
+
+  <!-- ICON: Quant Ascending E (Crescent + Breakout Wave) -->
+  <g transform="translate(60, 40)">
+    <!-- Base Crescent Curve -->
+    <path class="cls-dark" d="M125,25 C70,25 25,70 25,125 C25,180 70,225 125,225 C145,225 163,219 178,208 C183,204 181,196 175,195 C145,190 120,172 105,145 L70,145 C62,145 58,135 64,130 L95,105 C98,103 103,103 106,106 L125,125 L160,80 L145,80 C138,80 134,70 140,65 L190,25 C194,22 200,25 198,30 L185,85 C183,92 173,94 168,88 L160,80 L128,122 L110,104 L78,130 L115,130 C125,150 145,165 170,170 C175,171 178,176 175,181 C162,204 135,215 110,215 C60,215 35,175 35,125 C35,75 60,35 110,35 C135,35 160,46 175,65 C178,69 184,69 187,65 C192,58 190,52 185,47 C168,33 148,25 125,25 Z"/>
+    
+    <!-- Dynamic Ascending Breakout Arrow -->
+    <polygon points="120,140 140,115 175,70 155,70 195,30 185,80 165,80 135,122" fill="#FF3C00"/>
+  </g>
+
+  <!-- WORDMARK: EXPONENZ -->
+  <text x="320" y="152" class="cls-text" font-size="78">EXPONENZ</text>
+  <text x="324" y="196" class="cls-sub" font-size="16">QUANT TRADING &amp; ANALYTICS</text>
+</svg>

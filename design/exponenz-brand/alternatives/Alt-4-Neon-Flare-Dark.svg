@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 960 300">
+  <defs>
+    <style>
+      .bg-dark { fill: #181818; }
+      .cls-neon-e {
+        fill: none;
+        stroke: #FF3C00;
+        stroke-width: 14;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .cls-text-white {
+        fill: #FFFFFF;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+      }
+      .cls-sub-gray {
+        fill: #DBD4CF;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 700;
+        letter-spacing: 0.28em;
+      }
+    </style>
+    <linearGradient id="neonLaser" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF3C00" stop-opacity="0"/>
+      <stop offset="30%" stop-color="#FF3C00" stop-opacity="0.8"/>
+      <stop offset="50%" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="70%" stop-color="#FF3C00" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#FF3C00" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- DARK BACKGROUND CANVAS -->
+  <rect width="960" height="300" rx="16" class="bg-dark"/>
+
+  <!-- ICON: Neon Flare Outline E -->
+  <g transform="translate(60, 40)">
+    <!-- Outline Curve of E -->
+    <path class="cls-neon-e" d="M165,45 L125,45 C80,45 45,80 45,125 C45,170 80,205 125,205 L165,205"/>
+    
+    <!-- Laser Beam Center Cut -->
+    <polygon points="0,125 75,119 160,119 220,125 160,131 75,131" fill="url(#neonLaser)"/>
+    <ellipse cx="115" cy="125" rx="16" ry="5" fill="#FFFFFF"/>
+  </g>
+
+  <!-- WORDMARK: EXPONENZ -->
+  <text x="320" y="152" class="cls-text-white" font-size="78">EXPONENZ</text>
+  <text x="324" y="196" class="cls-sub-gray" font-size="16">QUANT TRADING &amp; ANALYTICS</text>
+</svg>

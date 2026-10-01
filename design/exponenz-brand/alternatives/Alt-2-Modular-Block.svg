@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 960 300">
+  <defs>
+    <style>
+      .cls-dark { fill: #181818; }
+      .cls-orange { fill: #FF3C00; }
+      .cls-text {
+        fill: #181818;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+      }
+      .cls-sub {
+        fill: #767270;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 700;
+        letter-spacing: 0.28em;
+      }
+    </style>
+  </defs>
+
+  <!-- ICON: Modular Block E (Replit Inspired Geometry) -->
+  <g transform="translate(60, 40)">
+    <!-- Top Modular Block -->
+    <path class="cls-dark" d="M30,55 C30,38 44,25 60,25 L165,25 C173,25 180,32 180,40 L180,55 C180,63 173,70 165,70 L75,70 C67,70 60,77 60,85 L60,95 L30,95 Z"/>
+    
+    <!-- Middle Core Accent Block (Forward Thrust) -->
+    <path class="cls-orange" d="M30,105 L60,105 L60,110 L160,110 C168,110 175,117 175,125 C175,133 168,140 160,140 L60,140 L60,145 L30,145 C22,145 15,138 15,130 L15,120 C15,112 22,105 30,105 Z"/>
+    
+    <!-- Bottom Modular Block -->
+    <path class="cls-dark" d="M30,155 L60,155 L60,165 C60,173 67,180 75,180 L165,180 C173,180 180,187 180,195 L180,210 C180,218 173,225 165,225 L60,225 C44,225 30,212 30,195 Z"/>
+  </g>
+
+  <!-- WORDMARK: EXPONENZ -->
+  <text x="320" y="152" class="cls-text" font-size="78">EXPONENZ</text>
+  <text x="324" y="196" class="cls-sub" font-size="16">QUANT TRADING &amp; ANALYTICS</text>
+</svg>

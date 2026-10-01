@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EXPONENZ - Official Brand Identity &amp; Logo Kit</title>
+    <title>EXPONENZ - Official Brand Identity &amp; Logo Alternatives</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
@@ -71,6 +71,26 @@
             font-weight: 500;
         }
 
+        .section-header {
+            margin-top: 40px;
+            margin-bottom: 24px;
+        }
+
+        .section-header h2 {
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: var(--off-black);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-header p {
+            color: var(--medium-gray);
+            font-size: 0.95rem;
+            margin-top: 4px;
+        }
+
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
@@ -87,6 +107,12 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
         }
 
         .card.dark-theme {
@@ -100,11 +126,22 @@
         }
 
         .card-title {
-            font-size: 1.1rem;
+            font-size: 1.15rem;
             font-weight: 800;
             display: flex;
             align-items: center;
             justify-content: space-between;
+        }
+
+        .card-desc {
+            font-size: 0.88rem;
+            color: var(--medium-gray);
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+
+        .card.dark-theme .card-desc {
+            color: var(--warm-light-gray);
         }
 
         .logo-preview-box {
@@ -115,7 +152,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 180px;
+            min-height: 160px;
             margin-bottom: 20px;
         }
 
@@ -124,10 +161,10 @@
             border-color: var(--dark-gray);
         }
 
-        .logo-preview-box svg {
+        .logo-preview-box img, .logo-preview-box svg {
             max-width: 100%;
             height: auto;
-            max-height: 120px;
+            max-height: 110px;
         }
 
         .palette-section {
@@ -196,68 +233,86 @@
             <p class="subtitle">Brand Identity &amp; Logo System terinspirasi dari Replit Design System</p>
         </header>
 
+        <!-- 4 ALTERNATIF BERBASIS SIMBOL 'E' DENGAN LASER HORIZON -->
+        <div class="section-header">
+            <h2><i class="fa-solid fa-layer-group" style="color: #FF3C00;"></i> 4 Alternatif Desain Berbasis Simbol 'E' Laser</h2>
+            <p>Eksplorasi 4 karakter visual berbeda berbasis bentuk 'E' dengan aksen laser horizon Replit Orange (#FF3C00)</p>
+        </div>
+
         <div class="grid">
-            <!-- 1. PRIMARY LOGO (LIGHT) -->
+            <!-- ALT 1: LASER HORIZON E -->
             <div class="card">
-                <div class="card-header">
-                    <div class="card-title">
-                        <span><i class="fa-solid fa-sun" style="color: #FF3C00;"></i> Primary Logo (Light)</span>
-                        <span style="font-size: 0.75rem; color: var(--medium-gray);">Vector SVG</span>
+                <div>
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span><i class="fa-solid fa-bolt" style="color: #FF3C00;"></i> Alternatif 1: Laser Horizon E</span>
+                            <span style="font-size: 0.75rem; color: var(--medium-gray);">Vector SVG</span>
+                        </div>
+                        <p class="card-desc">Bentuk murni kurva geometris 'E' hitam pekat dengan potongan sinar laser horizontal gradasi Replit Orange (#FF3C00) membelah tengah.</p>
+                    </div>
+                    <div class="logo-preview-box">
+                        <img src="./alternatives/Alt-1-Laser-Horizon.svg" alt="Alt 1 Laser Horizon E">
                     </div>
                 </div>
-                <div class="logo-preview-box">
-                    <img src="./Logo Kit/Exponenz Primary Logo/Exponenz-Logo-Primary.svg" alt="Exponenz Primary Logo" style="max-height: 90px; width: auto;">
-                </div>
                 <div>
-                    <a href="./Logo Kit/Exponenz Primary Logo/Exponenz-Logo-Primary.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download SVG</a>
+                    <a href="./alternatives/Alt-1-Laser-Horizon.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download Alt 1 (SVG)</a>
                 </div>
             </div>
 
-            <!-- 2. PRIMARY LOGO (DARK MODE) -->
+            <!-- ALT 2: MODULAR BLOCK E -->
+            <div class="card">
+                <div>
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span><i class="fa-solid fa-cubes" style="color: #FF3C00;"></i> Alternatif 2: Modular Block E</span>
+                            <span style="font-size: 0.75rem; color: var(--medium-gray);">Vector SVG</span>
+                        </div>
+                        <p class="card-desc">Konsep arsitektur modular khas Replit: 3 balok geometris sudut membulat dengan pilar tengah Replit Orange menonjol ke depan.</p>
+                    </div>
+                    <div class="logo-preview-box">
+                        <img src="./alternatives/Alt-2-Modular-Block.svg" alt="Alt 2 Modular Block E">
+                    </div>
+                </div>
+                <div>
+                    <a href="./alternatives/Alt-2-Modular-Block.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download Alt 2 (SVG)</a>
+                </div>
+            </div>
+
+            <!-- ALT 3: QUANT ASCENDING E -->
+            <div class="card">
+                <div>
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span><i class="fa-solid fa-arrow-trend-up" style="color: #FF3C00;"></i> Alternatif 3: Quant Ascending E</span>
+                            <span style="font-size: 0.75rem; color: var(--medium-gray);">Vector SVG</span>
+                        </div>
+                        <p class="card-desc">Kurva bulan sabit 'E' yang mengintegrasikan panah breakout eksponensial di tengahnya, melambangkan pertumbuhan profit kuantitatif.</p>
+                    </div>
+                    <div class="logo-preview-box">
+                        <img src="./alternatives/Alt-3-Quant-Ascending.svg" alt="Alt 3 Quant Ascending E">
+                    </div>
+                </div>
+                <div>
+                    <a href="./alternatives/Alt-3-Quant-Ascending.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download Alt 3 (SVG)</a>
+                </div>
+            </div>
+
+            <!-- ALT 4: NEON FLARE DARK -->
             <div class="card dark-theme">
-                <div class="card-header">
-                    <div class="card-title">
-                        <span><i class="fa-solid fa-moon" style="color: #FF3C00;"></i> Primary Logo (Dark)</span>
-                        <span style="font-size: 0.75rem; color: #DBD4CF;">Vector SVG</span>
+                <div>
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span><i class="fa-solid fa-moon" style="color: #FF3C00;"></i> Alternatif 4: Neon Flare Terminal</span>
+                            <span style="font-size: 0.75rem; color: var(--warm-light-gray);">Dark Mode SVG</span>
+                        </div>
+                        <p class="card-desc">Varian High-Tech Trading Terminal: Outline 'E' minimalis dengan pendaran neon laser horizon tajam berlatar belakang gelap (#181818).</p>
+                    </div>
+                    <div class="logo-preview-box">
+                        <img src="./alternatives/Alt-4-Neon-Flare-Dark.svg" alt="Alt 4 Neon Flare Dark">
                     </div>
                 </div>
-                <div class="logo-preview-box">
-                    <img src="./Logo Kit/Exponenz Primary Logo/Exponenz-Logo-Dark.svg" alt="Exponenz Dark Logo" style="max-height: 90px; width: auto;">
-                </div>
                 <div>
-                    <a href="./Logo Kit/Exponenz Primary Logo/Exponenz-Logo-Dark.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download SVG</a>
-                </div>
-            </div>
-
-            <!-- 3. BRAND SYMBOL ONLY -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">
-                        <span><i class="fa-solid fa-shapes" style="color: #FF3C00;"></i> Symbol Only (Favicon &amp; App Icon)</span>
-                        <span style="font-size: 0.75rem; color: var(--medium-gray);">Vector SVG</span>
-                    </div>
-                </div>
-                <div class="logo-preview-box">
-                    <img src="./Logo Kit/Exponenz Symbol/Exponenz-Symbol.svg" alt="Exponenz Symbol" style="max-height: 100px; width: auto;">
-                </div>
-                <div>
-                    <a href="./Logo Kit/Exponenz Symbol/Exponenz-Symbol.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download SVG</a>
-                </div>
-            </div>
-
-            <!-- 4. STACKED LOGO -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">
-                        <span><i class="fa-solid fa-layer-group" style="color: #FF3C00;"></i> Stacked Logo (Centered)</span>
-                        <span style="font-size: 0.75rem; color: var(--medium-gray);">Vector SVG</span>
-                    </div>
-                </div>
-                <div class="logo-preview-box">
-                    <img src="./Logo Kit/Exponenz Stacked Logo/Exponenz-Logo-Stacked.svg" alt="Exponenz Stacked Logo" style="max-height: 130px; width: auto;">
-                </div>
-                <div>
-                    <a href="./Logo Kit/Exponenz Stacked Logo/Exponenz-Logo-Stacked.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download SVG</a>
+                    <a href="./alternatives/Alt-4-Neon-Flare-Dark.svg" download class="btn-download"><i class="fa-solid fa-download"></i> Download Alt 4 (SVG)</a>
                 </div>
             </div>
         </div>
