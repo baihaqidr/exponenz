@@ -59,11 +59,10 @@ def fetch_fast_api_klines(symbol: str = "BTCUSDT", interval: str = "4h", total_c
     all_rows = []
     end_time = None
 
-    # Priority endpoints: 1. Mainnet Futures FAPI, 2. Testnet Futures FAPI, 3. Binance Public Vision API
+    # Priority endpoints: 1. Binance Public Vision API (100% Real Mainnet, Zero Fake Wicks, Unblocked), 2. Mainnet Futures FAPI
     endpoints = [
-        ("fapi", BINANCE_FUTURES_FAPI_URL),
-        ("testnet", BINANCE_TESTNET_FAPI_URL),
         ("vision", BINANCE_PUBLIC_KLINES_URL),
+        ("fapi", BINANCE_FUTURES_FAPI_URL),
     ]
 
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
