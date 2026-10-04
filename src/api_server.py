@@ -677,9 +677,7 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
     def _backtest_single_symbol(self, symbol: str, interval: str, strategy_id: str, leverage: float, risk_pct: float, candles: int) -> Dict[str, Any]:
         try:
             import importlib
-            import src.data_fetcher
-            importlib.reload(src.data_fetcher)
-            df = src.data_fetcher.fetch_binance_futures_klines(symbol=symbol, interval=interval, total_candles=candles, use_cache=False)
+            df = src.data_fetcher.fetch_binance_futures_klines(symbol=symbol, interval=interval, total_candles=candles, use_cache=True)
             if df is None or len(df) < 30:
                 return {
                     "symbol": symbol,
@@ -724,11 +722,8 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                     "trades": []
                 }
 
-            import importlib
             import src.strategy_registry
             import src.backtester
-            importlib.reload(src.strategy_registry)
-            importlib.reload(src.backtester)
             strat = src.strategy_registry.get_strategy_instance(strategy_id)
             df_signals = strat.generate_signals(df)
 
@@ -856,8 +851,8 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                 except Exception:
                     risk_pct = 0.20
 
-            # Parallel execution across all pairs (High Concurrency 25 Workers)
-            max_workers = min(len(symbols), 25) if len(symbols) > 0 else 6
+            # Parallel execution across all pairs (Optimized Concurrency for Cloud VM)
+            max_workers = min(len(symbols), 8) if len(symbols) > 0 else 4
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 futures = [
                     executor.submit(self._backtest_single_symbol, sym, interval, strategy_id, leverage, risk_pct, candles)
