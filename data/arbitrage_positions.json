@@ -1,31 +1,30 @@
 {
-  "positions": {
-    "SAGAUSDT": {
+  "positions": {},
+  "history": [
+    {
       "symbol": "SAGAUSDT",
-      "status": "OPEN",
+      "type": "ARBITRAGE (CASH & CARRY)",
       "opened_at": "2026-09-28 11:22:39",
-      "opened_ts": 1790569359986,
+      "closed_at": "2026-09-29 07:57:31",
       "notional_total": 500.0,
-      "allocated_spot_usd": 250.0,
-      "allocated_futures_usd": 250.0,
       "spot_entry_price": 0.02616,
+      "spot_exit_price": 0.027,
       "futures_entry_price": 0.02574,
-      "quantity": 9556.6,
-      "funding_rate_at_entry": -0.00603755,
-      "funding_pct_at_entry": -0.603755,
-      "current_funding_pct": -0.308758,
-      "accumulated_funding_reward": -4.4348,
-      "harvest_count": 4,
-      "next_funding_time": 1790611200000,
-      "last_harvest_time": "2026-09-28 19:00:24"
+      "futures_exit_price": 0.0269,
+      "price_delta_pnl": -3.0581,
+      "harvested_funding_fee": -3.9677,
+      "net_profit": -7.03,
+      "roi_pct": -1.41,
+      "harvest_count": 5,
+      "rebalanced": true,
+      "rebalance_note": "Auto-Rebalanced: Spot ($258.03) & Futures ($238.91) digabungkan kembali ke modal awal + cuan $-7.03"
     }
-  },
-  "history": [],
+  ],
   "is_auto_running": false,
   "auto_config": {
     "max_pairs": 3,
     "notional_per_pair": 500.0,
     "min_funding_rate_pct": 0.03
   },
-  "updated_at": "2026-09-28 19:00:24"
+  "updated_at": "2026-09-29 07:57:31"
 }
