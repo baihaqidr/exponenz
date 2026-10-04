@@ -89,25 +89,39 @@ class LiveTradingBot:
     def reset_session(self):
         """Reset total sesi trading baru dari modal awal $5,000"""
         self.stop()
-        for p in self.engine.get_open_positions():
-            self.engine.close_position(p["symbol"])
         
+        # Bersihkan virtual trading engine
+        if hasattr(self.engine, 'virtual_positions'):
+            self.engine.virtual_positions.clear()
+        if hasattr(self.engine, 'virtual_trades'):
+            self.engine.virtual_trades.clear()
+        if hasattr(self.engine, 'virtual_wallet_balance'):
+            self.engine.virtual_wallet_balance = 5000.0
+        if hasattr(self.engine, '_save_virtual_account'):
+            self.engine._save_virtual_account()
+        
+        # Bersihkan posisi arbitrase jika ada
+        try:
+            from src.arbitrage_engine import arbitrage_engine
+            arbitrage_engine.positions.clear()
+            arbitrage_engine.trade_history.clear()
+            arbitrage_engine.total_realized_pnl = 0.0
+            arbitrage_engine.total_funding_collected = 0.0
+            arbitrage_engine.save_state()
+        except Exception:
+            pass
+
         self.trade_history.clear()
         self.logs.clear()
         self.last_traded_candles.clear()
         self.session_start_time = int(time.time() * 1000)
         
-        if os.path.exists("data/bot_trades.json"):
-            try:
-                os.remove("data/bot_trades.json")
-            except Exception:
-                pass
-
-        if os.path.exists("data/bot_state.json"):
-            try:
-                os.remove("data/bot_state.json")
-            except Exception:
-                pass
+        for fname in ["data/bot_trades.json", "data/bot_state.json", "data/virtual_account.json", "data/arbitrage_positions.json"]:
+            if os.path.exists(fname):
+                try:
+                    os.remove(fname)
+                except Exception:
+                    pass
 
         self._log("RESET", "🔄 Sesi trading telah di-reset dari awal! Modal bersih $5,000.00.")
         return {"status": "reset_success"}
