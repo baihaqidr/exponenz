@@ -676,8 +676,7 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
 
     def _backtest_single_symbol(self, symbol: str, interval: str, strategy_id: str, leverage: float, risk_pct: float, candles: int) -> Dict[str, Any]:
         try:
-            import importlib
-            df = src.data_fetcher.fetch_binance_futures_klines(symbol=symbol, interval=interval, total_candles=candles, use_cache=True)
+            df = fetch_binance_futures_klines(symbol=symbol, interval=interval, total_candles=candles, use_cache=True)
             if df is None or len(df) < 30:
                 return {
                     "symbol": symbol,
@@ -722,12 +721,10 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                     "trades": []
                 }
 
-            import src.strategy_registry
-            import src.backtester
-            strat = src.strategy_registry.get_strategy_instance(strategy_id)
+            strat = get_strategy_instance(strategy_id)
             df_signals = strat.generate_signals(df)
 
-            engine = src.backtester.BacktestEngine(
+            engine = BacktestEngine(
                 initial_capital=1000.0,
                 leverage=leverage,
                 risk_per_trade_pct=risk_pct,
