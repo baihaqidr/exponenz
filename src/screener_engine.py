@@ -315,77 +315,84 @@ class BollingerScreenerEngine:
             avg_vol = float(past_vols.mean()) if len(past_vols) > 0 else (curr_vol or 1.0)
             vol_mult = round(curr_vol / (avg_vol + 1e-6), 1) if avg_vol > 0 else 1.0
 
-            # 1m RSI
+            # 1m RSI (14)
             rsi = self._calculate_rsi(df['close'].values, period=14)
 
             # 24h Change % (estimate from 50 bars)
             chg_24h = ((curr_close - df['close'].iloc[0]) / df['close'].iloc[0]) * 100.0 if df['close'].iloc[0] > 0 else 0.0
             highest_50 = float(df['high'].max())
+            lowest_50 = float(df['low'].min())
             is_breakout = (curr_close >= highest_50 * 0.995)
 
-            # Status Badge & Detection by Method
-            if method == "cumulative_5bar_momentum":
-                is_active = (spike_5m_pct >= 2.0 or vol_mult >= 2.0)
-                if spike_5m_pct >= 5.0:
-                    badge = f"📈 5M WAVE (+{round(spike_5m_pct, 1)}%)"
+            # 3 Pure & Clear Momentum Methods:
+            if method in ["rsi_oversold", "rapid_rsi_oversold"]:
+                # RSI Oversold Hunter: Default <= 30
+                is_active = (rsi <= 30.0)
+                if rsi <= 20.0:
+                    badge = f"🟢 EXTREME CRASH ({round(rsi, 1)})"
                     badge_color = "#10b981"
-                    status_desc = f"Gelombang momentum kuat +{round(spike_5m_pct, 2)}% dalam 5 lilin"
-                elif spike_5m_pct >= 2.0:
-                    badge = f"🔥 5M PUSH (+{round(spike_5m_pct, 1)}%)"
-                    badge_color = "#06b6d4"
-                    status_desc = f"Akumulasi dorongan bullish +{round(spike_5m_pct, 2)}%"
-                else:
-                    badge = "⚡ 5M NORMAL"
-                    badge_color = "#8b5cf6"
-                    status_desc = "Fluktuasi 5 bar wajar"
-            elif method == "breakout_24h_high":
-                is_active = is_breakout or (vol_mult >= 2.5)
-                if is_breakout and vol_mult >= 2.0:
-                    badge = "💥 BREAKOUT HIGH"
+                    status_desc = f"Diskon ekstrem (RSI {round(rsi, 1)}) - Siap Pantulan Golden Reversal"
+                elif rsi <= 25.0:
+                    badge = f"🟢 DEEP PANIC DIP ({round(rsi, 1)})"
+                    badge_color = "#059669"
+                    status_desc = f"Penurunan panik dalam (RSI {round(rsi, 1)}) - Buy The Dip Zone"
+                elif rsi <= 30.0:
+                    badge = f"🟢 OVERSOLD ({round(rsi, 1)})"
                     badge_color = "#10b981"
-                    status_desc = f"Penembusan High terdekat dengan volume {vol_mult}x"
-                elif is_breakout:
-                    badge = "🚀 AT HIGH LEVEL"
-                    badge_color = "#06b6d4"
-                    status_desc = "Menyentuh level tertinggi 50 lilin"
-                else:
-                    badge = "📊 CONSOLIDATING"
-                    badge_color = "#64748b"
-                    status_desc = "Di bawah level resistance"
-            elif method == "rapid_rsi_extreme":
-                is_active = (rsi >= 70 or rsi <= 30)
-                if rsi >= 75:
-                    badge = f"🔥 RSI OVERBOUGHT ({round(rsi, 1)})"
+                    status_desc = f"Memasuki zona diskon jenuh jual (RSI {round(rsi, 1)})"
+                elif rsi <= 38.0:
+                    badge = f"🟡 NEAR OVERSOLD ({round(rsi, 1)})"
                     badge_color = "#f59e0b"
-                    status_desc = "Momentum beli ekstrem (Overbought)"
-                elif rsi <= 25:
-                    badge = f"🟢 RSI OVERSOLD ({round(rsi, 1)})"
-                    badge_color = "#10b981"
-                    status_desc = "Momentum jual jenuh (Oversold)"
+                    status_desc = f"Mendekati area oversold (RSI {round(rsi, 1)})"
                 else:
-                    badge = f"⚡ RSI NEUTRAL ({round(rsi, 1)})"
+                    badge = f"⚡ RSI NETRAL ({round(rsi, 1)})"
                     badge_color = "#64748b"
-                    status_desc = "RSI dalam rentang normal"
-            else: # candle_spike_volume
-                is_active = (spike_1m_pct >= 2.0 or spike_5m_pct >= 4.0 or vol_mult >= 2.5)
+                    status_desc = f"RSI dalam rentang normal ({round(rsi, 1)})"
+
+            elif method in ["rsi_overbought", "rapid_rsi_overbought"]:
+                # RSI Overbought Reversal: Default >= 70
+                is_active = (rsi >= 70.0)
+                if rsi >= 80.0:
+                    badge = f"🔴 EXTREME TOP ({round(rsi, 1)})"
+                    badge_color = "#ef4444"
+                    status_desc = f"Pucuk sangat jenuh (RSI {round(rsi, 1)}) - Risiko Koreksi Tinggi / Area Short"
+                elif rsi >= 75.0:
+                    badge = f"🔴 HIGH OVERBOUGHT ({round(rsi, 1)})"
+                    badge_color = "#f97316"
+                    status_desc = f"Jenuh beli tinggi (RSI {round(rsi, 1)}) - Potensi Kelelahan Pembeli"
+                elif rsi >= 70.0:
+                    badge = f"🔴 OVERBOUGHT ({round(rsi, 1)})"
+                    badge_color = "#e11d48"
+                    status_desc = f"Memasuki area overbought (RSI {round(rsi, 1)})"
+                elif rsi >= 62.0:
+                    badge = f"🟠 NEAR OVERBOUGHT ({round(rsi, 1)})"
+                    badge_color = "#f59e0b"
+                    status_desc = f"Mendekati area overbought (RSI {round(rsi, 1)})"
+                else:
+                    badge = f"⚡ RSI NETRAL ({round(rsi, 1)})"
+                    badge_color = "#64748b"
+                    status_desc = f"RSI dalam rentang normal ({round(rsi, 1)})"
+
+            else: # candle_spike_volume / price_spike
+                is_active = (spike_1m_pct >= 2.0 or spike_5m_pct >= 3.5 or vol_mult >= 2.0)
                 if spike_1m_pct >= 5.0 or spike_5m_pct >= 8.0:
                     badge = f"🚀 SUPER PUMP (+{round(spike_1m_pct, 1)}%)"
                     badge_color = "#10b981"
-                    status_desc = f"Lonjakan harga ekstrem +{round(spike_1m_pct, 2)}% dalam 1m"
+                    status_desc = f"Lonjakan harga ekstrem +{round(spike_1m_pct, 2)}% dalam lilin {timeframe}"
                 elif vol_mult >= 3.0:
-                    badge = f"⚡ VOL SURGE ({vol_mult}x)"
+                    badge = f"💥 VOL SURGE ({vol_mult}x)"
                     badge_color = "#f59e0b"
-                    status_desc = f"Volume meledak {vol_mult}x lipat dari normal"
-                elif spike_1m_pct >= 2.5:
+                    status_desc = f"Volume meledak {vol_mult}x lipat dari rata-rata 20 bar"
+                elif spike_1m_pct >= 2.0 or spike_5m_pct >= 3.0:
                     badge = f"🔥 MOMENTUM (+{round(spike_1m_pct, 1)}%)"
                     badge_color = "#06b6d4"
                     status_desc = f"Momentum bullish kuat +{round(spike_1m_pct, 2)}%"
-                elif spike_1m_pct <= -3.0:
+                elif spike_1m_pct <= -2.5:
                     badge = f"🔻 DUMP SPIKE ({round(spike_1m_pct, 1)}%)"
                     badge_color = "#f43f5e"
                     status_desc = f"Penurunan tajam {round(spike_1m_pct, 2)}%"
                 else:
-                    badge = "📈 NORMAL SPIKE"
+                    badge = "📈 NORMAL FLUCTUATION"
                     badge_color = "#8b5cf6"
                     status_desc = "Fluktuasi harga wajar"
 
@@ -398,6 +405,8 @@ class BollingerScreenerEngine:
                 "vol_multiplier": vol_mult,
                 "current_volume": round(curr_vol, 2),
                 "rsi": round(rsi, 1),
+                "support_level": round(lowest_50, 4),
+                "resistance_level": round(highest_50, 4),
                 "price_change_pct": round(chg_24h, 2),
                 "badge": badge,
                 "badge_color": badge_color,
@@ -407,15 +416,15 @@ class BollingerScreenerEngine:
         except Exception:
             return None
 
-    def scan_pump_spikes(self, timeframe: str = "1m", min_pct: float = 2.0, min_vol_mult: float = 1.5, limit: int = 50, preset: str = None, custom_symbols: List[str] = None, method: str = "candle_spike_volume") -> List[Dict[str, Any]]:
+    def scan_pump_spikes(self, timeframe: str = "1m", min_pct: float = 2.0, min_vol_mult: float = 1.5, limit: int = 50, preset: str = None, custom_symbols: List[str] = None, method: str = "candle_spike_volume", rsi_threshold: float = None) -> List[Dict[str, Any]]:
         now = time.time()
         preset_key = preset or ("custom" if custom_symbols else "all")
-        cache_key = f"pump_{method}_{timeframe}_{limit}_{preset_key}_{min_pct}_{min_vol_mult}"
+        cache_key = f"pump_{method}_{timeframe}_{limit}_{preset_key}_{min_pct}_{min_vol_mult}_{rsi_threshold}"
         
-        # 10 second fast cache for live momentum screener
+        # 8 second fast cache for live momentum screener
         if not custom_symbols and cache_key in self.cache:
             entry = self.cache[cache_key]
-            if now - entry["ts"] < 10:
+            if now - entry["ts"] < 8:
                 return entry["data"]
 
         if custom_symbols and len(custom_symbols) > 0:
@@ -432,13 +441,14 @@ class BollingerScreenerEngine:
                     results.append(res)
 
         # Sorting logic based on method
-        if method == "cumulative_5bar_momentum":
-            results.sort(key=lambda x: (x.get("spike_5m_pct", 0), x.get("vol_multiplier", 0)), reverse=True)
-        elif method == "breakout_24h_high":
-            results.sort(key=lambda x: (x.get("vol_multiplier", 0), x.get("price_change_pct", 0)), reverse=True)
-        elif method == "rapid_rsi_extreme":
-            results.sort(key=lambda x: (abs(x.get("rsi", 50) - 50), x.get("vol_multiplier", 0)), reverse=True)
+        if method in ["rsi_oversold", "rapid_rsi_oversold"]:
+            # Ascending by RSI (Lowest RSI = deepest discount comes first!)
+            results.sort(key=lambda x: x.get("rsi", 100))
+        elif method in ["rsi_overbought", "rapid_rsi_overbought"]:
+            # Descending by RSI (Highest RSI = highest overbought comes first!)
+            results.sort(key=lambda x: x.get("rsi", 0), reverse=True)
         else:
+            # Default Spike: Descending by spike % and volume multiplier
             results.sort(key=lambda x: (x.get("spike_1m_pct", 0), x.get("vol_multiplier", 0)), reverse=True)
 
         if not custom_symbols:

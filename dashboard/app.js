@@ -4722,7 +4722,14 @@ async function updateScreenerChart(symbol, timeframe, strategyId) {
     let minMove = 0.01;
 
     try {
-        const url = `/api/chart/klines?symbol=${encodeURIComponent(sym)}&timeframe=${encodeURIComponent(tf)}&strategy=${encodeURIComponent(stratId)}&limit=1000`;
+        let url;
+        const isPumpMode = (state.screenerRadarMode === 'pump');
+        if (isPumpMode) {
+            const pMethod = state.pumpMethod || 'candle_spike_volume';
+            url = `/api/chart/klines?symbol=${encodeURIComponent(sym)}&timeframe=${encodeURIComponent(tf)}&strategy=momentum&mode=momentum&momentum_method=${encodeURIComponent(pMethod)}&limit=1000`;
+        } else {
+            url = `/api/chart/klines?symbol=${encodeURIComponent(sym)}&timeframe=${encodeURIComponent(tf)}&strategy=${encodeURIComponent(stratId)}&limit=1000`;
+        }
         const res = await fetch(url);
         const data = await res.json();
 
@@ -4849,6 +4856,44 @@ async function updateScreenerChart(symbol, timeframe, strategyId) {
         emaLegendEl.textContent = `${shortStratLabel}: $${formatCleanPrice(latestEma, precision)}`;
     }
 
+    // Dynamic Chart Legend Pills (Contextual per Mode)
+    const legendBuyEl = document.getElementById('screener-legend-badge-buy');
+    const legendSellEl = document.getElementById('screener-legend-badge-sell');
+    if (legendBuyEl && legendSellEl) {
+        if (state.screenerRadarMode === 'pump') {
+            const pMethod = state.pumpMethod || 'candle_spike_volume';
+            if (pMethod === 'rsi_oversold') {
+                legendBuyEl.innerHTML = '<i class="fa-solid fa-arrow-up"></i> 🟢 OVERSOLD (Buy Dip)';
+                legendBuyEl.style.color = '#10b981';
+                legendBuyEl.style.background = 'rgba(16,185,129,0.12)';
+                legendSellEl.innerHTML = '<i class="fa-solid fa-arrow-trend-up"></i> ⚡ REBOUND TARGET';
+                legendSellEl.style.color = '#0284c7';
+                legendSellEl.style.background = 'rgba(2,132,199,0.12)';
+            } else if (pMethod === 'rsi_overbought') {
+                legendBuyEl.innerHTML = '<i class="fa-solid fa-arrow-down"></i> 🔴 OVERBOUGHT (Short)';
+                legendBuyEl.style.color = '#ef4444';
+                legendBuyEl.style.background = 'rgba(239,68,68,0.12)';
+                legendSellEl.innerHTML = '<i class="fa-solid fa-arrow-trend-down"></i> ⚡ PULLBACK TARGET';
+                legendSellEl.style.color = '#ea580c';
+                legendSellEl.style.background = 'rgba(234,88,12,0.12)';
+            } else {
+                legendBuyEl.innerHTML = '<i class="fa-solid fa-fire"></i> 🔥 SPIKE SURGE';
+                legendBuyEl.style.color = '#f59e0b';
+                legendBuyEl.style.background = 'rgba(245,158,11,0.12)';
+                legendSellEl.innerHTML = '<i class="fa-solid fa-arrow-down"></i> 🔻 DUMP SPIKE';
+                legendSellEl.style.color = '#f43f5e';
+                legendSellEl.style.background = 'rgba(244,63,94,0.12)';
+            }
+        } else {
+            legendBuyEl.innerHTML = '<i class="fa-solid fa-arrow-up"></i> BUY (Entry Long)';
+            legendBuyEl.style.color = '#10b981';
+            legendBuyEl.style.background = 'rgba(16,185,129,0.1)';
+            legendSellEl.innerHTML = '<i class="fa-solid fa-xmark"></i> CLOSE (Tutup Posisi)';
+            legendSellEl.style.color = '#ef4444';
+            legendSellEl.style.background = 'rgba(239,68,68,0.1)';
+        }
+    }
+
     const latestC = candles[candles.length - 1];
     const latestE = emaSeries.length > 0 ? emaSeries[emaSeries.length - 1].value : latestClose;
     const latestR = rsiSeries.length > 0 ? rsiSeries[rsiSeries.length - 1].value : null;
@@ -4874,8 +4919,8 @@ function changeScreenerChartTimeframe(tf) {
     const overlay = document.getElementById('screener-chart-loading-overlay');
     if (overlay) overlay.style.display = 'flex';
     
-    // Opsi A: Lock active coin on chart during multi-timeframe analysis
-    updateScreenerChart(state.screenerActiveSymbol, chosenTf, state.screenerStrategy);
+    const stratId = (state.screenerRadarMode === 'pump') ? 'momentum' : state.screenerStrategy;
+    updateScreenerChart(state.screenerActiveSymbol, chosenTf, stratId);
 }
 window.changeScreenerChartTimeframe = changeScreenerChartTimeframe;
 
@@ -4907,6 +4952,9 @@ function switchScreenerRadarMode(mode) {
         if (tablePump) tablePump.style.display = 'block';
 
         loadPumpSniperData(true);
+        if (state.screenerActiveSymbol) {
+            updateScreenerChart(state.screenerActiveSymbol, state.screenerChartTimeframe || state.screenerTimeframe, 'momentum');
+        }
     } else {
         if (btnStrat) {
             btnStrat.style.background = '#ea580c';
@@ -4926,9 +4974,101 @@ function switchScreenerRadarMode(mode) {
         if (tablePump) tablePump.style.display = 'none';
 
         loadStrategyScreenerData(true);
+        if (state.screenerActiveSymbol) {
+            updateScreenerChart(state.screenerActiveSymbol, state.screenerChartTimeframe || state.screenerTimeframe, state.screenerStrategy);
+        }
     }
 }
 window.switchScreenerRadarMode = switchScreenerRadarMode;
+
+function onPumpMethodChanged() {
+    const methodSelect = document.getElementById('screener-pump-strategy-select');
+    if (!methodSelect) return;
+    state.pumpMethod = methodSelect.value || 'candle_spike_volume';
+
+    const labelMain = document.getElementById('label-pump-filter-main');
+    const selectMain = document.getElementById('screener-pump-min-pct');
+    const labelVol = document.getElementById('label-pump-filter-vol');
+    const descBadge = document.getElementById('screener-pump-desc-badge');
+
+    if (state.pumpMethod === 'rsi_oversold') {
+        if (labelMain) {
+            labelMain.style.color = '#10b981';
+            labelMain.innerHTML = '<i class="fa-solid fa-arrow-down-long"></i> AMBANG RSI OVERSOLD:';
+        }
+        if (selectMain) {
+            selectMain.innerHTML = `
+                <option value="30" selected>🟢 RSI &le; 30 (Diskon Panik Standar)</option>
+                <option value="25">🔥 RSI &le; 25 (Extreme Deep Dip)</option>
+                <option value="20">⚡ RSI &le; 20 (Ultra Crashed Dip)</option>
+                <option value="35">🟡 RSI &le; 35 (Early Dip Alert)</option>
+                <option value="100">⚡ Tampilkan Semua Nilai RSI</option>
+            `;
+            state.pumpMinPct = 30.0;
+        }
+        if (labelVol) {
+            labelVol.innerHTML = '<i class="fa-solid fa-chart-column"></i> VOLUME ANOMALY:';
+        }
+        if (descBadge) {
+            descBadge.textContent = 'Radar Pemburu Diskon Ekstrem (RSI < 30) - Cari Peluang Pantulan Bawah (Buy The Dip)';
+        }
+        state.pumpSortField = 'rsi';
+        state.pumpSortOrder = 'asc';
+    } else if (state.pumpMethod === 'rsi_overbought') {
+        if (labelMain) {
+            labelMain.style.color = '#ef4444';
+            labelMain.innerHTML = '<i class="fa-solid fa-arrow-up-long"></i> AMBANG RSI OVERBOUGHT:';
+        }
+        if (selectMain) {
+            selectMain.innerHTML = `
+                <option value="70" selected>🔴 RSI &ge; 70 (Pucuk Jenuh Standar)</option>
+                <option value="75">🔥 RSI &ge; 75 (Extreme Overheated)</option>
+                <option value="80">⚡ RSI &ge; 80 (Ultra Mania Top)</option>
+                <option value="65">🟠 RSI &ge; 65 (Early Top Alert)</option>
+                <option value="0">⚡ Tampilkan Semua Nilai RSI</option>
+            `;
+            state.pumpMinPct = 70.0;
+        }
+        if (labelVol) {
+            labelVol.innerHTML = '<i class="fa-solid fa-chart-column"></i> VOLUME ANOMALY:';
+        }
+        if (descBadge) {
+            descBadge.textContent = 'Radar Deteksi Pucuk Jenuh Beli (RSI > 70) - Waspada Koreksi / Peluang Short Reversal';
+        }
+        state.pumpSortField = 'rsi';
+        state.pumpSortOrder = 'desc';
+    } else { // candle_spike_volume
+        if (labelMain) {
+            labelMain.style.color = '#ea580c';
+            labelMain.innerHTML = '<i class="fa-solid fa-arrow-trend-up"></i> MINIMAL KENAIKAN SPIKE:';
+        }
+        if (selectMain) {
+            selectMain.innerHTML = `
+                <option value="1.5">🔥 &gt; +1.5% (Early Momentum)</option>
+                <option value="3.0" selected>🚀 &gt; +3.0% (High Surge)</option>
+                <option value="5.0">⚡ &gt; +5.0% (Super Pump)</option>
+                <option value="8.0">💥 &gt; +8.0% (Extreme Surge)</option>
+                <option value="0.0">⚡ Tampilkan Semua (+ / -)</option>
+            `;
+            state.pumpMinPct = 3.0;
+        }
+        if (labelVol) {
+            labelVol.innerHTML = '<i class="fa-solid fa-chart-column"></i> VOLUME SURGE:';
+        }
+        if (descBadge) {
+            descBadge.textContent = 'Radar Real-Time Anomali Volume, Akselerasi Momentum & Breakout';
+        }
+        state.pumpSortField = 'spike_1m_pct';
+        state.pumpSortOrder = 'desc';
+    }
+
+    loadPumpSniperData(true);
+
+    if (state.screenerActiveSymbol) {
+        updateScreenerChart(state.screenerActiveSymbol, state.screenerChartTimeframe || state.screenerTimeframe, 'momentum');
+    }
+}
+window.onPumpMethodChanged = onPumpMethodChanged;
 
 function changePumpSniperTimeframe(tf) {
     const validTfs = ['1m', '5m', '15m'];
@@ -4976,7 +5116,7 @@ function sortPumpBy(field) {
         state.pumpSortOrder = state.pumpSortOrder === 'asc' ? 'desc' : 'asc';
     } else {
         state.pumpSortField = field;
-        state.pumpSortOrder = 'desc';
+        state.pumpSortOrder = (field === 'rsi' && state.pumpMethod === 'rsi_oversold') ? 'asc' : 'desc';
     }
 
     const allIcons = document.querySelectorAll('#screener-pump-table .sort-icon');
@@ -5001,18 +5141,23 @@ async function loadPumpSniperData(forceRefresh = false) {
     const minVolSelect = document.getElementById('screener-pump-min-vol');
     const methodSelect = document.getElementById('screener-pump-strategy-select');
 
-    if (minPctSelect) state.pumpMinPct = parseFloat(minPctSelect.value) || 2.0;
-    if (minVolSelect) state.pumpMinVol = parseFloat(minVolSelect.value) || 1.5;
+    if (minPctSelect) state.pumpMinPct = parseFloat(minPctSelect.value) || 0;
+    if (minVolSelect) state.pumpMinVol = parseFloat(minVolSelect.value) || 1.0;
     if (methodSelect) state.pumpMethod = methodSelect.value || 'candle_spike_volume';
 
     if (!tbody) return;
+
+    const method = state.pumpMethod || 'candle_spike_volume';
+    let methodDesc = 'lonjakan harga & volume';
+    if (method === 'rsi_oversold') methodDesc = 'diskon ekstrem (RSI < 30)';
+    else if (method === 'rsi_overbought') methodDesc = 'pucuk jenuh beli (RSI > 70)';
 
     if (forceRefresh || !state.pumpSniperData || state.pumpSniperData.length === 0) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="9" class="loading-cell" style="padding: 28px; color: #64748b;">
                     <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.3rem; color: #f59e0b; margin-bottom: 6px; display: block;"></i>
-                    Memindai anomali momentum lilin [${state.pumpTimeframe || '1m'}] & volume surge (${state.pumpActivePreset || 'top_50'})...
+                    Memindai pasar untuk ${methodDesc} [${state.pumpTimeframe || '1m'}] (${state.pumpActivePreset || 'top_50'})...
                 </td>
             </tr>
         `;
@@ -5021,10 +5166,9 @@ async function loadPumpSniperData(forceRefresh = false) {
     try {
         const tf = state.pumpTimeframe || '1m';
         const minPct = (state.pumpMinPct !== undefined) ? state.pumpMinPct : 2.0;
-        const minVol = (state.pumpMinVol !== undefined) ? state.pumpMinVol : 1.5;
+        const minVol = (state.pumpMinVol !== undefined) ? state.pumpMinVol : 1.0;
         const preset = state.pumpActivePreset || 'top_50';
         const presetParam = preset ? `&preset=${encodeURIComponent(preset)}` : '';
-        const method = state.pumpMethod || 'candle_spike_volume';
         
         let url = `/api/screener/strategy-scan?strategy=pump_sniper&mode=pump&method=${encodeURIComponent(method)}&timeframe=${encodeURIComponent(tf)}&min_pct=${encodeURIComponent(minPct)}&min_vol_mult=${encodeURIComponent(minVol)}&limit=60${presetParam}`;
         let res = await fetch(url);
@@ -5037,19 +5181,39 @@ async function loadPumpSniperData(forceRefresh = false) {
             const data = await res.json();
             if (data.success && data.pairs) {
                 state.pumpSniperData = data.pairs;
-                const pumpCount = (data.pump_count !== undefined) ? data.pump_count : data.pairs.filter(p => p.is_pump || (p.spike_1m_pct >= 2.0)).length;
+                
+                let activeCount = 0;
+                if (method === 'rsi_oversold') {
+                    activeCount = data.pairs.filter(p => Number(p.rsi || 50) <= (state.pumpMinPct || 30)).length;
+                } else if (method === 'rsi_overbought') {
+                    activeCount = data.pairs.filter(p => Number(p.rsi || 50) >= (state.pumpMinPct || 70)).length;
+                } else {
+                    activeCount = (data.pump_count !== undefined) ? data.pump_count : data.pairs.filter(p => p.is_pump || (p.spike_1m_pct >= 2.0)).length;
+                }
 
                 if (badgeEl) {
-                    if (pumpCount > 0) {
-                        badgeEl.style.background = 'rgba(245, 158, 11, 0.15)';
-                        badgeEl.style.color = '#d97706';
-                        badgeEl.style.borderColor = '#f59e0b';
-                        badgeEl.innerHTML = `⚡ <strong>${pumpCount} Koin Terdeteksi Momentum Aktif</strong> (${tf})`;
+                    if (method === 'rsi_oversold') {
+                        badgeEl.style.background = 'rgba(16, 185, 129, 0.15)';
+                        badgeEl.style.color = '#059669';
+                        badgeEl.style.borderColor = '#10b981';
+                        badgeEl.innerHTML = `🟢 <strong>${activeCount} Koin Terdeteksi RSI Oversold (&le; ${state.pumpMinPct})</strong> (${tf})`;
+                    } else if (method === 'rsi_overbought') {
+                        badgeEl.style.background = 'rgba(239, 68, 68, 0.15)';
+                        badgeEl.style.color = '#e11d48';
+                        badgeEl.style.borderColor = '#ef4444';
+                        badgeEl.innerHTML = `🔴 <strong>${activeCount} Koin Terdeteksi RSI Overbought (&ge; ${state.pumpMinPct})</strong> (${tf})`;
                     } else {
-                        badgeEl.style.background = 'rgba(100, 116, 139, 0.1)';
-                        badgeEl.style.color = '#64748b';
-                        badgeEl.style.borderColor = '#cbd5e1';
-                        badgeEl.innerHTML = `⚪ 0 Momentum Terdeteksi (${tf} Standby)`;
+                        if (activeCount > 0) {
+                            badgeEl.style.background = 'rgba(245, 158, 11, 0.15)';
+                            badgeEl.style.color = '#d97706';
+                            badgeEl.style.borderColor = '#f59e0b';
+                            badgeEl.innerHTML = `⚡ <strong>${activeCount} Koin Terdeteksi Momentum Aktif</strong> (${tf})`;
+                        } else {
+                            badgeEl.style.background = 'rgba(100, 116, 139, 0.1)';
+                            badgeEl.style.color = '#64748b';
+                            badgeEl.style.borderColor = '#cbd5e1';
+                            badgeEl.innerHTML = `⚪ 0 Momentum Terdeteksi (${tf} Standby)`;
+                        }
                     }
                 }
 
@@ -5069,16 +5233,90 @@ async function loadPumpSniperData(forceRefresh = false) {
 }
 window.loadPumpSniperData = loadPumpSniperData;
 
+function renderPumpTableHead() {
+    const thead = document.getElementById('screener-pump-thead');
+    if (!thead) return;
+
+    const method = state.pumpMethod || 'candle_spike_volume';
+    if (method === 'rsi_oversold') {
+        thead.innerHTML = `
+            <tr>
+                <th class="sortable-th" onclick="sortPumpBy('symbol')">Pair Contract <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-symbol"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('rsi')">RSI (14) <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-rsi"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('spike_1m_pct')">1m Candle % <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-spike_1m_pct"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('vol_multiplier')">Volume Surge <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-vol_multiplier"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('support_level')">Support Floor <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-support_level"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('current_price')">Harga Live <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-current_price"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('price_change_pct')">24h Chg % <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-price_change_pct"></i></th>
+                <th>Status Diskon</th>
+                <th>Aksi Snipe</th>
+            </tr>
+        `;
+    } else if (method === 'rsi_overbought') {
+        thead.innerHTML = `
+            <tr>
+                <th class="sortable-th" onclick="sortPumpBy('symbol')">Pair Contract <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-symbol"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('rsi')">RSI (14) <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-rsi"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('spike_1m_pct')">1m Candle % <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-spike_1m_pct"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('vol_multiplier')">Volume Surge <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-vol_multiplier"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('resistance_level')">Resistance Top <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-resistance_level"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('current_price')">Harga Live <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-current_price"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('price_change_pct')">24h Chg % <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-price_change_pct"></i></th>
+                <th>Status Pucuk</th>
+                <th>Aksi Snipe</th>
+            </tr>
+        `;
+    } else {
+        thead.innerHTML = `
+            <tr>
+                <th class="sortable-th" onclick="sortPumpBy('symbol')">Pair Contract <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-symbol"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('spike_1m_pct')">1m Candle Spike % <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-spike_1m_pct"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('spike_5m_pct')">5m Momentum % <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-spike_5m_pct"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('vol_multiplier')">Volume Surge (Nx) <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-vol_multiplier"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('rsi')">RSI (14) <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-rsi"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('current_price')">Harga Live <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-current_price"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('price_change_pct')">24h Chg % <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-price_change_pct"></i></th>
+                <th>Status Deteksi</th>
+                <th>Aksi Snipe</th>
+            </tr>
+        `;
+    }
+
+    const activeIcon = document.getElementById(`sort-icon-pump-${state.pumpSortField || 'spike_1m_pct'}`);
+    if (activeIcon) {
+        activeIcon.className = `fa-solid ${state.pumpSortOrder === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} sort-icon active`;
+    }
+}
+
 function filterAndRenderPumpTable() {
+    renderPumpTableHead();
     const tbody = document.getElementById('screener-pump-tbody');
     const countEl = document.getElementById('screener-pump-total-count');
     if (!tbody) return;
 
     let filtered = [...state.pumpSniperData];
+    const method = state.pumpMethod || 'candle_spike_volume';
 
-    // Filter by Min Pct Threshold
-    if (state.pumpMinPct > 0) {
-        filtered = filtered.filter(p => (p.spike_1m_pct >= state.pumpMinPct || p.spike_5m_pct >= state.pumpMinPct));
+    // Dynamic Filter per Method
+    if (method === 'rsi_oversold') {
+        const rsiThresh = (state.pumpMinPct !== undefined) ? Number(state.pumpMinPct) : 30.0;
+        if (rsiThresh < 100) {
+            filtered = filtered.filter(p => Number(p.rsi || 50) <= rsiThresh);
+        }
+    } else if (method === 'rsi_overbought') {
+        const rsiThresh = (state.pumpMinPct !== undefined) ? Number(state.pumpMinPct) : 70.0;
+        if (rsiThresh > 0) {
+            filtered = filtered.filter(p => Number(p.rsi || 50) >= rsiThresh);
+        }
+    } else {
+        if (state.pumpMinPct > 0) {
+            filtered = filtered.filter(p => (p.spike_1m_pct >= state.pumpMinPct || p.spike_5m_pct >= state.pumpMinPct));
+        }
+    }
+
+    // Volume Multiplier Filter
+    if (state.pumpMinVol && state.pumpMinVol > 1.0) {
+        filtered = filtered.filter(p => Number(p.vol_multiplier || 1.0) >= state.pumpMinVol);
     }
 
     // Filter by Search Query
@@ -5088,8 +5326,8 @@ function filterAndRenderPumpTable() {
     }
 
     // Sorting
-    const field = state.pumpSortField || 'spike_1m_pct';
-    const order = state.pumpSortOrder || 'desc';
+    const field = state.pumpSortField || (method === 'rsi_oversold' || method === 'rsi_overbought' ? 'rsi' : 'spike_1m_pct');
+    const order = state.pumpSortOrder || ((field === 'rsi' && method === 'rsi_oversold') ? 'asc' : 'desc');
     filtered.sort((a, b) => {
         let valA = a[field];
         let valB = b[field];
@@ -5106,7 +5344,7 @@ function filterAndRenderPumpTable() {
 
     state.filteredPumpData = filtered;
     if (countEl) {
-        countEl.textContent = `Menampilkan ${filtered.length} dari ${state.pumpSniperData.length} Koin (${state.pumpTimeframe})`;
+        countEl.textContent = `Menampilkan ${filtered.length} dari ${state.pumpSniperData.length} Koin (${state.pumpTimeframe || '1m'})`;
     }
 
     tbody.innerHTML = '';
@@ -5116,7 +5354,7 @@ function filterAndRenderPumpTable() {
                 <tr>
                     <td colspan="9" class="loading-cell" style="padding: 30px 15px; color: #64748b; background: #fafbfc;">
                         <i class="fa-solid fa-filter-circle-xmark" style="font-size: 1.4rem; color: #94a3b8; display: block; margin-bottom: 6px;"></i>
-                        Tidak ada koin pump yang sesuai dengan pencarian <strong>"${state.pumpSearch}"</strong>.
+                        Tidak ada koin yang sesuai dengan pencarian <strong>"${state.pumpSearch}"</strong>.
                         <div style="margin-top: 10px;">
                             <button type="button" class="btn-clear-coins" onclick="clearPumpSearch()" style="padding: 4px 12px; font-size: 0.8rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; color: #334155; font-weight: 700;">
                                 ✕ Reset Pencarian "${state.pumpSearch}"
@@ -5126,14 +5364,24 @@ function filterAndRenderPumpTable() {
                 </tr>
             `;
         } else {
+            let emptyMsg = `Saat ini belum ada koin yang lonjak &gt; +${state.pumpMinPct}%`;
+            let emptySub = 'Anda dapat menurunkan ambang batas atau mengganti interval scan.';
+            if (method === 'rsi_oversold') {
+                emptyMsg = `Belum ada koin di zona diskon RSI &le; ${state.pumpMinPct}`;
+                emptySub = 'Pasar sedang stabil atau bullish. Anda dapat menaikkan ambang ke "RSI &le; 35" untuk deteksi dini.';
+            } else if (method === 'rsi_overbought') {
+                emptyMsg = `Belum ada koin di zona jenuh beli RSI &ge; ${state.pumpMinPct}`;
+                emptySub = 'Pasar tidak mengalami euforia overbought ekstrem.';
+            }
+
             tbody.innerHTML = `
                 <tr>
                     <td colspan="9" class="loading-cell" style="padding: 34px 20px; background: #fafbfc;">
                         <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">
-                            <i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Saat ini belum ada koin yang lonjak &gt; +${state.pumpMinPct}% pada timeframe ${state.pumpTimeframe}
+                            <i class="fa-solid fa-circle-check" style="color: #10b981;"></i> ${emptyMsg}
                         </div>
                         <div style="font-size: 0.85rem; color: #64748b; max-width: 600px; margin: 0 auto; line-height: 1.5;">
-                            Pasar sedang dalam volatilitas wajar. Anda dapat menurunkan ambang batas ke <strong>"🔥 &gt; +2.0%"</strong> atau mengganti interval ke <strong>"5m Spike"</strong> untuk memantau pergerakan lebih awal.
+                            ${emptySub}
                         </div>
                     </td>
                 </tr>
@@ -5148,62 +5396,151 @@ function filterAndRenderPumpTable() {
         const sp5m = Number(pair.spike_5m_pct || 0);
         const volN = Number(pair.vol_multiplier || 1.0);
         const chg = Number(pair.price_change_pct || 0);
+        const rsiVal = Number(pair.rsi || 50.0);
 
         tr.style.cursor = 'pointer';
         tr.onclick = () => selectScreenerChartCoin(pair.symbol);
 
-        if (pair.is_pump || sp1m >= 3.0) {
-            tr.style.background = 'rgba(245, 158, 11, 0.05)';
+        if (method === 'rsi_oversold') {
+            if (rsiVal <= 25.0) tr.style.background = 'rgba(16, 185, 129, 0.08)';
+            else if (rsiVal <= 30.0) tr.style.background = 'rgba(16, 185, 129, 0.04)';
+        } else if (method === 'rsi_overbought') {
+            if (rsiVal >= 75.0) tr.style.background = 'rgba(239, 68, 68, 0.08)';
+            else if (rsiVal >= 70.0) tr.style.background = 'rgba(239, 68, 68, 0.04)';
+        } else {
+            if (pair.is_pump || sp1m >= 3.0) tr.style.background = 'rgba(245, 158, 11, 0.05)';
         }
 
         const sp1mSign = sp1m >= 0 ? '+' : '';
         const sp1mColor = sp1m >= 3.0 ? '#10b981; font-weight:800;' : (sp1m > 0 ? '#059669;' : '#f43f5e;');
-        
         const sp5mSign = sp5m >= 0 ? '+' : '';
         const sp5mColor = sp5m >= 5.0 ? '#10b981; font-weight:800;' : (sp5m > 0 ? '#059669;' : '#f43f5e;');
-
         const volColor = volN >= 3.0 ? '#ea580c; font-weight:800;' : (volN >= 1.5 ? '#d97706;' : '#64748b;');
 
-        tr.innerHTML = `
-            <td>
-                <strong style="color: #0f172a; font-size: 0.95rem;">${pair.symbol}</strong>
-                ${pair.is_pump ? '<span style="display:block; font-size:0.7rem; color:#d97706; font-weight:800;">⚡ MOMENTUM SPIKE</span>' : ''}
-            </td>
-            <td class="font-mono" style="font-size: 0.95rem; color: ${sp1mColor}">
-                ${sp1mSign}${sp1m.toFixed(2)}%
-            </td>
-            <td class="font-mono" style="font-size: 0.92rem; color: ${sp5mColor}">
-                ${sp5mSign}${sp5m.toFixed(2)}%
-            </td>
-            <td class="font-mono" style="font-size: 0.92rem; color: ${volColor}">
-                ${volN.toFixed(1)}x Vol Normal
-            </td>
-            <td class="font-mono" style="font-size: 0.88rem; color: ${pair.rsi >= 70 ? '#ef4444; font-weight:800;' : (pair.rsi <= 30 ? '#10b981; font-weight:800;' : '#64748b;')}">
-                ${pair.rsi || '-'}
-            </td>
-            <td class="font-mono" style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">
-                $${formatCleanPrice(pair.current_price)}
-            </td>
-            <td class="font-mono ${chg >= 0 ? 'text-profit font-bold' : 'text-loss font-bold'}" style="font-size: 0.85rem;">
-                ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%
-            </td>
-            <td>
-                <span class="tag-badge" style="background: ${pair.badge_color || '#64748b'}18; color: ${pair.badge_color || '#64748b'}; border: 1px solid ${pair.badge_color || '#64748b'}44; font-weight: 800;">
-                    ${pair.badge || 'NORMAL'}
-                </span>
-            </td>
-            <td>
-                <button class="btn-log-action" style="background: rgba(234, 88, 12, 0.12); border-color: #ea580c; color: #c2410c; font-weight: 800; margin-right: 4px; padding: 5px 8px; border-radius: 6px;" onclick="event.stopPropagation(); selectScreenerChartCoin('${pair.symbol}')" title="Buka Live Chart ${pair.symbol}">
-                    <i class="fa-solid fa-chart-candlestick"></i> Chart
-                </button>
-                <button class="btn-log-action" style="background: rgba(16, 185, 129, 0.18); border-color: #10b981; color: #059669; font-weight: 800; margin-right: 4px; padding: 5px 10px; border-radius: 6px;" onclick="event.stopPropagation(); openPaperTradeFromScreener('${pair.symbol}', 'LONG', ${pair.current_price})" title="Quick Snipe Buka Paper Trade Sekarang">
-                    <i class="fa-solid fa-bolt"></i> Snipe Long
-                </button>
-                <button class="btn-log-action" style="background: rgba(59, 130, 246, 0.12); border-color: #3b82f6; color: #2563eb; font-weight: 700; margin-right: 4px; padding: 5px 8px; border-radius: 6px;" onclick="event.stopPropagation(); addPairToBotWatchlist('${pair.symbol}')" title="Masukkan ke Watchlist Bot">
-                    <i class="fa-solid fa-plus"></i> Watchlist
-                </button>
-            </td>
-        `;
+        if (method === 'rsi_oversold') {
+            const rsiBadgeColor = rsiVal <= 20 ? '#059669' : (rsiVal <= 25 ? '#10b981' : '#0284c7');
+            tr.innerHTML = `
+                <td>
+                    <strong style="color: #0f172a; font-size: 0.95rem;">${pair.symbol}</strong>
+                    ${rsiVal <= 25 ? '<span style="display:block; font-size:0.7rem; color:#059669; font-weight:800;">🟢 DISKON EKSTREM</span>' : ''}
+                </td>
+                <td class="font-mono">
+                    <span style="font-weight: 800; font-size: 0.95rem; color: #fff; background: ${rsiBadgeColor}; padding: 3px 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(16,185,129,0.2);">
+                        ${rsiVal.toFixed(1)}
+                    </span>
+                </td>
+                <td class="font-mono" style="font-size: 0.92rem; color: ${sp1mColor}">
+                    ${sp1mSign}${sp1m.toFixed(2)}%
+                </td>
+                <td class="font-mono" style="font-size: 0.92rem; color: ${volColor}">
+                    ${volN.toFixed(1)}x Vol Rata2
+                </td>
+                <td class="font-mono" style="font-size: 0.9rem; color: #0284c7; font-weight: 700;">
+                    $${formatCleanPrice(pair.support_level || pair.current_price * 0.98)}
+                </td>
+                <td class="font-mono" style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">
+                    $${formatCleanPrice(pair.current_price)}
+                </td>
+                <td class="font-mono ${chg >= 0 ? 'text-profit font-bold' : 'text-loss font-bold'}" style="font-size: 0.85rem;">
+                    ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%
+                </td>
+                <td>
+                    <span class="tag-badge" style="background: ${pair.badge_color || '#10b981'}18; color: ${pair.badge_color || '#10b981'}; border: 1px solid ${pair.badge_color || '#10b981'}44; font-weight: 800;">
+                        ${pair.badge || '🟢 OVERSOLD'}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn-log-action" style="background: rgba(234, 88, 12, 0.12); border-color: #ea580c; color: #c2410c; font-weight: 800; margin-right: 4px; padding: 5px 8px; border-radius: 6px;" onclick="event.stopPropagation(); selectScreenerChartCoin('${pair.symbol}')" title="Buka Live Chart ${pair.symbol}">
+                        <i class="fa-solid fa-chart-candlestick"></i> Chart
+                    </button>
+                    <button class="btn-log-action" style="background: rgba(16, 185, 129, 0.18); border-color: #10b981; color: #059669; font-weight: 800; margin-right: 4px; padding: 5px 10px; border-radius: 6px;" onclick="event.stopPropagation(); openPaperTradeFromScreener('${pair.symbol}', 'LONG', ${pair.current_price})" title="Quick Snipe Beli Dip Pantulan">
+                        <i class="fa-solid fa-bolt"></i> Buy Dip
+                    </button>
+                </td>
+            `;
+        } else if (method === 'rsi_overbought') {
+            const rsiBadgeColor = rsiVal >= 80 ? '#b91c1c' : (rsiVal >= 75 ? '#dc2626' : '#ea580c');
+            tr.innerHTML = `
+                <td>
+                    <strong style="color: #0f172a; font-size: 0.95rem;">${pair.symbol}</strong>
+                    ${rsiVal >= 75 ? '<span style="display:block; font-size:0.7rem; color:#dc2626; font-weight:800;">🔴 PUCUK JENUH</span>' : ''}
+                </td>
+                <td class="font-mono">
+                    <span style="font-weight: 800; font-size: 0.95rem; color: #fff; background: ${rsiBadgeColor}; padding: 3px 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(239,68,68,0.2);">
+                        ${rsiVal.toFixed(1)}
+                    </span>
+                </td>
+                <td class="font-mono" style="font-size: 0.92rem; color: ${sp1mColor}">
+                    ${sp1mSign}${sp1m.toFixed(2)}%
+                </td>
+                <td class="font-mono" style="font-size: 0.92rem; color: ${volColor}">
+                    ${volN.toFixed(1)}x Vol Rata2
+                </td>
+                <td class="font-mono" style="font-size: 0.9rem; color: #ef4444; font-weight: 700;">
+                    $${formatCleanPrice(pair.resistance_level || pair.current_price * 1.02)}
+                </td>
+                <td class="font-mono" style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">
+                    $${formatCleanPrice(pair.current_price)}
+                </td>
+                <td class="font-mono ${chg >= 0 ? 'text-profit font-bold' : 'text-loss font-bold'}" style="font-size: 0.85rem;">
+                    ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%
+                </td>
+                <td>
+                    <span class="tag-badge" style="background: ${pair.badge_color || '#ef4444'}18; color: ${pair.badge_color || '#ef4444'}; border: 1px solid ${pair.badge_color || '#ef4444'}44; font-weight: 800;">
+                        ${pair.badge || '🔴 OVERBOUGHT'}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn-log-action" style="background: rgba(234, 88, 12, 0.12); border-color: #ea580c; color: #c2410c; font-weight: 800; margin-right: 4px; padding: 5px 8px; border-radius: 6px;" onclick="event.stopPropagation(); selectScreenerChartCoin('${pair.symbol}')" title="Buka Live Chart ${pair.symbol}">
+                        <i class="fa-solid fa-chart-candlestick"></i> Chart
+                    </button>
+                    <button class="btn-log-action" style="background: rgba(239, 68, 68, 0.18); border-color: #ef4444; color: #dc2626; font-weight: 800; margin-right: 4px; padding: 5px 10px; border-radius: 6px;" onclick="event.stopPropagation(); openPaperTradeFromScreener('${pair.symbol}', 'SHORT', ${pair.current_price})" title="Quick Snipe Short / Exit">
+                        <i class="fa-solid fa-bolt"></i> Snipe Short
+                    </button>
+                </td>
+            `;
+        } else {
+            tr.innerHTML = `
+                <td>
+                    <strong style="color: #0f172a; font-size: 0.95rem;">${pair.symbol}</strong>
+                    ${pair.is_pump ? '<span style="display:block; font-size:0.7rem; color:#d97706; font-weight:800;">⚡ MOMENTUM SPIKE</span>' : ''}
+                </td>
+                <td class="font-mono" style="font-size: 0.95rem; color: ${sp1mColor}">
+                    ${sp1mSign}${sp1m.toFixed(2)}%
+                </td>
+                <td class="font-mono" style="font-size: 0.92rem; color: ${sp5mColor}">
+                    ${sp5mSign}${sp5m.toFixed(2)}%
+                </td>
+                <td class="font-mono" style="font-size: 0.92rem; color: ${volColor}">
+                    ${volN.toFixed(1)}x Vol Normal
+                </td>
+                <td class="font-mono" style="font-size: 0.88rem; color: ${rsiVal >= 70 ? '#ef4444; font-weight:800;' : (rsiVal <= 30 ? '#10b981; font-weight:800;' : '#64748b;')}">
+                    ${rsiVal.toFixed(1)}
+                </td>
+                <td class="font-mono" style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">
+                    $${formatCleanPrice(pair.current_price)}
+                </td>
+                <td class="font-mono ${chg >= 0 ? 'text-profit font-bold' : 'text-loss font-bold'}" style="font-size: 0.85rem;">
+                    ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%
+                </td>
+                <td>
+                    <span class="tag-badge" style="background: ${pair.badge_color || '#64748b'}18; color: ${pair.badge_color || '#64748b'}; border: 1px solid ${pair.badge_color || '#64748b'}44; font-weight: 800;">
+                        ${pair.badge || 'NORMAL'}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn-log-action" style="background: rgba(234, 88, 12, 0.12); border-color: #ea580c; color: #c2410c; font-weight: 800; margin-right: 4px; padding: 5px 8px; border-radius: 6px;" onclick="event.stopPropagation(); selectScreenerChartCoin('${pair.symbol}')" title="Buka Live Chart ${pair.symbol}">
+                        <i class="fa-solid fa-chart-candlestick"></i> Chart
+                    </button>
+                    <button class="btn-log-action" style="background: rgba(16, 185, 129, 0.18); border-color: #10b981; color: #059669; font-weight: 800; margin-right: 4px; padding: 5px 10px; border-radius: 6px;" onclick="event.stopPropagation(); openPaperTradeFromScreener('${pair.symbol}', 'LONG', ${pair.current_price})" title="Quick Snipe Buka Paper Trade Sekarang">
+                        <i class="fa-solid fa-bolt"></i> Snipe Long
+                    </button>
+                    <button class="btn-log-action" style="background: rgba(59, 130, 246, 0.12); border-color: #3b82f6; color: #2563eb; font-weight: 700; margin-right: 4px; padding: 5px 8px; border-radius: 6px;" onclick="event.stopPropagation(); addPairToBotWatchlist('${pair.symbol}')" title="Masukkan ke Watchlist Bot">
+                        <i class="fa-solid fa-plus"></i> Watchlist
+                    </button>
+                </td>
+            `;
+        }
         tbody.appendChild(tr);
     });
 }
@@ -5249,10 +5586,11 @@ function selectScreenerChartCoin(symbol) {
     if (!symbol) return;
     state.screenerActiveSymbol = symbol.toUpperCase().trim();
     updateScreenerPresetUI();
+    const stratId = (state.screenerRadarMode === 'pump') ? 'momentum' : state.screenerStrategy;
     if (!screenerChartInstance) {
         initScreenerChart();
     } else {
-        updateScreenerChart(state.screenerActiveSymbol, state.screenerChartTimeframe || state.screenerTimeframe, state.screenerStrategy);
+        updateScreenerChart(state.screenerActiveSymbol, state.screenerChartTimeframe || state.screenerTimeframe, stratId);
     }
     const card = document.getElementById('screener-chart-card');
     if (card) {

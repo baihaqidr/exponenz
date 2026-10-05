@@ -170,22 +170,41 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
             tf = qs.get("timeframe", ["1m"])[0]
             limit = int(qs.get("limit", ["1000"])[0])
             strat_id = qs.get("strategy", [trading_bot.active_strategy_id])[0]
+            chart_mode = qs.get("mode", ["strategy"])[0]
+            momentum_method = qs.get("momentum_method", [qs.get("method", ["candle_spike_volume"])[0]])[0]
             
             try:
                 # Fetch candles for indicator convergence warmup
                 warmup_limit = max(limit + 500, 1500)
                 df = fetch_fast_api_klines(sym, tf, total_candles=warmup_limit)
                 if df is not None and len(df) > 10:
-                    import importlib
-                    import src.strategy_registry
-                    import src.backtester
-                    importlib.reload(src.strategy_registry)
-                    importlib.reload(src.backtester)
-                    strategy = src.strategy_registry.get_strategy_instance(strat_id)
-                    df_sig = strategy.generate_signals(df)
+                    strat_name = "Indikator"
                     
-                    # Slice to requested limit after accurate calculation
-                    df_plot = df_sig.tail(limit).reset_index(drop=True)
+                    if strat_id == "momentum" or chart_mode == "momentum":
+                        strat_name = "Real-Time Momentum & RSI Scanner"
+                        # Calculate EMA 20, EMA 50, RSI 14, Support, Resistance, and Volume MA 20
+                        df_sig = df.copy()
+                        df_sig['ema_20'] = df_sig['close'].ewm(span=20, adjust=False).mean()
+                        df_sig['ema_50'] = df_sig['close'].ewm(span=50, adjust=False).mean()
+                        df_sig['sw_high'] = df_sig['high'].rolling(window=20).max()
+                        df_sig['sw_low'] = df_sig['low'].rolling(window=20).min()
+                        df_sig['vol_ma20'] = df_sig['volume'].rolling(window=20).mean()
+                        
+                        delta = df_sig['close'].diff()
+                        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+                        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+                        rs = gain / (loss + 1e-9)
+                        df_sig['rsi'] = 100 - (100 / (1 + rs))
+                        
+                        df_plot = df_sig.tail(limit).reset_index(drop=True)
+                    else:
+                        import importlib
+                        import src.strategy_registry
+                        import src.backtester
+                        strategy = get_strategy_instance(strat_id)
+                        strat_name = getattr(strategy, 'name', strat_id)
+                        df_sig = strategy.generate_signals(df)
+                        df_plot = df_sig.tail(limit).reset_index(drop=True)
                     
                     latest_close = float(df_plot.iloc[-1]['close'])
                     if latest_close < 0.0001:
@@ -240,31 +259,38 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                             "volume": c_vol
                         })
 
-                        vol_color = "rgba(14, 203, 129, 0.45)" if c_close >= c_open else "rgba(246, 70, 93, 0.45)"
+                        # Volume color with Surge detection
+                        vol_ma = float(row.get('vol_ma20', 0.0))
+                        is_vol_surge = (vol_ma > 0 and c_vol >= vol_ma * 1.5)
+                        if is_vol_surge:
+                            vol_color = "rgba(245, 158, 11, 0.9)" # Gold/Amber surge
+                        else:
+                            vol_color = "rgba(14, 203, 129, 0.45)" if c_close >= c_open else "rgba(246, 70, 93, 0.45)"
+
                         volume_data.append({
                             "time": t_sec,
                             "value": c_vol,
                             "color": vol_color
                         })
                         
-                        # Dynamic Main Line (EMA, Supertrend, or Middle Band)
-                        main_val = row.get('ema_7', row.get('ema_main', row.get('supertrend', row.get('sma_mid', row.get('bb_middleband')))))
+                        # Main Line (EMA 20 for momentum, or strategy main line)
+                        main_val = row.get('ema_20', row.get('ema_7', row.get('ema_main', row.get('supertrend', row.get('sma_mid', row.get('bb_middleband'))))))
                         if pd.notnull(main_val):
                             ema_data.append({
                                 "time": t_sec,
                                 "value": float(main_val)
                             })
                             
-                        # Upper Band / Swing High
-                        up_val = row.get('bb_upper', row.get('bb_upperband', row.get('swing_high', row.get('sw_high'))))
+                        # Upper Band / Resistance Level
+                        up_val = row.get('sw_high', row.get('bb_upper', row.get('bb_upperband', row.get('swing_high'))))
                         if pd.notnull(up_val):
                             upper_data.append({
                                 "time": t_sec,
                                 "value": float(up_val)
                             })
                             
-                        # Lower Band / Swing Low
-                        low_val = row.get('bb_lower', row.get('bb_lowerband', row.get('swing_low', row.get('sw_low'))))
+                        # Lower Band / Support Floor
+                        low_val = row.get('sw_low', row.get('bb_lower', row.get('bb_lowerband', row.get('swing_low'))))
                         if pd.notnull(low_val):
                             lower_data.append({
                                 "time": t_sec,
@@ -278,32 +304,99 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                                 "time": t_sec,
                                 "value": round(float(rsi_val), 2)
                             })
-                            
-                    # Generate 100% accurate, stateful trade markers matching the Strategy and Backtest Engine
-                    is_long_only = getattr(strategy, 'is_long_only', False)
-                    engine = BacktestEngine(initial_capital=1000.0, leverage=2.0, risk_per_trade_pct=0.02, is_long_only=is_long_only)
-                    res_bt = engine.run(df_sig)
-                    df_trades = res_bt.get("trades_df", pd.DataFrame())
-                    open_pos = res_bt.get("open_position", None)
-                    
-                    candle_times = set(c['time'] for c in candles)
-                    min_plot_sec = candles[0]['time'] if candles else 0
-                    max_plot_sec = candles[-1]['time'] if candles else 0
+
+                    # Markers generation
                     markers_map = {}
+                    if strat_id == "momentum" or chart_mode == "momentum":
+                        # Pure Momentum / RSI Markers (Historical & Real-time)
+                        for i in range(len(df_plot)):
+                            r = df_plot.iloc[i]
+                            t = candles[i]['time']
+                            c_op = candles[i]['open']
+                            c_cl = candles[i]['close']
+                            c_rsi = float(r.get('rsi', 50.0))
+                            spk_pct = ((c_cl - c_op) / c_op) * 100.0 if c_op > 0 else 0.0
+                            
+                            if momentum_method in ["rsi_oversold", "rapid_rsi_oversold"]:
+                                if c_rsi <= 30.0:
+                                    markers_map[t] = {
+                                        "time": t,
+                                        "position": "belowBar",
+                                        "color": "#10b981",
+                                        "shape": "arrowUp",
+                                        "text": f"OVERSOLD ({round(c_rsi, 1)})"
+                                    }
+                            elif momentum_method in ["rsi_overbought", "rapid_rsi_overbought"]:
+                                if c_rsi >= 70.0:
+                                    markers_map[t] = {
+                                        "time": t,
+                                        "position": "aboveBar",
+                                        "color": "#ef4444",
+                                        "shape": "arrowDown",
+                                        "text": f"OVERBOUGHT ({round(c_rsi, 1)})"
+                                    }
+                            else: # candle_spike_volume
+                                if spk_pct >= 2.0:
+                                    markers_map[t] = {
+                                        "time": t,
+                                        "position": "aboveBar",
+                                        "color": "#f59e0b",
+                                        "shape": "arrowUp",
+                                        "text": f"🔥 +{round(spk_pct, 1)}%"
+                                    }
+                                elif spk_pct <= -2.5:
+                                    markers_map[t] = {
+                                        "time": t,
+                                        "position": "belowBar",
+                                        "color": "#f43f5e",
+                                        "shape": "arrowDown",
+                                        "text": f"🔻 {round(spk_pct, 1)}%"
+                                    }
+                    else:
+                        # Strategy Backtest Markers
+                        is_long_only = getattr(strategy, 'is_long_only', False)
+                        engine = BacktestEngine(initial_capital=1000.0, leverage=2.0, risk_per_trade_pct=0.02, is_long_only=is_long_only)
+                        res_bt = engine.run(df_sig)
+                        df_trades = res_bt.get("trades_df", pd.DataFrame())
+                        open_pos = res_bt.get("open_position", None)
+                        
+                        candle_times = set(c['time'] for c in candles)
+                        min_plot_sec = candles[0]['time'] if candles else 0
+                        max_plot_sec = candles[-1]['time'] if candles else 0
 
-                    def _find_closest_candle_time(target_sec):
-                        if target_sec in candle_times:
-                            return target_sec
-                        # Find nearest candle within reasonable tolerance
-                        best_t = min(candle_times, key=lambda t: abs(t - target_sec)) if candle_times else target_sec
-                        return best_t
+                        def _find_closest_candle_time(target_sec):
+                            if target_sec in candle_times:
+                                return target_sec
+                            best_t = min(candle_times, key=lambda t: abs(t - target_sec)) if candle_times else target_sec
+                            return best_t
 
-                    if not df_trades.empty:
-                        for _, tr in df_trades.iterrows():
-                            e_sec = _find_closest_candle_time(int(pd.to_datetime(tr['entry_time']).timestamp()))
-                            x_sec = _find_closest_candle_time(int(pd.to_datetime(tr['exit_time']).timestamp()))
-                            is_long = tr['type'] == 'LONG'
+                        if not df_trades.empty:
+                            for _, tr in df_trades.iterrows():
+                                e_sec = _find_closest_candle_time(int(pd.to_datetime(tr['entry_time']).timestamp()))
+                                x_sec = _find_closest_candle_time(int(pd.to_datetime(tr['exit_time']).timestamp()))
+                                is_long = tr['type'] == 'LONG'
 
+                                if min_plot_sec <= e_sec <= max_plot_sec:
+                                    markers_map[e_sec] = {
+                                        "time": e_sec,
+                                        "position": "belowBar" if is_long else "aboveBar",
+                                        "color": "#10b981" if is_long else "#ef4444",
+                                        "shape": "arrowUp" if is_long else "arrowDown",
+                                        "text": "BUY" if is_long else "SHORT"
+                                    }
+
+                                if min_plot_sec <= x_sec <= max_plot_sec:
+                                    markers_map[x_sec] = {
+                                        "time": x_sec,
+                                        "position": "aboveBar" if is_long else "belowBar",
+                                        "color": "#ef4444" if is_long else "#10b981",
+                                        "shape": "arrowDown" if is_long else "arrowUp",
+                                        "text": "CLOSE" if is_long else "COVER"
+                                    }
+
+                        if open_pos is not None:
+                            e_sec = _find_closest_candle_time(int(pd.to_datetime(open_pos['entry_time']).timestamp()))
+                            is_long = open_pos['type'] == 'LONG'
                             if min_plot_sec <= e_sec <= max_plot_sec:
                                 markers_map[e_sec] = {
                                     "time": e_sec,
@@ -311,49 +404,6 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                                     "color": "#10b981" if is_long else "#ef4444",
                                     "shape": "arrowUp" if is_long else "arrowDown",
                                     "text": "BUY" if is_long else "SHORT"
-                                }
-
-                            if min_plot_sec <= x_sec <= max_plot_sec:
-                                markers_map[x_sec] = {
-                                    "time": x_sec,
-                                    "position": "aboveBar" if is_long else "belowBar",
-                                    "color": "#ef4444" if is_long else "#10b981",
-                                    "shape": "arrowDown" if is_long else "arrowUp",
-                                    "text": "CLOSE" if is_long else "COVER"
-                                }
-
-                    if open_pos is not None:
-                        e_sec = _find_closest_candle_time(int(pd.to_datetime(open_pos['entry_time']).timestamp()))
-                        is_long = open_pos['type'] == 'LONG'
-                        if min_plot_sec <= e_sec <= max_plot_sec:
-                            markers_map[e_sec] = {
-                                "time": e_sec,
-                                "position": "belowBar" if is_long else "aboveBar",
-                                "color": "#10b981" if is_long else "#ef4444",
-                                "shape": "arrowUp" if is_long else "arrowDown",
-                                "text": "BUY" if is_long else "SHORT"
-                            }
-
-                    # Fallback to direct strategy signal indicators if no backtest trades were closed
-                    if not markers_map and len(candles) == len(df_plot):
-                        for i in range(len(df_plot)):
-                            r = df_plot.iloc[i]
-                            t = candles[i]['time']
-                            if r.get('enter_long', 0) == 1 or r.get('signal', 0) == 1:
-                                markers_map[t] = {
-                                    "time": t,
-                                    "position": "belowBar",
-                                    "color": "#10b981",
-                                    "shape": "arrowUp",
-                                    "text": "BUY"
-                                }
-                            elif r.get('exit_long', 0) == 1 or (not is_long_only and (r.get('signal', 0) == -1 or r.get('enter_short', 0) == 1)):
-                                markers_map[t] = {
-                                    "time": t,
-                                    "position": "aboveBar",
-                                    "color": "#ef4444",
-                                    "shape": "arrowDown",
-                                    "text": "CLOSE" if is_long_only else "SHORT"
                                 }
 
                     markers = [markers_map[t] for t in sorted(markers_map.keys())]
