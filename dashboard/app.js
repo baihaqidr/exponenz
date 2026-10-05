@@ -4991,7 +4991,12 @@ function onPumpMethodChanged() {
     const labelVol = document.getElementById('label-pump-filter-vol');
     const descBadge = document.getElementById('screener-pump-desc-badge');
 
+    const selectVol = document.getElementById('screener-pump-min-vol');
     if (state.pumpMethod === 'rsi_oversold') {
+        if (selectVol) {
+            selectVol.value = '1.0';
+            state.pumpMinVol = 1.0;
+        }
         if (labelMain) {
             labelMain.style.color = '#10b981';
             labelMain.innerHTML = '<i class="fa-solid fa-arrow-down-long"></i> AMBANG RSI OVERSOLD:';
@@ -5015,6 +5020,10 @@ function onPumpMethodChanged() {
         state.pumpSortField = 'rsi';
         state.pumpSortOrder = 'asc';
     } else if (state.pumpMethod === 'rsi_overbought') {
+        if (selectVol) {
+            selectVol.value = '1.0';
+            state.pumpMinVol = 1.0;
+        }
         if (labelMain) {
             labelMain.style.color = '#ef4444';
             labelMain.innerHTML = '<i class="fa-solid fa-arrow-up-long"></i> AMBANG RSI OVERBOUGHT:';
@@ -5179,11 +5188,12 @@ async function loadPumpSniperData(forceRefresh = false) {
         const minVol = (state.pumpMinVol !== undefined) ? state.pumpMinVol : 1.0;
         const preset = state.pumpActivePreset || 'top_50';
         const presetParam = preset ? `&preset=${encodeURIComponent(preset)}` : '';
+        const scanLimit = (preset === 'all_coins') ? 150 : (preset === 'top_50' ? 50 : (preset === 'top_25' ? 25 : 10));
         
-        let url = `/api/screener/strategy-scan?strategy=pump_sniper&mode=pump&method=${encodeURIComponent(method)}&timeframe=${encodeURIComponent(tf)}&min_pct=${encodeURIComponent(minPct)}&min_vol_mult=${encodeURIComponent(minVol)}&limit=60${presetParam}`;
+        let url = `/api/screener/strategy-scan?strategy=pump_sniper&mode=pump&method=${encodeURIComponent(method)}&timeframe=${encodeURIComponent(tf)}&min_pct=${encodeURIComponent(minPct)}&min_vol_mult=${encodeURIComponent(minVol)}&limit=${scanLimit}${presetParam}`;
         let res = await fetch(url);
         if (!res.ok) {
-            url = `/api/screener/pump-spikes?method=${encodeURIComponent(method)}&timeframe=${encodeURIComponent(tf)}&min_pct=${encodeURIComponent(minPct)}&min_vol_mult=${encodeURIComponent(minVol)}&limit=60${presetParam}`;
+            url = `/api/screener/pump-spikes?method=${encodeURIComponent(method)}&timeframe=${encodeURIComponent(tf)}&min_pct=${encodeURIComponent(minPct)}&min_vol_mult=${encodeURIComponent(minVol)}&limit=${scanLimit}${presetParam}`;
             res = await fetch(url);
         }
 
@@ -5324,9 +5334,9 @@ function filterAndRenderPumpTable() {
         }
     }
 
-    // Volume Multiplier Filter
-    if (state.pumpMinVol && state.pumpMinVol > 1.0) {
-        filtered = filtered.filter(p => Number(p.vol_multiplier || 1.0) >= state.pumpMinVol);
+    // Volume Multiplier Filter (Only apply if explicitly set > 1.0)
+    if (state.pumpMinVol && Number(state.pumpMinVol) > 1.0) {
+        filtered = filtered.filter(p => Number(p.vol_multiplier || 1.0) >= Number(state.pumpMinVol));
     }
 
     // Filter by Search Query
@@ -5377,11 +5387,23 @@ function filterAndRenderPumpTable() {
             let emptyMsg = `Saat ini belum ada koin yang lonjak &gt; +${state.pumpMinPct}%`;
             let emptySub = 'Anda dapat menurunkan ambang batas atau mengganti interval scan.';
             if (method === 'rsi_oversold') {
-                emptyMsg = `Belum ada koin di zona diskon RSI &le; ${state.pumpMinPct}`;
-                emptySub = 'Pasar sedang stabil atau bullish. Anda dapat menaikkan ambang ke "RSI &le; 35" untuk deteksi dini.';
+                const rawOversold = state.pumpSniperData.filter(p => Number(p.rsi || 50) <= (state.pumpMinPct || 30));
+                if (rawOversold.length > 0 && Number(state.pumpMinVol || 1.0) > 1.0) {
+                    emptyMsg = `Ditemukan ${rawOversold.length} koin Oversold, namun terfilter oleh "Volume Anomaly: ${state.pumpMinVol}x"`;
+                    emptySub = `Silakan ganti dropdown <strong>VOLUME ANOMALY</strong> menjadi <strong>"Semua Volume"</strong> untuk melihat ${rawOversold.length} koin tersebut.`;
+                } else {
+                    emptyMsg = `Belum ada koin di zona diskon RSI &le; ${state.pumpMinPct} (${state.pumpTimeframe || '1m'})`;
+                    emptySub = 'Pasar sedang stabil atau bullish. Anda dapat menaikkan ambang ke "🟡 RSI &le; 35" atau ganti Scope Koin ke "Scan Seluruh 500+ Koin Binance".';
+                }
             } else if (method === 'rsi_overbought') {
-                emptyMsg = `Belum ada koin di zona jenuh beli RSI &ge; ${state.pumpMinPct}`;
-                emptySub = 'Pasar tidak mengalami euforia overbought ekstrem.';
+                const rawOverbought = state.pumpSniperData.filter(p => Number(p.rsi || 50) >= (state.pumpMinPct || 70));
+                if (rawOverbought.length > 0 && Number(state.pumpMinVol || 1.0) > 1.0) {
+                    emptyMsg = `Ditemukan ${rawOverbought.length} koin Overbought, namun terfilter oleh "Volume Anomaly: ${state.pumpMinVol}x"`;
+                    emptySub = `Silakan ganti dropdown <strong>VOLUME ANOMALY</strong> menjadi <strong>"Semua Volume"</strong> untuk melihat ${rawOverbought.length} koin tersebut.`;
+                } else {
+                    emptyMsg = `Belum ada koin di zona jenuh beli RSI &ge; ${state.pumpMinPct} (${state.pumpTimeframe || '1m'})`;
+                    emptySub = 'Pasar tidak mengalami euforia overbought ekstrem.';
+                }
             }
 
             tbody.innerHTML = `

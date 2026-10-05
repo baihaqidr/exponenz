@@ -57,10 +57,38 @@ class BollingerScreenerEngine:
         self.symbols_cache_ts = 0
 
     def get_top_symbols(self, limit: int = 50, preset: str = None) -> List[str]:
+        now = time.time()
+        if preset and preset in SCREENER_PRESETS and preset != "all_coins":
+            return SCREENER_PRESETS[preset][:limit]
+
+        if preset == "all_coins" or limit > 50:
+            if self.symbols_cache and (now - self.symbols_cache_ts < 300):
+                return self.symbols_cache[:limit]
+            try:
+                import requests
+                headers = {'User-Agent': 'Mozilla/5.0'}
+                r = requests.get("https://data-api.binance.vision/api/v3/ticker/24hr", headers=headers, timeout=5)
+                if r.status_code == 200:
+                    tickers = r.json()
+                    stables = {"USDCUSDT", "FDUSDUSDT", "TUSDUSDT", "USDPUSDT", "BUSDUSDT", "EURUSDT", "GBPUSDT", "USD1USDT"}
+                    usdt_pairs = [
+                        t for t in tickers 
+                        if t.get('symbol', '').endswith('USDT') 
+                        and t['symbol'] not in stables 
+                        and float(t.get('quoteVolume', 0)) > 300000
+                    ]
+                    usdt_pairs.sort(key=lambda x: float(x.get('quoteVolume', 0)), reverse=True)
+                    sym_list = [t['symbol'] for t in usdt_pairs]
+                    if len(sym_list) > 20:
+                        self.symbols_cache = sym_list
+                        self.symbols_cache_ts = now
+                        return sym_list[:limit]
+            except Exception:
+                pass
+
         if preset and preset in SCREENER_PRESETS:
             return SCREENER_PRESETS[preset][:limit]
 
-        # Use verified liquid universe directly to prevent low-cap / illiquid / dead tokens from cluttering the screener
         verified_pool = SCREENER_PRESETS.get("all_coins", [])
         return verified_pool[:limit]
 
@@ -433,7 +461,7 @@ class BollingerScreenerEngine:
             symbols = self.get_top_symbols(limit=limit, preset=preset)
 
         results = []
-        with ThreadPoolExecutor(max_workers=16) as executor:
+        with ThreadPoolExecutor(max_workers=32) as executor:
             futures = [executor.submit(self._evaluate_pump_spike, sym, timeframe, method) for sym in symbols]
             for f in futures:
                 res = f.result()
