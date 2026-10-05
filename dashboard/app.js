@@ -5071,7 +5071,7 @@ function onPumpMethodChanged() {
 window.onPumpMethodChanged = onPumpMethodChanged;
 
 function changePumpSniperTimeframe(tf) {
-    const validTfs = ['1m', '5m', '15m'];
+    const validTfs = ['1m', '5m', '15m', '1h', '4h', '1d'];
     state.pumpTimeframe = validTfs.includes(tf) ? tf : '1m';
     const btns = document.querySelectorAll('#screener-pump-tf-buttons .tf-btn');
     btns.forEach(b => {
@@ -5079,6 +5079,16 @@ function changePumpSniperTimeframe(tf) {
         else b.classList.remove('active');
     });
     loadPumpSniperData(true);
+
+    if (state.screenerActiveSymbol) {
+        state.screenerChartTimeframe = state.pumpTimeframe;
+        const chartTfBtns = document.querySelectorAll('#screener-chart-tf-buttons .tf-btn');
+        chartTfBtns.forEach(b => {
+            if (b.getAttribute('data-screener-chart-tf') === state.pumpTimeframe) b.classList.add('active');
+            else b.classList.remove('active');
+        });
+        updateScreenerChart(state.screenerActiveSymbol, state.pumpTimeframe, 'momentum');
+    }
 }
 window.changePumpSniperTimeframe = changePumpSniperTimeframe;
 

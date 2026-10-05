@@ -795,11 +795,11 @@
 
                     <!-- 1. RADAR SUB-MODE SWITCHER (STRATEGY SIGNALS vs REAL-TIME MOMENTUM SCREENER) -->
                     <div class="screener-mode-tabs" style="display: flex; gap: 10px; margin-bottom: 16px; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; flex-wrap: wrap;">
-                        <button type="button" id="screener-mode-btn-strategy" class="btn-subtab active" onclick="switchScreenerRadarMode('strategy')" style="font-weight: 800; padding: 9px 20px; border-radius: 8px; border: 1px solid #ea580c; background: #ea580c; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(234,88,12,0.2);">
-                            <i class="fa-solid fa-crosshairs"></i> 🎯 Technical Strategy Screener
+                        <button type="button" id="screener-mode-btn-strategy" class="btn-subtab active" onclick="switchScreenerRadarMode('strategy')" style="font-weight: 800; padding: 9px 18px; border-radius: 8px; border: 1px solid #ea580c; background: #ea580c; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.88rem; box-shadow: 0 2px 4px rgba(234,88,12,0.2); white-space: nowrap;">
+                            <i class="fa-solid fa-crosshairs"></i> Technical Strategy Screener
                         </button>
-                        <button type="button" id="screener-mode-btn-pump" class="btn-subtab" onclick="switchScreenerRadarMode('pump')" style="font-weight: 800; padding: 9px 20px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.9rem;">
-                            <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> ⚡ Real-Time Momentum Screener <span class="tag-badge" style="background: rgba(245,158,11,0.15); color: #d97706; font-size: 0.68rem; padding: 1px 6px;">LIVE MOMENTUM</span>
+                        <button type="button" id="screener-mode-btn-pump" class="btn-subtab" onclick="switchScreenerRadarMode('pump')" style="font-weight: 800; padding: 9px 18px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.88rem; white-space: nowrap;">
+                            <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> Real-Time Momentum &amp; RSI Screener
                         </button>
                     </div>
 
@@ -907,6 +907,8 @@
                                 <button class="tf-btn" data-pump-tf="5m" onclick="changePumpSniperTimeframe('5m')">5m</button>
                                 <button class="tf-btn" data-pump-tf="15m" onclick="changePumpSniperTimeframe('15m')">15m</button>
                                 <button class="tf-btn" data-pump-tf="1h" onclick="changePumpSniperTimeframe('1h')">1h</button>
+                                <button class="tf-btn" data-pump-tf="4h" onclick="changePumpSniperTimeframe('4h')">4h</button>
+                                <button class="tf-btn" data-pump-tf="1d" onclick="changePumpSniperTimeframe('1d')">1d</button>
                             </div>
                         </div>
 
