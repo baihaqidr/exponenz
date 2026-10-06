@@ -5619,10 +5619,19 @@ function selectScreenerChartCoin(symbol) {
     state.screenerActiveSymbol = symbol.toUpperCase().trim();
     updateScreenerPresetUI();
     const stratId = (state.screenerRadarMode === 'pump') ? 'momentum' : state.screenerStrategy;
+    const targetTf = (state.screenerRadarMode === 'pump') ? (state.pumpTimeframe || '1m') : (state.screenerChartTimeframe || state.screenerTimeframe || '15m');
+    state.screenerChartTimeframe = targetTf;
+
+    const btns = document.querySelectorAll('#screener-chart-tf-buttons .tf-btn');
+    btns.forEach(b => {
+        if (b.getAttribute('data-screener-chart-tf') === targetTf) b.classList.add('active');
+        else b.classList.remove('active');
+    });
+
     if (!screenerChartInstance) {
         initScreenerChart();
     } else {
-        updateScreenerChart(state.screenerActiveSymbol, state.screenerChartTimeframe || state.screenerTimeframe, stratId);
+        updateScreenerChart(state.screenerActiveSymbol, targetTf, stratId);
     }
     const card = document.getElementById('screener-chart-card');
     if (card) {

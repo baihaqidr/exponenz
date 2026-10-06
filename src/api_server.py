@@ -413,7 +413,7 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                         "symbol": sym,
                         "timeframe": tf,
                         "strategy_id": strat_id,
-                        "strategy_name": strategy.name,
+                        "strategy_name": strat_name,
                         "precision": prec,
                         "min_move": min_m,
                         "candles": candles,
