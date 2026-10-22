@@ -314,6 +314,8 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                             t = candles[i]['time']
                             c_op = candles[i]['open']
                             c_cl = candles[i]['close']
+                            c_rsi = float(r.get('rsi', 50.0))
+                            spk_pct = ((c_cl - c_op) / c_op) * 100.0 if c_op > 0 else 0.0
                             c_rsi_prev2 = float(df_plot.iloc[i-2].get('rsi', c_rsi)) if i >= 2 else c_rsi
                             c_rsi_prev3 = float(df_plot.iloc[i-3].get('rsi', c_rsi_prev2)) if i >= 3 else c_rsi_prev2
                             c_rsi_drop = max(0.0, c_rsi_prev2 - c_rsi, c_rsi_prev3 - c_rsi)
