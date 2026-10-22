@@ -314,10 +314,20 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                             t = candles[i]['time']
                             c_op = candles[i]['open']
                             c_cl = candles[i]['close']
-                            c_rsi = float(r.get('rsi', 50.0))
-                            spk_pct = ((c_cl - c_op) / c_op) * 100.0 if c_op > 0 else 0.0
-                            
-                            if momentum_method in ["rsi_oversold", "rapid_rsi_oversold"]:
+                            c_rsi_prev2 = float(df_plot.iloc[i-2].get('rsi', c_rsi)) if i >= 2 else c_rsi
+                            c_rsi_prev3 = float(df_plot.iloc[i-3].get('rsi', c_rsi_prev2)) if i >= 3 else c_rsi_prev2
+                            c_rsi_drop = max(0.0, c_rsi_prev2 - c_rsi, c_rsi_prev3 - c_rsi)
+
+                            if momentum_method in ["rapid_rsi_drop", "rsi_drop"]:
+                                if c_rsi_drop >= 15.0 and c_rsi <= 35.0:
+                                    markers_map[t] = {
+                                        "time": t,
+                                        "position": "belowBar",
+                                        "color": "#10b981",
+                                        "shape": "arrowUp",
+                                        "text": f"⚡ DROP -{round(c_rsi_drop, 0)} ({round(c_rsi, 1)})"
+                                    }
+                            elif momentum_method in ["rsi_oversold", "rapid_rsi_oversold"]:
                                 if c_rsi <= 30.0:
                                     markers_map[t] = {
                                         "time": t,

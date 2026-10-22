@@ -4862,7 +4862,14 @@ async function updateScreenerChart(symbol, timeframe, strategyId) {
     if (legendBuyEl && legendSellEl) {
         if (state.screenerRadarMode === 'pump') {
             const pMethod = state.pumpMethod || 'candle_spike_volume';
-            if (pMethod === 'rsi_oversold') {
+            if (pMethod === 'rapid_rsi_drop') {
+                legendBuyEl.innerHTML = '<i class="fa-solid fa-bolt"></i> ⚡ RAPID DROP (Rebound Dip)';
+                legendBuyEl.style.color = '#0284c7';
+                legendBuyEl.style.background = 'rgba(2,132,199,0.12)';
+                legendSellEl.innerHTML = '<i class="fa-solid fa-arrow-trend-up"></i> 🎯 BOUNCE RECOVERY';
+                legendSellEl.style.color = '#10b981';
+                legendSellEl.style.background = 'rgba(16,185,129,0.12)';
+            } else if (pMethod === 'rsi_oversold') {
                 legendBuyEl.innerHTML = '<i class="fa-solid fa-arrow-up"></i> 🟢 OVERSOLD (Buy Dip)';
                 legendBuyEl.style.color = '#10b981';
                 legendBuyEl.style.background = 'rgba(16,185,129,0.12)';
@@ -4992,7 +4999,34 @@ function onPumpMethodChanged() {
     const descBadge = document.getElementById('screener-pump-desc-badge');
 
     const selectVol = document.getElementById('screener-pump-min-vol');
-    if (state.pumpMethod === 'rsi_oversold') {
+    if (state.pumpMethod === 'rapid_rsi_drop') {
+        if (selectVol) {
+            selectVol.value = '1.0';
+            state.pumpMinVol = 1.0;
+        }
+        if (labelMain) {
+            labelMain.style.color = '#0284c7';
+            labelMain.innerHTML = '<i class="fa-solid fa-bolt"></i> MINIMAL PENURUNAN RSI:';
+        }
+        if (selectMain) {
+            selectMain.innerHTML = `
+                <option value="15" selected>⚡ Drop &ge; 15 Poin (Rekomendasi Rebound)</option>
+                <option value="20">🔥 Drop &ge; 20 Poin (Super Sharp Dump)</option>
+                <option value="25">💥 Drop &ge; 25 Poin (Flash Crash Ekstrem)</option>
+                <option value="10">🟡 Drop &ge; 10 Poin (Early Dip Alert)</option>
+                <option value="0">⚡ Tampilkan Semua Penurunan</option>
+            `;
+            state.pumpMinPct = 15.0;
+        }
+        if (labelVol) {
+            labelVol.innerHTML = '<i class="fa-solid fa-chart-column"></i> VOLUME ANOMALY:';
+        }
+        if (descBadge) {
+            descBadge.textContent = 'Radar Penurunan Curam (RSI Flash Drop) - Koin yang Terjun Bebas & Berpotensi Rebound Cepat';
+        }
+        state.pumpSortField = 'rsi_drop_pts';
+        state.pumpSortOrder = 'desc';
+    } else if (state.pumpMethod === 'rsi_oversold') {
         if (selectVol) {
             selectVol.value = '1.0';
             state.pumpMinVol = 1.0;
@@ -5258,7 +5292,21 @@ function renderPumpTableHead() {
     if (!thead) return;
 
     const method = state.pumpMethod || 'candle_spike_volume';
-    if (method === 'rsi_oversold') {
+    if (method === 'rapid_rsi_drop') {
+        thead.innerHTML = `
+            <tr>
+                <th class="sortable-th" onclick="sortPumpBy('symbol')">Pair Contract <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-symbol"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('rsi_drop_pts')">RSI Drop (&Delta; Pts) <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-rsi_drop_pts"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('rsi')">RSI Sekarang <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-rsi"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('vol_multiplier')">Volume Surge <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-vol_multiplier"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('support_level')">Support Floor <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-support_level"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('current_price')">Harga Live <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-current_price"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('price_change_pct')">24h Chg % <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-price_change_pct"></i></th>
+                <th>Status Penurunan</th>
+                <th>Aksi Snipe</th>
+            </tr>
+        `;
+    } else if (method === 'rsi_oversold') {
         thead.innerHTML = `
             <tr>
                 <th class="sortable-th" onclick="sortPumpBy('symbol')">Pair Contract <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-symbol"></i></th>
@@ -5318,7 +5366,12 @@ function filterAndRenderPumpTable() {
     const method = state.pumpMethod || 'candle_spike_volume';
 
     // Dynamic Filter per Method
-    if (method === 'rsi_oversold') {
+    if (method === 'rapid_rsi_drop') {
+        const dropThresh = (state.pumpMinPct !== undefined) ? Number(state.pumpMinPct) : 15.0;
+        if (dropThresh > 0) {
+            filtered = filtered.filter(p => Number(p.rsi_drop_pts || 0) >= dropThresh);
+        }
+    } else if (method === 'rsi_oversold') {
         const rsiThresh = (state.pumpMinPct !== undefined) ? Number(state.pumpMinPct) : 30.0;
         if (rsiThresh < 100) {
             filtered = filtered.filter(p => Number(p.rsi || 50) <= rsiThresh);
@@ -5346,8 +5399,10 @@ function filterAndRenderPumpTable() {
     }
 
     // Sorting
-    const field = state.pumpSortField || (method === 'rsi_oversold' || method === 'rsi_overbought' ? 'rsi' : 'spike_1m_pct');
-    const order = state.pumpSortOrder || ((field === 'rsi' && method === 'rsi_oversold') ? 'asc' : 'desc');
+    const defaultSortField = (method === 'rapid_rsi_drop') ? 'rsi_drop_pts' : ((method === 'rsi_oversold' || method === 'rsi_overbought') ? 'rsi' : 'spike_1m_pct');
+    const field = state.pumpSortField || defaultSortField;
+    const defaultSortOrder = (method === 'rsi_oversold' && field === 'rsi') ? 'asc' : 'desc';
+    const order = state.pumpSortOrder || defaultSortOrder;
     filtered.sort((a, b) => {
         let valA = a[field];
         let valB = b[field];
@@ -5433,7 +5488,11 @@ function filterAndRenderPumpTable() {
         tr.style.cursor = 'pointer';
         tr.onclick = () => selectScreenerChartCoin(pair.symbol);
 
-        if (method === 'rsi_oversold') {
+        if (method === 'rapid_rsi_drop') {
+            const dropPts = Number(pair.rsi_drop_pts || 0);
+            if (dropPts >= 25.0) tr.style.background = 'rgba(16, 185, 129, 0.09)';
+            else if (dropPts >= 15.0) tr.style.background = 'rgba(2, 132, 199, 0.05)';
+        } else if (method === 'rsi_oversold') {
             if (rsiVal <= 25.0) tr.style.background = 'rgba(16, 185, 129, 0.08)';
             else if (rsiVal <= 30.0) tr.style.background = 'rgba(16, 185, 129, 0.04)';
         } else if (method === 'rsi_overbought') {
@@ -5449,7 +5508,50 @@ function filterAndRenderPumpTable() {
         const sp5mColor = sp5m >= 5.0 ? '#10b981; font-weight:800;' : (sp5m > 0 ? '#059669;' : '#f43f5e;');
         const volColor = volN >= 3.0 ? '#ea580c; font-weight:800;' : (volN >= 1.5 ? '#d97706;' : '#64748b;');
 
-        if (method === 'rsi_oversold') {
+        if (method === 'rapid_rsi_drop') {
+            const dropPts = Number(pair.rsi_drop_pts || 0);
+            const dropBadgeColor = dropPts >= 25 ? '#059669' : (dropPts >= 20 ? '#10b981' : '#0284c7');
+            const rsiCurrColor = rsiVal <= 25 ? '#059669' : (rsiVal <= 30 ? '#10b981' : '#f59e0b');
+            tr.innerHTML = `
+                <td>
+                    <strong style="color: #0f172a; font-size: 0.95rem;">${pair.symbol}</strong>
+                    ${dropPts >= 20 ? '<span style="display:block; font-size:0.7rem; color:#059669; font-weight:800;">⚡ CRASH REBOUND SETUP</span>' : ''}
+                </td>
+                <td class="font-mono">
+                    <span style="font-weight: 800; font-size: 0.95rem; color: #fff; background: ${dropBadgeColor}; padding: 3px 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(2,132,199,0.2);">
+                        -${dropPts.toFixed(1)} pts
+                    </span>
+                </td>
+                <td class="font-mono" style="font-weight: 700; color: ${rsiCurrColor}; font-size: 0.92rem;">
+                    RSI ${rsiVal.toFixed(1)}
+                </td>
+                <td class="font-mono" style="font-size: 0.92rem; color: ${volColor}">
+                    ${volN.toFixed(1)}x Vol Rata2
+                </td>
+                <td class="font-mono" style="font-size: 0.9rem; color: #0284c7; font-weight: 700;">
+                    $${formatCleanPrice(pair.support_level || pair.current_price * 0.98)}
+                </td>
+                <td class="font-mono" style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">
+                    $${formatCleanPrice(pair.current_price)}
+                </td>
+                <td class="font-mono ${chg >= 0 ? 'text-profit font-bold' : 'text-loss font-bold'}" style="font-size: 0.85rem;">
+                    ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%
+                </td>
+                <td>
+                    <span class="tag-badge" style="background: ${pair.badge_color || '#10b981'}18; color: ${pair.badge_color || '#10b981'}; border: 1px solid ${pair.badge_color || '#10b981'}44; font-weight: 800;">
+                        ${pair.badge || '⚡ SHARP DIP'}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn-log-action" style="background: rgba(234, 88, 12, 0.12); border-color: #ea580c; color: #c2410c; font-weight: 800; margin-right: 4px; padding: 5px 8px; border-radius: 6px;" onclick="event.stopPropagation(); selectScreenerChartCoin('${pair.symbol}')" title="Buka Live Chart ${pair.symbol}">
+                        <i class="fa-solid fa-chart-candlestick"></i> Chart
+                    </button>
+                    <button class="btn-log-action" style="background: rgba(2, 132, 199, 0.18); border-color: #0284c7; color: #0369a1; font-weight: 800; margin-right: 4px; padding: 5px 10px; border-radius: 6px;" onclick="event.stopPropagation(); openPaperTradeFromScreener('${pair.symbol}', 'LONG', ${pair.current_price})" title="Quick Snipe Beli Rebound Dip">
+                        <i class="fa-solid fa-bolt"></i> Buy Dip
+                    </button>
+                </td>
+            `;
+        } else if (method === 'rsi_oversold') {
             const rsiBadgeColor = rsiVal <= 20 ? '#059669' : (rsiVal <= 25 ? '#10b981' : '#0284c7');
             tr.innerHTML = `
                 <td>
