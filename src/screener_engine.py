@@ -372,13 +372,11 @@ class BollingerScreenerEngine:
             rsi_series = self._calculate_rsi_series(df['close'].values, period=14)
             rsi = float(rsi_series[-1])
             rsi_prev1 = float(rsi_series[-2]) if len(rsi_series) >= 2 else rsi
-            rsi_prev2 = float(rsi_series[-3]) if len(rsi_series) >= 3 else rsi_prev1
-            rsi_prev3 = float(rsi_series[-4]) if len(rsi_series) >= 4 else rsi_prev2
 
-            # RSI Drop Magnitude (dalam 2 candle dan 3 candle)
-            rsi_drop_2bar = round(max(0.0, rsi_prev2 - rsi), 1)
-            rsi_drop_3bar = round(max(0.0, rsi_prev3 - rsi), 1)
-            rsi_drop_pts = max(rsi_drop_2bar, rsi_drop_3bar)
+            # Single-Candle Shock: Drop murni selisih dari 1 candle sebelumnya
+            rsi_drop_pts = round(max(0.0, rsi_prev1 - rsi), 1)
+            # First Time Drop: Candle sebelumnya belum oversold (> 30), dan candle ini resmi jebol masuk ke <= 30
+            is_first_time_drop = (rsi_prev1 > 30.0 and rsi <= 30.0)
 
             # 24h Change % (estimate from 50 bars)
             chg_24h = ((curr_close - df['close'].iloc[0]) / df['close'].iloc[0]) * 100.0 if df['close'].iloc[0] > 0 else 0.0
@@ -388,28 +386,28 @@ class BollingerScreenerEngine:
 
             # Pure Momentum Methods:
             if method in ["rapid_rsi_drop", "rsi_drop"]:
-                # Rapid RSI Drop Hunter: Deteksi penurunan curam (Delta RSI >= 15 pts dalam 2-3 bar)
-                is_active = (rsi_drop_pts >= 12.0 and rsi <= 38.0)
-                if rsi_drop_pts >= 25.0 and rsi <= 25.0:
-                    badge = f"⚡ FLASH CRASH (-{rsi_drop_pts} pts)"
+                # First-Time Rapid RSI Drop Hunter: Wajib RSI <= 30 dan first time drop dari candle sebelumnya
+                is_active = (is_first_time_drop and rsi_drop_pts >= 8.0)
+                if rsi_drop_pts >= 18.0 and rsi <= 20.0:
+                    badge = f"⚡ 1ST CRASH (-{rsi_drop_pts} pts)"
                     badge_color = "#10b981"
-                    status_desc = f"Likuifikasi curam ekstrem! RSI anjlok -{rsi_drop_pts} pts mendarat di {round(rsi, 1)} (Rebound Emas)"
-                elif rsi_drop_pts >= 20.0 and rsi <= 30.0:
-                    badge = f"⚡ ULTRA SHARP DIP (-{rsi_drop_pts} pts)"
+                    status_desc = f"Sentakan anjlok 1 lilin pertama (-{rsi_drop_pts} pts) mendarat di RSI {round(rsi, 1)} (Reversal Emas)"
+                elif rsi_drop_pts >= 12.0 and rsi <= 25.0:
+                    badge = f"⚡ 1ST ULTRA DROP (-{rsi_drop_pts} pts)"
                     badge_color = "#059669"
-                    status_desc = f"Penurunan panik masif -{rsi_drop_pts} pts ke RSI {round(rsi, 1)} - Potensi V-Rebound Tinggi"
-                elif rsi_drop_pts >= 15.0 and rsi <= 35.0:
-                    badge = f"🟢 SHARP DIP (-{rsi_drop_pts} pts)"
+                    status_desc = f"Drop tajam 1 lilin pertama (-{rsi_drop_pts} pts) ke RSI {round(rsi, 1)} - Siap V-Rebound"
+                elif is_first_time_drop and rsi_drop_pts >= 8.0:
+                    badge = f"🟢 1ST SHARP DROP (-{rsi_drop_pts} pts)"
                     badge_color = "#10b981"
-                    status_desc = f"Drop cepat -{rsi_drop_pts} pts dalam 2-3 lilin (RSI {round(rsi, 1)}) - Area Diskon Pantulan"
-                elif rsi_drop_pts >= 10.0 and rsi <= 38.0:
-                    badge = f"🟡 MODERATE DIP (-{rsi_drop_pts} pts)"
-                    badge_color = "#f59e0b"
-                    status_desc = f"Koreksi cepat -{rsi_drop_pts} pts mendekati zona pantulan (RSI {round(rsi, 1)})"
+                    status_desc = f"Sentakan pertama tembus RSI &le; 30 (Drop -{rsi_drop_pts} pts) - Titik Rebound Awal"
+                elif rsi <= 30.0:
+                    badge = f"📉 OVERSOLD (-{rsi_drop_pts} pts)"
+                    badge_color = "#0284c7"
+                    status_desc = f"RSI berada di {round(rsi, 1)} (Bukan lilin sentakan pertama)"
                 else:
-                    badge = f"📉 SLOW DRIFT (-{rsi_drop_pts} pts)"
+                    badge = f"⚡ NORMAL (-{rsi_drop_pts} pts)"
                     badge_color = "#64748b"
-                    status_desc = f"Penurunan wajar (-{rsi_drop_pts} pts, RSI {round(rsi, 1)})"
+                    status_desc = f"RSI {round(rsi, 1)} (Di atas zona diskon 30)"
 
             elif method in ["rsi_oversold", "rapid_rsi_oversold"]:
                 # RSI Oversold Hunter: Default <= 30
@@ -492,8 +490,7 @@ class BollingerScreenerEngine:
                 "current_volume": round(curr_vol, 2),
                 "rsi": round(rsi, 1),
                 "rsi_drop_pts": rsi_drop_pts,
-                "rsi_drop_2bar": rsi_drop_2bar,
-                "rsi_drop_3bar": rsi_drop_3bar,
+                "is_first_time_drop": is_first_time_drop,
                 "support_level": round(lowest_50, 4),
                 "resistance_level": round(highest_50, 4),
                 "price_change_pct": round(chg_24h, 2),

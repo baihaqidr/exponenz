@@ -5006,23 +5006,23 @@ function onPumpMethodChanged() {
         }
         if (labelMain) {
             labelMain.style.color = '#0284c7';
-            labelMain.innerHTML = '<i class="fa-solid fa-bolt"></i> MINIMAL PENURUNAN RSI:';
+            labelMain.innerHTML = '<i class="fa-solid fa-bolt"></i> MINIMAL DROP 1 LILIN (RSI &le; 30):';
         }
         if (selectMain) {
             selectMain.innerHTML = `
-                <option value="15" selected>⚡ Drop &ge; 15 Poin (Rekomendasi Rebound)</option>
-                <option value="20">🔥 Drop &ge; 20 Poin (Super Sharp Dump)</option>
-                <option value="25">💥 Drop &ge; 25 Poin (Flash Crash Ekstrem)</option>
-                <option value="10">🟡 Drop &ge; 10 Poin (Early Dip Alert)</option>
-                <option value="0">⚡ Tampilkan Semua Penurunan</option>
+                <option value="8" selected>⚡ Drop &ge; 8 Pts (First-Time Tembus &le; 30)</option>
+                <option value="12">🔥 Drop &ge; 12 Pts (Sentakan Anjlok Kuat)</option>
+                <option value="18">💥 Drop &ge; 18 Pts (Super Flash Crash)</option>
+                <option value="5">🟡 Drop &ge; 5 Pts (Early Dip Tembus 30)</option>
+                <option value="0">⚡ Semua Koin RSI &le; 30</option>
             `;
-            state.pumpMinPct = 15.0;
+            state.pumpMinPct = 8.0;
         }
         if (labelVol) {
             labelVol.innerHTML = '<i class="fa-solid fa-chart-column"></i> VOLUME ANOMALY:';
         }
         if (descBadge) {
-            descBadge.textContent = 'Radar Penurunan Curam (RSI Flash Drop) - Koin yang Terjun Bebas & Berpotensi Rebound Cepat';
+            descBadge.textContent = 'Radar Sentakan Pertama (First-Time Drop 1 Lilin) - Koin yang baru saja anjlok curam menembus RSI <= 30';
         }
         state.pumpSortField = 'rsi_drop_pts';
         state.pumpSortOrder = 'desc';
@@ -5367,10 +5367,14 @@ function filterAndRenderPumpTable() {
 
     // Dynamic Filter per Method
     if (method === 'rapid_rsi_drop') {
-        const dropThresh = (state.pumpMinPct !== undefined) ? Number(state.pumpMinPct) : 15.0;
-        if (dropThresh > 0) {
-            filtered = filtered.filter(p => Number(p.rsi_drop_pts || 0) >= dropThresh);
-        }
+        const dropThresh = (state.pumpMinPct !== undefined) ? Number(state.pumpMinPct) : 8.0;
+        // Wajib RSI <= 30 (atau <= 35 jika early dip)
+        filtered = filtered.filter(p => {
+            const rsiVal = Number(p.rsi || 50);
+            const dropPts = Number(p.rsi_drop_pts || 0);
+            if (rsiVal > 35.0) return false;
+            return dropPts >= dropThresh;
+        });
     } else if (method === 'rsi_oversold') {
         const rsiThresh = (state.pumpMinPct !== undefined) ? Number(state.pumpMinPct) : 30.0;
         if (rsiThresh < 100) {
