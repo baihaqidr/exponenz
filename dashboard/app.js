@@ -3972,11 +3972,37 @@ let lastFetchedScreenerRsi = [];
 let currentLiveScreenerCandle = null;
 let currentLiveScreenerEma = null;
 let currentLiveScreenerRsi = null;
+let currentLiveScreenerRsiState = null;
 let currentLiveScreenerUpper = null;
 let currentLiveScreenerLower = null;
 let currentScreenerStrategyTitle = 'Indikator';
 let currentScreenerStreamingSymbol = '';
 let currentScreenerStreamingTimeframe = '';
+
+function calculateIncrementalRsi(currentPrice, candleTime) {
+    if (!currentLiveScreenerRsiState || !currentLiveScreenerRsiState.prev_close) {
+        return currentLiveScreenerRsi;
+    }
+    
+    let basePrevClose = currentLiveScreenerRsiState.prev_close;
+    let baseAvgGain = currentLiveScreenerRsiState.avg_gain;
+    let baseAvgLoss = currentLiveScreenerRsiState.avg_loss;
+    
+    if (candleTime && currentLiveScreenerRsiState.last_candle_time && candleTime > currentLiveScreenerRsiState.last_candle_time) {
+        basePrevClose = currentLiveScreenerRsiState.last_close;
+        baseAvgGain = currentLiveScreenerRsiState.last_avg_gain;
+        baseAvgLoss = currentLiveScreenerRsiState.last_avg_loss;
+    }
+
+    const delta = currentPrice - basePrevClose;
+    const gain = Math.max(0, delta);
+    const loss = Math.max(0, -delta);
+    const liveAvgGain = (baseAvgGain * 13.0 + gain) / 14.0;
+    const liveAvgLoss = (baseAvgLoss * 13.0 + loss) / 14.0;
+    const rs = liveAvgLoss > 0 ? (liveAvgGain / liveAvgLoss) : 100.0;
+    const liveRsi = 100.0 - (100.0 / (1.0 + rs));
+    return Math.round(liveRsi * 100) / 100;
+}
 
 function updateScreenerChartLegend(candle, emaVal, rsiVal, upperVal, lowerVal) {
     if (!candle) return;
@@ -4271,7 +4297,6 @@ function initScreenerChart() {
             screenerRsiSeriesInstance = screenerRsiChartInstance.addLineSeries({
                 color: '#8b5cf6',
                 lineWidth: 2,
-                title: 'RSI 14',
                 priceFormat: {
                     type: 'price',
                     precision: 2,
@@ -4357,7 +4382,9 @@ function initScreenerChart() {
             }
 
             let rsiVal = null;
-            if (lastFetchedScreenerRsi && lastFetchedScreenerRsi.length > 0) {
+            if (currentLiveScreenerCandle && param.time === currentLiveScreenerCandle.time && currentLiveScreenerRsi !== null) {
+                rsiVal = currentLiveScreenerRsi;
+            } else if (lastFetchedScreenerRsi && lastFetchedScreenerRsi.length > 0) {
                 const rMatch = lastFetchedScreenerRsi.find(item => item.time === param.time);
                 if (rMatch) rsiVal = rMatch.value;
             }
@@ -4398,8 +4425,17 @@ function initScreenerChart() {
                     return;
                 }
 
-                const rData = param.seriesData.get(screenerRsiSeriesInstance);
-                const rsiVal = rData ? rData.value : null;
+                let rsiVal = null;
+                if (currentLiveScreenerCandle && param.time === currentLiveScreenerCandle.time && currentLiveScreenerRsi !== null) {
+                    rsiVal = currentLiveScreenerRsi;
+                } else {
+                    const rData = param.seriesData.get(screenerRsiSeriesInstance);
+                    rsiVal = rData ? rData.value : null;
+                    if (rsiVal === null && lastFetchedScreenerRsi && lastFetchedScreenerRsi.length > 0) {
+                        const rMatch = lastFetchedScreenerRsi.find(item => item.time === param.time);
+                        if (rMatch) rsiVal = rMatch.value;
+                    }
+                }
 
                 let cMatch = null;
                 let emaVal = null;
@@ -4437,8 +4473,8 @@ function initScreenerChart() {
             }
             const activeC = currentLiveScreenerCandle || (lastFetchedScreenerCandles && lastFetchedScreenerCandles.length > 0 ? lastFetchedScreenerCandles[lastFetchedScreenerCandles.length - 1] : null);
             const activeE = currentLiveScreenerEma || (lastFetchedScreenerEma && lastFetchedScreenerEma.length > 0 ? lastFetchedScreenerEma[lastFetchedScreenerEma.length - 1].value : null);
-            const activeR = currentLiveScreenerRsi || (lastFetchedScreenerRsi && lastFetchedScreenerRsi.length > 0 ? lastFetchedScreenerRsi[lastFetchedScreenerRsi.length - 1].value : null);
-            updateScreenerChartLegend(activeC, activeE, activeR);
+            const activeR = (currentLiveScreenerRsi !== null && currentLiveScreenerRsi !== undefined) ? currentLiveScreenerRsi : (lastFetchedScreenerRsi && lastFetchedScreenerRsi.length > 0 ? lastFetchedScreenerRsi[lastFetchedScreenerRsi.length - 1].value : null);
+            updateScreenerChartLegend(activeC, activeE, activeR, currentLiveScreenerUpper, currentLiveScreenerLower);
         };
 
         if (container) container.addEventListener('mouseleave', resetToLiveCandle);
@@ -4553,6 +4589,11 @@ function connectScreenerChartWebSocket(symbol, timeframe) {
                             if (emaLegendEl) emaLegendEl.textContent = `${currentScreenerStrategyTitle || 'Indikator'}: $${formatCleanPrice(liveEmaVal)}`;
                         }
 
+                        const liveRsi = calculateIncrementalRsi(closePrice, candleTime);
+                        if (liveRsi !== null && !isNaN(liveRsi)) {
+                            currentLiveScreenerRsi = liveRsi;
+                        }
+
                         if (screenerRsiSeriesInstance && currentLiveScreenerRsi !== null) {
                             screenerRsiSeriesInstance.update({
                                 time: candleTime,
@@ -4595,6 +4636,18 @@ function connectScreenerChartWebSocket(symbol, timeframe) {
                             currentLiveScreenerCandle.close = tradePrice;
                             if (tradePrice > currentLiveScreenerCandle.high) currentLiveScreenerCandle.high = tradePrice;
                             if (tradePrice < currentLiveScreenerCandle.low) currentLiveScreenerCandle.low = tradePrice;
+                        }
+
+                        const liveTradeRsi = calculateIncrementalRsi(tradePrice, expectedCandleTime);
+                        if (liveTradeRsi !== null && !isNaN(liveTradeRsi)) {
+                            currentLiveScreenerRsi = liveTradeRsi;
+                        }
+
+                        if (screenerRsiSeriesInstance && currentLiveScreenerRsi !== null) {
+                            screenerRsiSeriesInstance.update({
+                                time: expectedCandleTime,
+                                value: currentLiveScreenerRsi
+                            });
                         }
 
                         if (screenerCandleSeriesInstance) {
@@ -4657,10 +4710,11 @@ async function updateScreenerChart(symbol, timeframe, strategyId) {
     if (!screenerChartInstance || !screenerCandleSeriesInstance) return;
 
     const sym = symbol || state.screenerActiveSymbol || '1000PEPEUSDT';
-    const tf = timeframe || state.screenerTimeframe || '15m';
+    const tf = timeframe || state.screenerChartTimeframe || state.screenerTimeframe || '15m';
     const stratId = strategyId || state.screenerStrategy || 'trend_rider_supertrend';
 
     state.screenerActiveSymbol = sym;
+    state.screenerChartTimeframe = tf;
     currentScreenerStreamingSymbol = sym.toUpperCase();
     currentScreenerStreamingTimeframe = tf;
 
@@ -4676,6 +4730,7 @@ async function updateScreenerChart(symbol, timeframe, strategyId) {
         currentLiveScreenerCandle = null;
         currentLiveScreenerEma = null;
         currentLiveScreenerRsi = null;
+        currentLiveScreenerRsiState = null;
         lastFetchedScreenerCandles = [];
         lastFetchedScreenerEma = [];
         lastFetchedScreenerUpper = [];
@@ -4741,6 +4796,7 @@ async function updateScreenerChart(symbol, timeframe, strategyId) {
             if (data.upper_band) upperSeries = data.upper_band;
             if (data.lower_band) lowerSeries = data.lower_band;
             if (data.rsi) rsiSeries = data.rsi;
+            if (data.rsi_state) currentLiveScreenerRsiState = data.rsi_state;
             if (data.markers) markers = data.markers;
             if (data.strategy_name) stratName = data.strategy_name;
             if (data.precision !== undefined) precision = data.precision;

@@ -191,7 +191,13 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                         df_sig['vol_ma20'] = df_sig['volume'].rolling(window=20).mean()
                         
                         from src.indicators import calculate_rsi
-                        df_sig['rsi'] = calculate_rsi(df_sig['close'], period=14)
+                        delta = df_sig['close'].diff()
+                        gain = delta.clip(lower=0)
+                        loss = -delta.clip(upper=0)
+                        df_sig['avg_gain'] = gain.ewm(alpha=1/14, adjust=False).mean()
+                        df_sig['avg_loss'] = loss.ewm(alpha=1/14, adjust=False).mean()
+                        rs = df_sig['avg_gain'] / (df_sig['avg_loss'] + 1e-10)
+                        df_sig['rsi'] = 100 - (100 / (1 + rs))
                         
                         df_plot = df_sig.tail(limit).reset_index(drop=True)
                     else:
@@ -201,6 +207,15 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                         strategy = get_strategy_instance(strat_id)
                         strat_name = getattr(strategy, 'name', strat_id)
                         df_sig = strategy.generate_signals(df)
+                        
+                        delta = df_sig['close'].diff()
+                        gain = delta.clip(lower=0)
+                        loss = -delta.clip(upper=0)
+                        df_sig['avg_gain'] = gain.ewm(alpha=1/14, adjust=False).mean()
+                        df_sig['avg_loss'] = loss.ewm(alpha=1/14, adjust=False).mean()
+                        rs = df_sig['avg_gain'] / (df_sig['avg_loss'] + 1e-10)
+                        df_sig['rsi'] = 100 - (100 / (1 + rs))
+                        
                         df_plot = df_sig.tail(limit).reset_index(drop=True)
                     
                     latest_close = float(df_plot.iloc[-1]['close'])
@@ -414,6 +429,19 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                                 }
 
                     markers = [markers_map[t] for t in sorted(markers_map.keys())]
+                    
+                    rsi_state = None
+                    if len(df_sig) >= 2:
+                        last_c_time = candles[-1]['time'] if candles else int(df_sig['open_time'].iloc[-1]/1000)
+                        rsi_state = {
+                            "prev_close": float(df_sig['close'].iloc[-2]),
+                            "avg_gain": float(df_sig['avg_gain'].iloc[-2]),
+                            "avg_loss": float(df_sig['avg_loss'].iloc[-2]),
+                            "last_close": float(df_sig['close'].iloc[-1]),
+                            "last_avg_gain": float(df_sig['avg_gain'].iloc[-1]),
+                            "last_avg_loss": float(df_sig['avg_loss'].iloc[-1]),
+                            "last_candle_time": last_c_time
+                        }
                             
                     self.send_json({
                         "success": True,
@@ -429,6 +457,7 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                         "lower_band": lower_data,
                         "volume": volume_data,
                         "rsi": rsi_data,
+                        "rsi_state": rsi_state,
                         "markers": markers,
                         "current_price": latest_close
                     })
