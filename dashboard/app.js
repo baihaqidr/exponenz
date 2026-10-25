@@ -4061,8 +4061,8 @@ function updateScreenerChartLegend(candle, emaVal, rsiVal, upperVal, lowerVal) {
         lowerWrap.style.display = 'none';
     }
 
-    const isWilder = (state.screenerStrategy && state.screenerStrategy.includes('wilder')) || (currentScreenerStrategyTitle && currentScreenerStrategyTitle.toLowerCase().includes('wilder'));
-    const rsiLabelText = isWilder ? 'RSI (Wilder 14)' : 'RSI (Freqtrade 14)';
+    const isFreqtradeStrat = (state.screenerStrategy && state.screenerStrategy.startsWith('freqtrade_bband')) && (state.screenerRadarMode !== 'pump');
+    const rsiLabelText = isFreqtradeStrat ? 'RSI (Freqtrade SMA 14)' : 'RSI (Wilder 14 - Binance)';
     if (rsiTitleEl) rsiTitleEl.textContent = rsiLabelText;
 
     const effectiveRsi = (rsiVal !== undefined && rsiVal !== null) ? (typeof rsiVal === 'object' ? rsiVal.value : rsiVal) : currentLiveScreenerRsi;

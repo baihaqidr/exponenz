@@ -170,8 +170,9 @@ class BollingerScreenerEngine:
             if 'tp_price' in sig_df and not pd.isna(sig_df['tp_price'].iloc[-1]):
                 tp_price = float(sig_df['tp_price'].iloc[-1])
 
-            # Hitung RSI & BB untuk info ringkas
-            rsi = self._calculate_rsi(df['close'].values, period=14)
+            # Hitung RSI (Wilder 100% Binance) & BB untuk info ringkas
+            from src.indicators import calculate_rsi
+            rsi = float(calculate_rsi(df['close'], period=14).iloc[-1])
             window_closes = df['close'].values[-20:]
             sma = float(np.mean(window_closes))
             std = float(np.std(window_closes))
@@ -344,7 +345,8 @@ class BollingerScreenerEngine:
 
         try:
             from src.data_fetcher import fetch_fast_api_klines
-            df = fetch_fast_api_klines(clean_sym, timeframe, total_candles=50)
+            from src.indicators import calculate_rsi
+            df = fetch_fast_api_klines(clean_sym, timeframe, total_candles=200)
             if df is None or len(df) < 20:
                 return None
 
@@ -368,10 +370,10 @@ class BollingerScreenerEngine:
             avg_vol = float(past_vols.mean()) if len(past_vols) > 0 else (curr_vol or 1.0)
             vol_mult = round(curr_vol / (avg_vol + 1e-6), 1) if avg_vol > 0 else 1.0
 
-            # Calculate RSI Series for velocity analysis
-            rsi_series = self._calculate_rsi_series(df['close'].values, period=14)
-            rsi = float(rsi_series[-1])
-            rsi_prev1 = float(rsi_series[-2]) if len(rsi_series) >= 2 else rsi
+            # Calculate Exact 100% Binance Wilder's Smoothed RSI Series
+            rsi_s = calculate_rsi(df['close'], period=14)
+            rsi = float(rsi_s.iloc[-1])
+            rsi_prev1 = float(rsi_s.iloc[-2]) if len(rsi_s) >= 2 else rsi
 
             # Single-Candle Shock: Drop murni selisih dari 1 candle sebelumnya
             rsi_drop_pts = round(max(0.0, rsi_prev1 - rsi), 1)

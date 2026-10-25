@@ -182,7 +182,7 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                     
                     if strat_id == "momentum" or chart_mode == "momentum":
                         strat_name = "Real-Time Momentum & RSI Scanner"
-                        # Calculate EMA 20, EMA 50, RSI 14, Support, Resistance, and Volume MA 20
+                        # Calculate EMA 20, EMA 50, RSI 14 (Exact 100% Binance Wilder's Smoothed), Support, Resistance, and Volume MA 20
                         df_sig = df.copy()
                         df_sig['ema_20'] = df_sig['close'].ewm(span=20, adjust=False).mean()
                         df_sig['ema_50'] = df_sig['close'].ewm(span=50, adjust=False).mean()
@@ -190,11 +190,8 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                         df_sig['sw_low'] = df_sig['low'].rolling(window=20).min()
                         df_sig['vol_ma20'] = df_sig['volume'].rolling(window=20).mean()
                         
-                        delta = df_sig['close'].diff()
-                        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-                        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-                        rs = gain / (loss + 1e-9)
-                        df_sig['rsi'] = 100 - (100 / (1 + rs))
+                        from src.indicators import calculate_rsi
+                        df_sig['rsi'] = calculate_rsi(df_sig['close'], period=14)
                         
                         df_plot = df_sig.tail(limit).reset_index(drop=True)
                     else:
@@ -228,11 +225,8 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
 
                     # Ensure RSI 14 is present
                     if 'rsi' not in df_plot.columns or df_plot['rsi'].isnull().all():
-                        delta = df_sig['close'].diff()
-                        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-                        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-                        rs = gain / (loss + 1e-9)
-                        df_sig['rsi'] = 100 - (100 / (1 + rs))
+                        from src.indicators import calculate_rsi
+                        df_sig['rsi'] = calculate_rsi(df_sig['close'], period=14)
                         df_plot = df_sig.tail(limit).reset_index(drop=True)
 
                     candles = []
