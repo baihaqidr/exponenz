@@ -61,6 +61,14 @@ class BollingerScreenerEngine:
         if preset and preset in SCREENER_PRESETS and preset != "all_coins":
             return SCREENER_PRESETS[preset][:limit]
 
+        try:
+            from src.binance_futures_feed import futures_live_feed
+            live_syms = futures_live_feed.get_top_symbols(limit=limit, sort_by="volume")
+            if live_syms and len(live_syms) >= 20:
+                return live_syms[:limit]
+        except Exception:
+            pass
+
         if preset == "all_coins" or limit > 50:
             if self.symbols_cache and (now - self.symbols_cache_ts < 300):
                 return self.symbols_cache[:limit]
@@ -374,42 +382,59 @@ class BollingerScreenerEngine:
             rsi_s = calculate_rsi(df['close'], period=14)
             rsi = float(rsi_s.iloc[-1])
             rsi_prev1 = float(rsi_s.iloc[-2]) if len(rsi_s) >= 2 else rsi
+            rsi_prev2 = float(rsi_s.iloc[-3]) if len(rsi_s) >= 3 else rsi_prev1
+            rsi_prev3 = float(rsi_s.iloc[-4]) if len(rsi_s) >= 4 else rsi_prev2
 
-            # Single-Candle Shock: Drop murni selisih dari 1 candle sebelumnya
-            rsi_drop_pts = round(max(0.0, rsi_prev1 - rsi), 1)
-            # First Time Drop: Candle sebelumnya belum oversold (> 30), dan candle ini resmi jebol masuk ke <= 30
-            is_first_time_drop = (rsi_prev1 > 30.0 and rsi <= 30.0)
+            # Total Penurunan: Lacak Puncak (Peak) RSI dalam rentang <= 3 candle sebelumnya
+            candidates = [(rsi_prev1, 1), (rsi_prev2, 2), (rsi_prev3, 3)]
+            peak_val, drop_bars = max(candidates, key=lambda x: x[0])
+            rsi_drop_pts = round(max(0.0, peak_val - rsi), 1)
+            rsi_peak = round(peak_val, 1)
 
-            # 24h Change % (estimate from 50 bars)
-            chg_24h = ((curr_close - df['close'].iloc[0]) / df['close'].iloc[0]) * 100.0 if df['close'].iloc[0] > 0 else 0.0
+            # Kondisi Sinyal Aktif: Total penurunan <= 3 candle >= 30 point dan mendarat di RSI <= 30
+            is_oversold = (rsi <= 30.0)
+            is_active_drop = (rsi_drop_pts >= 30.0 and is_oversold)
+
+            # Real-Time Enrichment from Official Binance Futures Live Feed
+            try:
+                from src.binance_futures_feed import futures_live_feed
+                fut_t = futures_live_feed.get_ticker(clean_sym)
+                if fut_t:
+                    chg_24h = float(fut_t.get("priceChangePercent", 0.0))
+                    curr_close = float(fut_t.get("price", curr_close))
+                else:
+                    chg_24h = ((curr_close - df['close'].iloc[0]) / df['close'].iloc[0]) * 100.0 if df['close'].iloc[0] > 0 else 0.0
+            except Exception:
+                chg_24h = ((curr_close - df['close'].iloc[0]) / df['close'].iloc[0]) * 100.0 if df['close'].iloc[0] > 0 else 0.0
+
             highest_50 = float(df['high'].max())
             lowest_50 = float(df['low'].min())
             is_breakout = (curr_close >= highest_50 * 0.995)
 
             # Pure Momentum Methods:
             if method in ["rapid_rsi_drop", "rsi_drop"]:
-                # First-Time Rapid RSI Drop Hunter: Wajib RSI <= 30 dan first time drop dari candle sebelumnya
-                is_active = (is_first_time_drop and rsi_drop_pts >= 8.0)
-                if rsi_drop_pts >= 18.0 and rsi <= 20.0:
-                    badge = f"⚡ 1ST CRASH (-{rsi_drop_pts} pts)"
+                # Total Penurunan <= 3 Lilin: Wajib akumulasi penurunan >= 30 pts dan mendarat di RSI <= 30
+                is_active = is_active_drop
+                if rsi_drop_pts >= 30.0 and is_oversold:
+                    badge = f"⚡ CRASH -{rsi_drop_pts} pts ({drop_bars}c)"
                     badge_color = "#10b981"
-                    status_desc = f"Sentakan anjlok 1 lilin pertama (-{rsi_drop_pts} pts) mendarat di RSI {round(rsi, 1)} (Reversal Emas)"
-                elif rsi_drop_pts >= 12.0 and rsi <= 25.0:
-                    badge = f"⚡ 1ST ULTRA DROP (-{rsi_drop_pts} pts)"
+                    status_desc = f"Flash crash {drop_bars} lilin (-{rsi_drop_pts} pts: {rsi_peak} ➔ {round(rsi, 1)}) tembus Oversold (Setup Reversal Emas)"
+                elif rsi_drop_pts >= 20.0 and is_oversold:
+                    badge = f"⚡ ULTRA DROP -{rsi_drop_pts} pts ({drop_bars}c)"
                     badge_color = "#059669"
-                    status_desc = f"Drop tajam 1 lilin pertama (-{rsi_drop_pts} pts) ke RSI {round(rsi, 1)} - Siap V-Rebound"
-                elif is_first_time_drop and rsi_drop_pts >= 8.0:
-                    badge = f"🟢 1ST SHARP DROP (-{rsi_drop_pts} pts)"
-                    badge_color = "#10b981"
-                    status_desc = f"Sentakan pertama tembus RSI &le; 30 (Drop -{rsi_drop_pts} pts) - Titik Rebound Awal"
-                elif rsi <= 30.0:
-                    badge = f"📉 OVERSOLD (-{rsi_drop_pts} pts)"
+                    status_desc = f"Drop tajam {drop_bars} lilin (-{rsi_drop_pts} pts: {rsi_peak} ➔ {round(rsi, 1)}) mendarat di Oversold"
+                elif rsi_drop_pts >= 15.0 and rsi <= 35.0:
+                    badge = f"🟢 SHARP DROP -{rsi_drop_pts} pts ({drop_bars}c)"
                     badge_color = "#0284c7"
-                    status_desc = f"RSI berada di {round(rsi, 1)} (Bukan lilin sentakan pertama)"
+                    status_desc = f"Penurunan {drop_bars} lilin (-{rsi_drop_pts} pts: {rsi_peak} ➔ {round(rsi, 1)}) mendekati area diskon"
+                elif is_oversold:
+                    badge = f"📉 OVERSOLD (-{rsi_drop_pts} pts)"
+                    badge_color = "#6366f1"
+                    status_desc = f"RSI berada di {round(rsi, 1)} (Zona Jenuh Jual)"
                 else:
                     badge = f"⚡ NORMAL (-{rsi_drop_pts} pts)"
                     badge_color = "#64748b"
-                    status_desc = f"RSI {round(rsi, 1)} (Di atas zona diskon 30)"
+                    status_desc = f"Penurunan {drop_bars} lilin (-{rsi_drop_pts} pts: {rsi_peak} ➔ {round(rsi, 1)})"
 
             elif method in ["rsi_oversold", "rapid_rsi_oversold"]:
                 # RSI Oversold Hunter: Default <= 30
@@ -491,8 +516,10 @@ class BollingerScreenerEngine:
                 "vol_multiplier": vol_mult,
                 "current_volume": round(curr_vol, 2),
                 "rsi": round(rsi, 1),
+                "rsi_peak": rsi_peak,
+                "drop_candles": drop_bars,
                 "rsi_drop_pts": rsi_drop_pts,
-                "is_first_time_drop": is_first_time_drop,
+                "is_first_time_drop": is_active,
                 "support_level": round(lowest_50, 4),
                 "resistance_level": round(highest_50, 4),
                 "price_change_pct": round(chg_24h, 2),

@@ -5062,23 +5062,23 @@ function onPumpMethodChanged() {
         }
         if (labelMain) {
             labelMain.style.color = '#0284c7';
-            labelMain.innerHTML = '<i class="fa-solid fa-bolt"></i> MINIMAL DROP 1 LILIN (RSI &le; 30):';
+            labelMain.innerHTML = '<i class="fa-solid fa-bolt"></i> MIN DROP (&le; 3 LILIN &amp; RSI &le; 30):';
         }
         if (selectMain) {
             selectMain.innerHTML = `
-                <option value="8" selected>⚡ Drop &ge; 8 Pts (First-Time Tembus &le; 30)</option>
-                <option value="12">🔥 Drop &ge; 12 Pts (Sentakan Anjlok Kuat)</option>
-                <option value="18">💥 Drop &ge; 18 Pts (Super Flash Crash)</option>
-                <option value="5">🟡 Drop &ge; 5 Pts (Early Dip Tembus 30)</option>
-                <option value="0">⚡ Semua Koin RSI &le; 30</option>
+                <option value="30" selected>⚡ Total Drop &ge; 30 Pts (Flash Crash Setup)</option>
+                <option value="20">🔥 Total Drop &ge; 20 Pts (Ultra Deep Dip)</option>
+                <option value="15">🟢 Total Drop &ge; 15 Pts (Sharp Drop Reversal)</option>
+                <option value="10">🟡 Total Drop &ge; 10 Pts (Early Dip Alert)</option>
+                <option value="0">⚡ Tampilkan Semua Drop (Urut Terbesar)</option>
             `;
-            state.pumpMinPct = 8.0;
+            state.pumpMinPct = 30.0;
         }
         if (labelVol) {
             labelVol.innerHTML = '<i class="fa-solid fa-chart-column"></i> VOLUME ANOMALY:';
         }
         if (descBadge) {
-            descBadge.textContent = 'Radar Sentakan Pertama (First-Time Drop 1 Lilin) - Koin yang baru saja anjlok curam menembus RSI <= 30';
+            descBadge.textContent = 'Radar Total Penurunan (≤ 3 Lilin) - Menemukan koin dengan drop akumulatif ≥ 30 poin RSI yang mendarat di oversold ≤ 30';
         }
         state.pumpSortField = 'rsi_drop_pts';
         state.pumpSortOrder = 'desc';
@@ -5352,7 +5352,7 @@ function renderPumpTableHead() {
         thead.innerHTML = `
             <tr>
                 <th class="sortable-th" onclick="sortPumpBy('symbol')">Pair Contract <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-symbol"></i></th>
-                <th class="sortable-th" onclick="sortPumpBy('rsi_drop_pts')">RSI Drop (&Delta; Pts) <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-rsi_drop_pts"></i></th>
+                <th class="sortable-th" onclick="sortPumpBy('rsi_drop_pts')">Total Drop (&le; 3 Lilin) <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-rsi_drop_pts"></i></th>
                 <th class="sortable-th" onclick="sortPumpBy('rsi')">RSI Sekarang <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-rsi"></i></th>
                 <th class="sortable-th" onclick="sortPumpBy('vol_multiplier')">Volume Surge <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-vol_multiplier"></i></th>
                 <th class="sortable-th" onclick="sortPumpBy('support_level')">Support Floor <i class="fa-solid fa-sort sort-icon" id="sort-icon-pump-support_level"></i></th>
@@ -5423,13 +5423,13 @@ function filterAndRenderPumpTable() {
 
     // Dynamic Filter per Method
     if (method === 'rapid_rsi_drop') {
-        const dropThresh = (state.pumpMinPct !== undefined) ? Number(state.pumpMinPct) : 8.0;
-        // Wajib RSI <= 30 (atau <= 35 jika early dip)
+        const dropThresh = (state.pumpMinPct !== undefined) ? Number(state.pumpMinPct) : 30.0;
         filtered = filtered.filter(p => {
             const rsiVal = Number(p.rsi || 50);
             const dropPts = Number(p.rsi_drop_pts || 0);
-            if (rsiVal > 35.0) return false;
-            return dropPts >= dropThresh;
+            if (dropThresh === 0) return true; // Tampilkan semua drop
+            if (dropThresh >= 30.0) return (dropPts >= dropThresh && rsiVal <= 30.0);
+            return (dropPts >= dropThresh && rsiVal <= 35.0);
         });
     } else if (method === 'rsi_oversold') {
         const rsiThresh = (state.pumpMinPct !== undefined) ? Number(state.pumpMinPct) : 30.0;
@@ -5570,17 +5570,22 @@ function filterAndRenderPumpTable() {
 
         if (method === 'rapid_rsi_drop') {
             const dropPts = Number(pair.rsi_drop_pts || 0);
-            const dropBadgeColor = dropPts >= 25 ? '#059669' : (dropPts >= 20 ? '#10b981' : '#0284c7');
+            const dropBadgeColor = dropPts >= 30 ? '#059669' : (dropPts >= 20 ? '#10b981' : '#0284c7');
             const rsiCurrColor = rsiVal <= 25 ? '#059669' : (rsiVal <= 30 ? '#10b981' : '#f59e0b');
+            const dropBars = pair.drop_candles || 1;
+            const rsiPeak = pair.rsi_peak || (rsiVal + dropPts).toFixed(1);
             tr.innerHTML = `
                 <td>
                     <strong style="color: #0f172a; font-size: 0.95rem;">${pair.symbol}</strong>
-                    ${dropPts >= 20 ? '<span style="display:block; font-size:0.7rem; color:#059669; font-weight:800;">⚡ CRASH REBOUND SETUP</span>' : ''}
+                    ${dropPts >= 30 && rsiVal <= 30 ? '<span style="display:block; font-size:0.7rem; color:#059669; font-weight:800;">⚡ CRASH REBOUND SETUP (&ge; 30 PTS)</span>' : ''}
                 </td>
                 <td class="font-mono">
-                    <span style="font-weight: 800; font-size: 0.95rem; color: #fff; background: ${dropBadgeColor}; padding: 3px 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(2,132,199,0.2);">
+                    <span style="font-weight: 800; font-size: 0.95rem; color: #fff; background: ${dropBadgeColor}; padding: 3px 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(2,132,199,0.2); display: inline-block;">
                         -${dropPts.toFixed(1)} pts
                     </span>
+                    <div style="font-size: 0.72rem; color: #64748b; margin-top: 3px; font-weight: 600;">
+                        (${dropBars} lilin: ${rsiPeak} ➔ ${rsiVal.toFixed(1)})
+                    </div>
                 </td>
                 <td class="font-mono" style="font-weight: 700; color: ${rsiCurrColor}; font-size: 0.92rem;">
                     RSI ${rsiVal.toFixed(1)}

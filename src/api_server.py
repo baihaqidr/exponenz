@@ -49,8 +49,31 @@ LAST_SYMBOLS_FETCH = 0
 def get_all_futures_symbols() -> List[Dict[str, Any]]:
     global CACHED_FUTURES_SYMBOLS, LAST_SYMBOLS_FETCH
     now = time.time()
-    if CACHED_FUTURES_SYMBOLS and (now - LAST_SYMBOLS_FETCH < 1800):
+    if CACHED_FUTURES_SYMBOLS and (now - LAST_SYMBOLS_FETCH < 300):
         return CACHED_FUTURES_SYMBOLS
+
+    try:
+        from src.binance_futures_feed import futures_live_feed
+        live_tickers = futures_live_feed.get_all_tickers()
+        if live_tickers and len(live_tickers) >= 20:
+            clean_symbols = []
+            for sym, t in live_tickers.items():
+                p = t.get("price", 0.0)
+                clean_symbols.append({
+                    "symbol": sym,
+                    "baseAsset": sym.replace("USDT", ""),
+                    "pricePrecision": 6 if p < 0.01 else (4 if p < 1.0 else 2),
+                    "quantityPrecision": 2,
+                    "volume_24h": t.get("quoteVolume", 0.0),
+                    "currentPrice": p,
+                    "priceChangePercent": t.get("priceChangePercent", 0.0)
+                })
+            clean_symbols.sort(key=lambda x: x.get("volume_24h", 0), reverse=True)
+            CACHED_FUTURES_SYMBOLS = clean_symbols
+            LAST_SYMBOLS_FETCH = now
+            return clean_symbols
+    except Exception:
+        pass
 
     try:
         # 1. Fetch real 24hr volumes from Binance Vision
@@ -92,7 +115,7 @@ def get_all_futures_symbols() -> List[Dict[str, Any]]:
         if clean_symbols:
             CACHED_FUTURES_SYMBOLS = clean_symbols
             LAST_SYMBOLS_FETCH = now
-            return CACHED_FUTURES_SYMBOLS
+            return clean_symbols
     except Exception as e:
         print(f"Error fetching active Binance Futures symbols: {e}")
 
@@ -133,11 +156,21 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
             })
         elif parsed.path == "/api/tickers":
             try:
+                from src.binance_futures_feed import futures_live_feed
+                live_tickers = futures_live_feed.get_all_tickers()
+                if live_tickers and len(live_tickers) >= 20:
+                    prices = {sym: t["price"] for sym, t in live_tickers.items()}
+                    self.send_json({"success": True, "prices": prices})
+                    return
+            except Exception:
+                pass
+
+            try:
                 r = requests.get("https://data-api.binance.vision/api/v3/ticker/price", verify=False, timeout=3)
                 if r.status_code == 200:
                     prices = {item['symbol']: float(item['price']) for item in r.json()}
                     # Map 1000x multiplier futures pairs
-                    for base in ['PEPE', 'SHIB', 'FLOKI', 'BONK', 'LUNC', 'RATS', 'SATS']:
+                    for base in ['PEPE', 'SHIB', 'FLOKI', 'BONK', 'LUNC', 'RATS', 'SATS', 'CAT']:
                         spot_sym = f"{base}USDT"
                         fut_sym = f"1000{base}USDT"
                         if spot_sym in prices:
@@ -325,19 +358,23 @@ class DashboardAPIHandler(SimpleHTTPRequestHandler):
                             c_cl = candles[i]['close']
                             c_rsi = float(r.get('rsi', 50.0))
                             spk_pct = ((c_cl - c_op) / c_op) * 100.0 if c_op > 0 else 0.0
-                            c_rsi_prev1 = float(df_plot.iloc[i-1].get('rsi', c_rsi)) if i >= 1 else c_rsi
-                            c_rsi_drop = max(0.0, c_rsi_prev1 - c_rsi)
-                            is_first_drop_bar = (c_rsi_prev1 > 30.0 and c_rsi <= 30.0)
+                            c_p1 = float(df_plot.iloc[i-1].get('rsi', c_rsi)) if i >= 1 else c_rsi
+                            c_p2 = float(df_plot.iloc[i-2].get('rsi', c_p1)) if i >= 2 else c_p1
+                            c_p3 = float(df_plot.iloc[i-3].get('rsi', c_p2)) if i >= 3 else c_p2
+                            candidates = [(c_p1, 1), (c_p2, 2), (c_p3, 3)]
+                            c_peak, c_bars = max(candidates, key=lambda x: x[0])
+                            c_rsi_drop = max(0.0, c_peak - c_rsi)
+                            is_crash_drop = (c_rsi_drop >= 30.0 and c_rsi <= 30.0)
 
                             if momentum_method in ["rapid_rsi_drop", "rsi_drop"]:
-                                # First time drop: Candle pertama tembus RSI <= 30 dengan drop tajam dari candle sebelumnya
-                                if is_first_drop_bar and c_rsi_drop >= 8.0:
+                                # Total Penurunan <= 3 Lilin: Wajib drop >= 30 pts dan mendarat di RSI <= 30
+                                if is_crash_drop:
                                     markers_map[t] = {
                                         "time": t,
                                         "position": "belowBar",
                                         "color": "#10b981",
                                         "shape": "arrowUp",
-                                        "text": f"⚡ 1ST DROP -{round(c_rsi_drop, 0)} ({round(c_rsi, 1)})"
+                                        "text": f"⚡ CRASH -{round(c_rsi_drop, 0)} ({c_bars}c: {round(c_rsi, 1)})"
                                     }
                             elif momentum_method in ["rsi_oversold", "rapid_rsi_oversold"]:
                                 if c_rsi <= 30.0:
